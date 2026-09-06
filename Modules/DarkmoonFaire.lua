@@ -5,7 +5,7 @@ local L = LibStub("AceLocale-3.0"):GetLocale("MidnightRoutine")
 
 local HOLIDAY_DARKMOON_FAIRE = 479
 
-local DARKMOON_ISLAND_MAP = 244
+local DARKMOON_ISLAND_MAP = 407
 
 local DARKMOON_QUEST_IDS = {
     29434,

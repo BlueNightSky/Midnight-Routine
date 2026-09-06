@@ -558,29 +558,14 @@ local function GetGatheringZoneName(mapID)
 end
 
 local function SetGatheringWaypoint(entry)
-    local mapID = entry and entry.zone
-    local x = entry and entry.x and (entry.x / 100)
-    local y = entry and entry.y and (entry.y / 100)
-    local tomTom = _G and rawget(_G, "TomTom")
-    if not mapID or not x or not y then return false, "Invalid coordinates" end
-
-    if tomTom and tomTom.AddWaypoint then
-        local ok = pcall(function()
-            tomTom:AddWaypoint(mapID, x, y, { title = EntryName(entry), persistent = false, minimap = true, world = true })
-        end)
-        if ok then return true, "TomTom" end
-    end
-
-    if UiMapPoint and UiMapPoint.CreateFromCoordinates and C_Map and C_Map.SetUserWaypoint then
-        local point = UiMapPoint.CreateFromCoordinates(mapID, x, y)
-        if point then
-            C_Map.SetUserWaypoint(point)
-            if C_SuperTrack and C_SuperTrack.SetSuperTrackedUserWaypoint then C_SuperTrack.SetSuperTrackedUserWaypoint(true) end
-            return true, "Blizzard"
-        end
-    end
-
-    return false, "No waypoint API available"
+    if not (entry and MR.SetWaypoint) then return false, "Invalid coordinates" end
+    return MR:SetWaypoint({
+        zone = entry.zone,
+        x = entry.x,
+        y = entry.y,
+        label = entry.label,
+        waypointTitle = EntryName(entry),
+    })
 end
 
 local function GetQuestSpecificLocations(entry)

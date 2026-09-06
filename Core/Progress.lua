@@ -237,28 +237,41 @@ function MR:SetWaypoint(target)
         return false, "Invalid coordinates"
     end
 
+    if self.ClearMapWaypointPin then
+        self:ClearMapWaypointPin()
+    end
+
     local title = target.waypointTitle or CleanDisplayLabel(target.label)
 
     if tomTom and tomTom.AddWaypoint then
-        local ok = pcall(function()
-            tomTom:AddWaypoint(mapID, x, y, {
+        local ok, waypoint = pcall(function()
+            return tomTom:AddWaypoint(mapID, x, y, {
                 title = title,
                 persistent = false,
                 minimap = true,
                 world = true,
             })
         end)
-        if ok then return true, "TomTom" end
+        if ok and waypoint then return true, "TomTom" end
     end
 
-    if UiMapPoint and UiMapPoint.CreateFromCoordinates and C_Map and C_Map.SetUserWaypoint then
+    if UiMapPoint and UiMapPoint.CreateFromCoordinates and C_Map and C_Map.SetUserWaypoint
+        and (not C_Map.CanSetUserWaypointOnMap or C_Map.CanSetUserWaypointOnMap(mapID)) then
         local point = UiMapPoint.CreateFromCoordinates(mapID, x, y)
         if point then
-            C_Map.SetUserWaypoint(point)
-            if C_SuperTrack and C_SuperTrack.SetSuperTrackedUserWaypoint then
+            local ok = pcall(C_Map.SetUserWaypoint, point)
+            local waypoint = ok and C_Map.GetUserWaypoint and C_Map.GetUserWaypoint()
+            if waypoint and waypoint.uiMapID == mapID and C_SuperTrack and C_SuperTrack.SetSuperTrackedUserWaypoint then
                 C_SuperTrack.SetSuperTrackedUserWaypoint(true)
             end
-            return true, "Blizzard" end
+            if waypoint and waypoint.uiMapID == mapID then
+                return true, "Blizzard"
+            end
+        end
+    end
+
+    if self.SetMapWaypointPin and self:SetMapWaypointPin(target) then
+        return true, "Blizzard map"
     end
 
     return false, "No waypoint API available"
