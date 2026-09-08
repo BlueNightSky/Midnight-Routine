@@ -153,6 +153,7 @@ local function UpdateCurrencyProgressForRow(self, progress, mod, row)
 end
 
 local function UpdateQuestProgressForRow(self, progress, mod, row)
+    local progressModuleKey = row.progressModuleKey or mod.key
     local done = 0
     if row.questIds then
         if row.orderedQuestSequence then
@@ -172,17 +173,17 @@ local function UpdateQuestProgressForRow(self, progress, mod, row)
     end
 
     local value = math.min(done, row.max or done)
-    local progressBucket = (self.GetProgressBucket and self:GetProgressBucket(mod.key, row.key)) or progress
-    local overridesBucket = (self.GetManualOverrideBucket and self:GetManualOverrideBucket(mod.key, row.key)) or self.db.char.manualOverrides
+    local progressBucket = (self.GetProgressBucket and self:GetProgressBucket(progressModuleKey, row.key)) or progress
+    local overridesBucket = (self.GetManualOverrideBucket and self:GetManualOverrideBucket(progressModuleKey, row.key)) or self.db.char.manualOverrides
 
     if (row.accountWideComplete or row.preserveCompletion) and value == 0 then
-        local existing = progressBucket[mod.key] and progressBucket[mod.key][row.key] or 0
+        local existing = progressBucket[progressModuleKey] and progressBucket[progressModuleKey][row.key] or 0
         if existing > 0 then
             return false
         end
     end
 
-    return WriteProgress(progressBucket, mod.key, row.key, value, overridesBucket)
+    return WriteProgress(progressBucket, progressModuleKey, row.key, value, overridesBucket)
 end
 
 local function UpdateItemProgressForRow(self, progress, mod, row)
@@ -208,8 +209,9 @@ function MR:PrimeModuleData(mod)
         if row.questIds and not row.turnInTracked then
             dirty = UpdateQuestProgressForRow(self, progress, mod, row) or dirty
         elseif row.questIds and row.turnInTracked and row.allowQuestFlagBackfill then
-            local progressBucket = (self.GetProgressBucket and self:GetProgressBucket(mod.key, row.key)) or progress
-            local currentValue = progressBucket[mod.key] and progressBucket[mod.key][row.key] or 0
+            local progressModuleKey = row.progressModuleKey or mod.key
+            local progressBucket = (self.GetProgressBucket and self:GetProgressBucket(progressModuleKey, row.key)) or progress
+            local currentValue = progressBucket[progressModuleKey] and progressBucket[progressModuleKey][row.key] or 0
             if currentValue <= 0 then
                 dirty = UpdateQuestProgressForRow(self, progress, mod, row) or dirty
             end
@@ -290,7 +292,7 @@ function MR:ScanAutoUpdateInstanceRows(changedQuestId, changedEncounterId, diffi
     end
     local progress = self.db.char.progress
     for _, mod in ipairs(self.modules) do
-        if self:IsModuleEnabled(mod.key) then
+        if self:IsModuleEnabled(mod.key) or mod.customTaskCategoryModule then
             for _, row in ipairs(mod.rows) do
 
                 if row.autoUpdateInstances and row.questIds
@@ -298,8 +300,9 @@ function MR:ScanAutoUpdateInstanceRows(changedQuestId, changedEncounterId, diffi
                     if not row.turnInTracked then
                         UpdateQuestProgressForRow(self, progress, mod, row)
                     elseif row.allowQuestFlagBackfill then
-                        local progressBucket = (self.GetProgressBucket and self:GetProgressBucket(mod.key, row.key)) or progress
-                        local cur = progressBucket[mod.key] and progressBucket[mod.key][row.key] or 0
+                        local progressModuleKey = row.progressModuleKey or mod.key
+                        local progressBucket = (self.GetProgressBucket and self:GetProgressBucket(progressModuleKey, row.key)) or progress
+                        local cur = progressBucket[progressModuleKey] and progressBucket[progressModuleKey][row.key] or 0
                         if cur <= 0 then
                             UpdateQuestProgressForRow(self, progress, mod, row)
                         end
@@ -311,9 +314,10 @@ function MR:ScanAutoUpdateInstanceRows(changedQuestId, changedEncounterId, diffi
 
                     local diffOk = (not difficultyId) or (not row.encounterDifficulties) or (row.encounterDifficulties[difficultyId] == true)
                     if diffOk then
-                        local progressBucket = (self.GetProgressBucket and self:GetProgressBucket(mod.key, row.key)) or progress
-                        if not progressBucket[mod.key] then progressBucket[mod.key] = {} end
-                        local cur = progressBucket[mod.key][row.key] or 0
+                        local progressModuleKey = row.progressModuleKey or mod.key
+                        local progressBucket = (self.GetProgressBucket and self:GetProgressBucket(progressModuleKey, row.key)) or progress
+                        if not progressBucket[progressModuleKey] then progressBucket[progressModuleKey] = {} end
+                        local cur = progressBucket[progressModuleKey][row.key] or 0
                         local maxVal = row.max or 1
 
                         if difficultyId and row.taskId then
@@ -333,7 +337,7 @@ function MR:ScanAutoUpdateInstanceRows(changedQuestId, changedEncounterId, diffi
                                     if not diffState[difficultyId] then
                                         diffState[difficultyId] = true
                                         if cur < maxVal then
-                                            progressBucket[mod.key][row.key] = cur + 1
+                                            progressBucket[progressModuleKey][row.key] = cur + 1
                                             self._moduleStatsCache = nil
                                         end
                                     end
@@ -341,7 +345,7 @@ function MR:ScanAutoUpdateInstanceRows(changedQuestId, changedEncounterId, diffi
                             end
                         elseif not row.taskId then
                             if cur < maxVal then
-                                progressBucket[mod.key][row.key] = maxVal
+                                progressBucket[progressModuleKey][row.key] = maxVal
                                 self._moduleStatsCache = nil
                             end
                         end
@@ -361,7 +365,7 @@ function MR:RefreshCurrencyProgress(currencyId, refreshUI)
     local dirty = false
 
     for _, mod in ipairs(self.modules) do
-        if self:IsModuleEnabled(mod.key) then
+        if self:IsModuleEnabled(mod.key) or mod.customTaskCategoryModule then
             for _, row in ipairs(mod.rows) do
                 if row.currencyId and (currencyId == nil or row.currencyId == currencyId) then
                     if UpdateCurrencyProgressForRow(self, progress, mod, row) then
@@ -391,7 +395,7 @@ function MR:RefreshQuestProgress(questId, refreshUI)
     local dirty = false
 
     for _, mod in ipairs(self.modules) do
-        if self:IsModuleEnabled(mod.key) then
+        if self:IsModuleEnabled(mod.key) or mod.customTaskCategoryModule then
             for _, row in ipairs(mod.rows) do
                 if row.questIds then
                     local shouldUpdate = questId == nil
@@ -406,8 +410,9 @@ function MR:RefreshQuestProgress(questId, refreshUI)
 
                     if shouldUpdate then
                         if row.turnInTracked and row.allowQuestFlagBackfill then
-                            local progressBucket = (self.GetProgressBucket and self:GetProgressBucket(mod.key, row.key)) or progress
-                            local currentValue = progressBucket[mod.key] and progressBucket[mod.key][row.key] or 0
+                            local progressModuleKey = row.progressModuleKey or mod.key
+                            local progressBucket = (self.GetProgressBucket and self:GetProgressBucket(progressModuleKey, row.key)) or progress
+                            local currentValue = progressBucket[progressModuleKey] and progressBucket[progressModuleKey][row.key] or 0
                             if currentValue <= 0 and UpdateQuestProgressForRow(self, progress, mod, row) then
                                 dirty = true
                             end
@@ -441,7 +446,7 @@ function MR:RefreshItemProgress(itemId, refreshUI)
     local dirty = false
 
     for _, mod in ipairs(self.modules) do
-        if self:IsModuleEnabled(mod.key) then
+        if self:IsModuleEnabled(mod.key) or mod.customTaskCategoryModule then
             for _, row in ipairs(mod.rows) do
                 if row.itemId and not row.noItemProgress and (itemId == nil or row.itemId == itemId) then
                     if UpdateItemProgressForRow(self, progress, mod, row) then
@@ -545,7 +550,7 @@ local function RunScanPass(self)
     local beforeProgress = DeepCopy(self.db.char.progress)
     local beforeRows = {}
     for _, mod in ipairs(self.modules) do
-        if self:IsModuleEnabled(mod.key) then
+        if self:IsModuleEnabled(mod.key) or mod.customTaskCategoryModule then
             local rows = {}
             beforeRows[mod.key] = rows
             for _, row in ipairs(mod.rows or {}) do
@@ -558,12 +563,13 @@ local function RunScanPass(self)
     local progress = self.db.char.progress
 
     for _, mod in ipairs(self.modules) do
-        if self:IsModuleEnabled(mod.key) then
+        if self:IsModuleEnabled(mod.key) or mod.customTaskCategoryModule then
             for _, row in ipairs(mod.rows) do
             if row.questIds and not row.turnInTracked then
                 UpdateQuestProgressForRow(self, progress, mod, row)
             elseif row.questIds and row.turnInTracked and row.allowQuestFlagBackfill then
-                local currentValue = progress[mod.key] and progress[mod.key][row.key] or 0
+                local progressModuleKey = row.progressModuleKey or mod.key
+                local currentValue = progress[progressModuleKey] and progress[progressModuleKey][row.key] or 0
                 if currentValue <= 0 then
                     UpdateQuestProgressForRow(self, progress, mod, row)
                 end

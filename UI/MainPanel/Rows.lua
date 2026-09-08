@@ -277,7 +277,7 @@ end
 
 local function MainRowOnMouseDown(selfRow, button)
     local data = selfRow._mrData
-    if not data or data.mode ~= "normal" then
+    if not data then
         return
     end
 
@@ -288,6 +288,17 @@ local function MainRowOnMouseDown(selfRow, button)
     local row = data.row
     local mod = data.mod
     local done = data.done
+
+    if data.mode == "sectionHeader" then
+        if button == "LeftButton" and row.onLeftClick then
+            row.onLeftClick(row, mod, done, selfRow)
+        elseif button == "RightButton" and row.onRightClick then
+            row.onRightClick(row, mod, done, selfRow)
+        end
+        return
+    elseif data.mode ~= "normal" then
+        return
+    end
 
     if button == "LeftButton" and row.onLeftClick then
         local handled = row.onLeftClick(row, mod, done, selfRow)
@@ -312,9 +323,9 @@ local function MainRowOnMouseDown(selfRow, button)
             print(L["Waypoint_Unavailable"])
         end
     elseif not data.isAutoTracked and not row.encounterIds and button == "LeftButton" then
-        MR:BumpProgress(mod.key, row.key, 1, row.max)
+        MR:BumpProgress(row.progressModuleKey or mod.key, row.key, 1, row.max)
     elseif not data.isAutoTracked and not row.encounterIds and button == "RightButton" then
-        MR:BumpProgress(mod.key, row.key, -1, row.max)
+        MR:BumpProgress(row.progressModuleKey or mod.key, row.key, -1, row.max)
     end
 end
 
@@ -331,14 +342,14 @@ local function MainStatusButtonOnClick(selfBtn)
 
     local row = data.row
     local mod = data.mod
-    if mod.key == "custom_tasks" and IsShiftKeyDown() and row.onLeftClick then
+    if row.taskId and IsShiftKeyDown() and row.onLeftClick then
         local handled = row.onLeftClick(row, mod, data.done, owner)
         if handled ~= false then
             return
         end
     end
 
-    if row.toggleStatus and MR.ToggleCustomTask and mod.key == "custom_tasks" then
+    if row.toggleStatus and MR.ToggleCustomTask and row.taskId then
         local rowKey = row.key or ""
         local scope = row.taskScope or (rowKey:match("^shared_task_") and "shared" or "character")
         local taskId = tonumber(rowKey:match("^shared_task_(%d+)") or rowKey:match("^task_(%d+)"))
@@ -351,8 +362,9 @@ local function MainStatusButtonOnClick(selfBtn)
 
     local max = tonumber(row.max)
     if not max then return end
-    local cur = tonumber(MR:GetManualOverride(mod.key, row.key)) or 0
-    MR:SetManualOverride(mod.key, row.key, cur >= max and 0 or max, max)
+    local progressModuleKey = row.progressModuleKey or mod.key
+    local cur = tonumber(MR:GetManualOverride(progressModuleKey, row.key)) or 0
+    MR:SetManualOverride(progressModuleKey, row.key, cur >= max and 0 or max, max)
 end
 
 local function MainStatusButtonOnEnter(selfBtn)
@@ -376,7 +388,8 @@ local function MainStatusButtonOnEnter(selfBtn)
         return
     end
 
-    local mo = tonumber(row.toggleStatus and MR:GetProgress(data.mod.key, row.key) or MR:GetManualOverride(data.mod.key, row.key)) or 0
+    local progressModuleKey = row.progressModuleKey or data.mod.key
+    local mo = tonumber(row.toggleStatus and MR:GetProgress(progressModuleKey, row.key) or MR:GetManualOverride(progressModuleKey, row.key)) or 0
     local max = tonumber(row.max)
     ns.ShowTooltip(selfBtn, {
         build = function(tooltip)
@@ -502,7 +515,14 @@ local function GetMainRowGroupKey(row)
 end
 
 local function IsMainRowVisible(mod, row)
+    if row and row.hideInMain then
+        return false
+    end
     return MR.IsRowVisibleForCharacter and MR:IsRowVisibleForCharacter(mod, row) or (not row.isVisible or row.isVisible())
+end
+
+local function GetRowProgressModuleKey(mod, row)
+    return row and row.progressModuleKey or (mod and mod.key)
 end
 
 local function GetReservedTextWidth(rowFrame, desiredWidth)
@@ -592,6 +612,9 @@ local function ShouldRenderMainRow(row, rowComplete, hideComplete)
     if row.control then
         return not (hideComplete and row.hideWhenComplete and rowComplete)
     end
+    if row.categoryCollapsed then
+        return false
+    end
     return not ((hideComplete or row.hideComplete) and rowComplete)
 end
 
@@ -602,7 +625,7 @@ local function ShouldRenderMainRowGroupHeader(self, mod, rows, group, hideComple
 
     for _, row in ipairs(rows or {}) do
         if IsMainRowInGroup(mod, row, group) and MR:IsRowEnabled(mod.key, row.key) then
-            local done = MR:GetProgress(mod.key, row.key)
+        local done = MR:GetProgress(GetRowProgressModuleKey(mod, row), row.key)
             local rowComplete = self:IsRowComplete(mod, row, done)
             if ShouldRenderMainRow(row, rowComplete, hideComplete) then
                 return true
@@ -627,7 +650,7 @@ local function RenderMainGroupedRows(self, card, mod, rows, hideComplete, yOff, 
         lastGroup = group
 
         if rowVisible and MR:IsRowEnabled(mod.key, row.key) then
-            local done = MR:GetProgress(mod.key, row.key)
+            local done = MR:GetProgress(GetRowProgressModuleKey(mod, row), row.key)
             local rowComplete = self:IsRowComplete(mod, row, done)
             if ShouldRenderMainRow(row, rowComplete, hideComplete) then
                 local rowFrame, nextY, rowId = buildRowFunc(row, done, yOff)
@@ -655,7 +678,7 @@ local function CountMainGroupedRows(self, mod, rows, hideComplete, isOpen)
         lastGroup = group
 
         if rowVisible and MR:IsRowEnabled(mod.key, row.key) then
-            local done = MR:GetProgress(mod.key, row.key)
+            local done = MR:GetProgress(GetRowProgressModuleKey(mod, row), row.key)
             local rowComplete = self:IsRowComplete(mod, row, done)
             if ShouldRenderMainRow(row, rowComplete, hideComplete) then
                 shownRows = shownRows + 1
@@ -1091,6 +1114,7 @@ local function EnsureMainRowHeaderParts(rowFrame)
 
     rowFrame._headerBg = rowFrame:CreateTexture(nil, "BACKGROUND")
     rowFrame._headerBg:SetAllPoints()
+    rowFrame._headerDivider = rowFrame:CreateTexture(nil, "ARTWORK")
     rowFrame._headerText = rowFrame:CreateFontString(nil, "OVERLAY")
     rowFrame._headerActionButton = CreateFrame("Button", nil, rowFrame, "BackdropTemplate")
     rowFrame._headerActionButton:SetBackdrop(MakeBackdrop())
@@ -1102,7 +1126,7 @@ local function EnsureMainRowHeaderParts(rowFrame)
     rowFrame._headerActionText:SetFont(ns.FONT_ROWS, 9, GetFontFlags())
     rowFrame._headerCount = rowFrame:CreateFontString(nil, "OVERLAY")
     rowFrame._headerCount:SetFont(ns.FONT_ROWS, math.max(8, GetFontSize() - 2), GetFontFlags())
-    MR._mainRowOptionalPartCreatedCount = (MR._mainRowOptionalPartCreatedCount or 0) + 5
+    MR._mainRowOptionalPartCreatedCount = (MR._mainRowOptionalPartCreatedCount or 0) + 6
 end
 
 local function EnsureMainRowTexture(rowFrame, key)
@@ -1135,7 +1159,7 @@ end
 local function GetMainRowWidgetKind(mod, row)
     if row.sectionHeader then
         local kind = "header"
-        if ((row.headerActionText and row.headerActionText ~= "") or row.headerActionStyle == "visibility") and row.onHeaderActionClick then
+        if ((row.headerActionText and row.headerActionText ~= "") or row.headerActionStyle == "visibility" or row.headerActionStyle == "collapse") and row.onHeaderActionClick then
             kind = kind .. ":action"
         end
         if row.countText then
@@ -1192,6 +1216,16 @@ end
 local function GetMainFrameRowCount(row)
     if MR.IsMainAltViewActive and MR:IsMainAltViewActive() then
         return nil, nil
+    end
+
+    if row.progressEntries then
+        local done = 0
+        for _, entry in ipairs(row.progressEntries) do
+            if (tonumber(MR:GetProgress("custom_tasks", entry.key)) or 0) >= (tonumber(entry.max) or 1) then
+                done = done + 1
+            end
+        end
+        return string.format("%d / %d", done, #row.progressEntries), row.countColor
     end
 
     return row.countText, row.countColor
@@ -1259,6 +1293,7 @@ UpdateMainRowWidget = function(self, section, mod, row, done, yOff, colW)
     rowFrame:Show()
 
     if rowFrame._headerBg then rowFrame._headerBg:Hide() end
+    if rowFrame._headerDivider then rowFrame._headerDivider:Hide() end
     if rowFrame._headerText then rowFrame._headerText:Hide() end
     if rowFrame._headerActionButton then rowFrame._headerActionButton:Hide() end
     if rowFrame._headerCount then rowFrame._headerCount:Hide() end
@@ -1282,8 +1317,22 @@ UpdateMainRowWidget = function(self, section, mod, row, done, yOff, colW)
         EnsureMainRowHeaderParts(rowFrame)
         rowFrame._mrData.mode = "sectionHeader"
         rowFrame._headerBg:Show()
+        rowFrame._headerDivider:Hide()
+        local headerColor = MR:GetRowColor(mod.key, row.key) or row.labelColor
+        local hr, hg, hb = 0.84, 0.70, 0.95
+        if headerColor then
+            hr, hg, hb = hex(headerColor)
+        end
         if transparent then
             rowFrame._headerBg:SetColorTexture(1, 1, 1, 0)
+        elseif row.categoryHeader then
+            local categoryBackground = row.headerBackgroundKey and MR:GetHeaderBackgroundColor(row.headerBackgroundKey)
+            if categoryBackground then
+                local br, bg, bb = hex(categoryBackground)
+                rowFrame._headerBg:SetColorTexture(br, bg, bb, 0.96 * frameAlpha)
+            else
+                rowFrame._headerBg:SetColorTexture(hr * 0.16, hg * 0.16, hb * 0.16, 0.96 * frameAlpha)
+            end
         else
             local headerBackground = row.headerBackgroundKey and MR:GetHeaderBackgroundColor(row.headerBackgroundKey)
             if headerBackground then
@@ -1294,15 +1343,22 @@ UpdateMainRowWidget = function(self, section, mod, row, done, yOff, colW)
             end
         end
 
-        SetFontForText(rowFrame._headerText, row.label, math.max(8, GetFontSize() - 1), GetFontFlags())
+        if row.categoryHeader and not transparent then
+            rowFrame._headerDivider:ClearAllPoints()
+            rowFrame._headerDivider:SetPoint("BOTTOMLEFT", rowFrame, "BOTTOMLEFT", 12, 0)
+            rowFrame._headerDivider:SetPoint("BOTTOMRIGHT", rowFrame, "BOTTOMRIGHT", -12, 0)
+            rowFrame._headerDivider:SetHeight(1)
+            rowFrame._headerDivider:SetColorTexture(hr, hg, hb, 0.48 * frameAlpha)
+            rowFrame._headerDivider:Show()
+        end
+
+        SetFontForText(rowFrame._headerText, row.label, row.categoryHeader and math.max(8, GetFontSize()) or math.max(8, GetFontSize() - 1), GetFontFlags())
         SetTwoAnchors(rowFrame._headerText,
-            "LEFT", rowFrame, "LEFT", 8, 0,
+            "LEFT", rowFrame, "LEFT", row.headerIndent or 8, 0,
             "RIGHT", rowFrame, "RIGHT", -84, 0)
         rowFrame._headerText:SetJustifyH("LEFT")
         rowFrame._headerText:SetText(row.label)
-        local headerColor = MR:GetRowColor(mod.key, row.key) or row.labelColor
         if headerColor then
-            local hr, hg, hb = hex(headerColor)
             rowFrame._headerText:SetTextColor(hr, hg, hb, 0.95)
         else
             rowFrame._headerText:SetTextColor(0.84, 0.70, 0.95, 0.95)
@@ -1310,12 +1366,36 @@ UpdateMainRowWidget = function(self, section, mod, row, done, yOff, colW)
         rowFrame._headerText:Show()
 
         local headerActionButton = nil
-        if ((row.headerActionText and row.headerActionText ~= "") or row.headerActionStyle == "visibility") and row.onHeaderActionClick then
+        if ((row.headerActionText and row.headerActionText ~= "") or row.headerActionStyle == "visibility" or row.headerActionStyle == "collapse") and row.onHeaderActionClick then
             headerActionButton = rowFrame._headerActionButton
             SetOneAnchor(headerActionButton, "RIGHT", rowFrame, "RIGHT", -4, 0)
             headerActionButton:Show()
+            if headerActionButton._lineA then headerActionButton._lineA:Hide() end
+            if headerActionButton._lineB then headerActionButton._lineB:Hide() end
 
-            if row.headerActionStyle == "visibility" then
+            if row.headerActionStyle == "collapse" then
+                headerActionButton:SetSize(14, 14)
+                headerActionButton:SetBackdropColor(0, 0, 0, 0)
+                headerActionButton:SetBackdropBorderColor(0, 0, 0, 0)
+                headerActionButton._mrLayoutOpen = nil
+                StyleSectionCollapseIndicator(headerActionButton, row.headerActionOpen == true)
+                if row.headerActionOpen ~= true and headerActionButton._lineA and headerActionButton._lineB then
+                    headerActionButton._lineA:ClearAllPoints()
+                    headerActionButton._lineB:ClearAllPoints()
+                    headerActionButton._lineA:SetSize(7, 2)
+                    headerActionButton._lineB:SetSize(7, 2)
+                    headerActionButton._lineA:SetPoint("CENTER", headerActionButton, "CENTER", 0, 2)
+                    headerActionButton._lineB:SetPoint("CENTER", headerActionButton, "CENTER", 0, -2)
+                    if headerActionButton._lineA.SetRotation then
+                        headerActionButton._lineA:SetRotation(math.rad(35))
+                        headerActionButton._lineB:SetRotation(math.rad(-35))
+                    end
+                    headerActionButton._lineA:Show()
+                    headerActionButton._lineB:Show()
+                end
+                if headerActionButton._lineA then headerActionButton._lineA:SetColorTexture(hr, hg, hb, 0.95) end
+                if headerActionButton._lineB then headerActionButton._lineB:SetColorTexture(hr, hg, hb, 0.95) end
+            elseif row.headerActionStyle == "visibility" then
                 headerActionButton:SetSize(14, 14)
                 headerActionButton:SetBackdropColor(0.05, 0.10, 0.18, 1)
                 headerActionButton:SetBackdropBorderColor(
@@ -1345,7 +1425,7 @@ UpdateMainRowWidget = function(self, section, mod, row, done, yOff, colW)
                     rowFrame._headerActionText:SetTextColor(0.92, 0.78, 0.24)
                 end
             end
-            rowFrame._headerActionText:Show()
+            rowFrame._headerActionText:SetShown(row.headerActionStyle ~= "collapse")
         end
 
         local headerCountText, headerCountColor = GetMainFrameRowCount(row)
@@ -1382,7 +1462,7 @@ UpdateMainRowWidget = function(self, section, mod, row, done, yOff, colW)
     rowFrame._separator:SetColorTexture(1, 1, 1, transparent and 0 or (0.06 * frameAlpha))
     rowFrame._separator:Show()
 
-    local mo = tonumber(MR:GetManualOverride(mod.key, row.key)) or 0
+    local mo = tonumber(MR:GetManualOverride(GetRowProgressModuleKey(mod, row), row.key)) or 0
     local max = tonumber(row.max)
     local forcedComplete = max and mo >= max
     local activeDone = forcedComplete and max or done
@@ -1768,7 +1848,7 @@ BuildModuleStatsCache = function(self)
         for _, row in ipairs(rows) do
             local rowVisible = IsMainRowVisible(mod, row)
             if rowVisible and MR:IsRowEnabled(mod.key, row.key) then
-                local done = MR:GetProgress(mod.key, row.key)
+                local done = MR:GetProgress(GetRowProgressModuleKey(mod, row), row.key)
                 local countsForTotals = not row.control
                 local isComplete = countsForTotals and self:IsRowComplete(mod, row, done) or false
                 if countsForTotals then

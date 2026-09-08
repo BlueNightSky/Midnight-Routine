@@ -697,11 +697,11 @@ function MR:ToggleManagedWindows()
     return self:ShowMainPanel(true)
 end
 
-_G.BINDING_HEADER_MIDNIGHTROUTINE = L["Binding_Header"] or "Routine"
-_G.BINDING_NAME_MIDNIGHTROUTINE_TOGGLE_WINDOWS = L["Binding_ToggleWindows"] or "Show / Hide Routine Windows"
-_G.MidnightRoutine_ToggleWindows = function()
+local toggleWindowsBindingButton = CreateFrame("Button", "MidnightRoutineToggleWindowsBindingButton", UIParent)
+toggleWindowsBindingButton:SetScript("OnClick", function()
     MR:ToggleManagedWindows()
-end
+end)
+ns.TOGGLE_WINDOWS_BINDING = "CLICK MidnightRoutineToggleWindowsBindingButton:LeftButton"
 
 function MR:UpdateInstanceFrameVisibility()
     if self:ShouldDeferForCombat("instanceVisibility") then

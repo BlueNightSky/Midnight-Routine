@@ -457,6 +457,7 @@ function Config.CreateTaskControl(spec)
 
     local canHaveCompletionSound = type(row.max) == "number" and row.max > 0 and not row.noMax and not row.currencyId
     if canHaveCompletionSound then
+        local soundModuleKey = row.progressModuleKey or moduleKey
         local soundBtn = ns.AcquireFrame(frame, "controlFrame8", "Button")
         soundBtn:SetSize(14, 14)
         soundBtn:SetPoint("RIGHT", swatch, "LEFT", -4, 0)
@@ -466,18 +467,18 @@ function Config.CreateTaskControl(spec)
         icon:SetAtlas("common-icon-sound", true)
         soundBtn:SetScript("OnClick", function()
             if ns.OpenCompletionSoundMenu then
-                ns.OpenCompletionSoundMenu(moduleKey, rowKey, soundBtn)
+                ns.OpenCompletionSoundMenu(soundModuleKey, rowKey, soundBtn)
             end
         end)
         soundBtn:SetScript("OnEnter", function()
-            local hasSound = ns.GetCompletionSoundValue and ns.GetCompletionSoundValue(moduleKey, rowKey) ~= nil
+            local hasSound = ns.GetCompletionSoundValue and ns.GetCompletionSoundValue(soundModuleKey, rowKey) ~= nil
             icon:SetVertexColor(1, 1, 1)
             ns.ShowTooltip(soundBtn, { text = hasSound
                 and (L["Config_RowSoundHintSet"] or "Completion sound set. Click to change.")
                 or (L["Config_RowSoundHint"] or "Click to set a completion sound.") })
         end)
         soundBtn:SetScript("OnLeave", function()
-            local hasSound = ns.GetCompletionSoundValue and ns.GetCompletionSoundValue(moduleKey, rowKey) ~= nil
+            local hasSound = ns.GetCompletionSoundValue and ns.GetCompletionSoundValue(soundModuleKey, rowKey) ~= nil
             if hasSound then
                 icon:SetVertexColor(0.90, 0.75, 0.35)
             else
@@ -485,7 +486,7 @@ function Config.CreateTaskControl(spec)
             end
             ns.HideOwnedTooltip(soundBtn)
         end)
-        local hasSoundNow = ns.GetCompletionSoundValue and ns.GetCompletionSoundValue(moduleKey, rowKey) ~= nil
+        local hasSoundNow = ns.GetCompletionSoundValue and ns.GetCompletionSoundValue(soundModuleKey, rowKey) ~= nil
         if hasSoundNow then
             icon:SetVertexColor(0.90, 0.75, 0.35)
         else

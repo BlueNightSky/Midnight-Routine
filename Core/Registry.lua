@@ -458,7 +458,7 @@ function MR:GetOrderedRows(mod)
         end
         for index, row in ipairs(baseRows) do
             if row and not row.control then
-                local groupKey = row.configGroup or false
+                local groupKey = row.orderGroup or row.configGroup or false
                 groupedRows[groupKey] = groupedRows[groupKey] or {}
                 groupedRows[groupKey][#groupedRows[groupKey] + 1] = { row = row, index = index }
             end
@@ -484,7 +484,7 @@ function MR:GetOrderedRows(mod)
             if row and row.control then
                 rows[#rows + 1] = row
             else
-                local groupKey = row.configGroup or false
+                local groupKey = row.orderGroup or row.configGroup or false
                 local group = groupedRows[groupKey]
                 local groupIndex = groupedIndexes[groupKey]
                 rows[#rows + 1] = group[groupIndex].row

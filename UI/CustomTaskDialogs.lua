@@ -51,7 +51,7 @@ local function ApplyCustomTaskDialogTheme(frame)
     local editFont  = math.max(9,  fontSize)
 
 
-    frame:SetSize(420, 620)
+    frame:SetSize(420, 670)
 
     local function sf(fs, size) if fs then fs:SetFont(ns.FONT_ROWS, size, GetFontFlags()) end end
     sf(frame.title,           math.max(10, fontSize + 1))
@@ -59,6 +59,7 @@ local function ApplyCustomTaskDialogTheme(frame)
     sf(frame.progressHeader,  rowFont)
     sf(frame.behaviorHeader,  rowFont)
     sf(frame.nameLabel,       rowFont)
+    sf(frame.categoryLabel,   rowFont)
     sf(frame.questLabel,      rowFont)
     sf(frame.encounterLabel,  rowFont)
     sf(frame.difficultyLabel, rowFont)
@@ -81,9 +82,11 @@ local function ApplyCustomTaskDialogTheme(frame)
     end
 
     if frame.input          then ApplyDialogEditBoxFont(frame.input,          editFont) end
+    if frame.categoryInput  then ApplyDialogEditBoxFont(frame.categoryInput,  editFont) end
     if frame.questInput     then ApplyDialogEditBoxFont(frame.questInput,     editFont) end
     if frame.encounterInput then ApplyDialogEditBoxFont(frame.encounterInput, editFont) end
     if frame.targetInput    then ApplyDialogEditBoxFont(frame.targetInput,    editFont) end
+    if frame.categoryDropdown and frame.categoryDropdown.ApplyFonts then frame.categoryDropdown:ApplyFonts() end
 
     if frame.saveBtn   and frame.saveBtn._label   then frame.saveBtn._label:SetFont(ns.FONT_HEADERS,   10, GetFontFlags()) end
     if frame.cancelBtn and frame.cancelBtn._label then frame.cancelBtn._label:SetFont(ns.FONT_HEADERS, 10, GetFontFlags()) end
@@ -132,6 +135,26 @@ local function ApplyCustomTasksTitleDialogTheme(frame)
     end
     if frame.cancelBtn and frame.cancelBtn._label then
         frame.cancelBtn._label:SetFont(ns.FONT_HEADERS, 10, GetFontFlags())
+    end
+end
+
+local function ApplyCustomTaskCategoryDialogTheme(frame)
+    if not frame then return end
+    RefreshFonts()
+    local fontSize = GetFontSize()
+    frame:SetSize(math.max(440, 330 + (fontSize * 10)), math.max(286, 220 + (fontSize * 6)))
+    if frame.titleText then frame.titleText:SetFont(ns.FONT_HEADERS, math.max(10, fontSize + 1), GetFontFlags()) end
+    if frame.subtitle then frame.subtitle:SetFont(ns.FONT_ROWS, math.max(8, fontSize - 1), GetFontFlags()) end
+    if frame.nameLabel then frame.nameLabel:SetFont(ns.FONT_ROWS, math.max(8, fontSize - 1), GetFontFlags()) end
+    if frame.input then ApplyDialogEditBoxFont(frame.input, math.max(9, fontSize)) end
+    if frame.hint then frame.hint:SetFont(ns.FONT_ROWS, math.max(8, fontSize - 2), GetFontFlags()) end
+    if frame.separateModuleCheck and frame.separateModuleCheck._text then
+        frame.separateModuleCheck._text:SetFont(ns.FONT_ROWS, math.max(8, fontSize - 1), GetFontFlags())
+    end
+    for _, button in ipairs({ frame.saveBtn, frame.cancelBtn, frame.removeBtn, frame.deleteAllBtn }) do
+        if button and button._label then
+            button._label:SetFont(ns.FONT_HEADERS, 10, GetFontFlags())
+        end
     end
 end
 
@@ -269,9 +292,59 @@ local function EnsureCustomTaskDialog()
     BindHelp(input, "CustomTasks_TaskNameTooltip", "The name shown for this custom task.")
 
 
+    local categoryLabel = MakeLabel(nameBg, "BOTTOMLEFT", 0, -GAP, Text("CustomTasks_CategoryLabel", "Category (optional)"))
+    categoryLabel:SetTextColor(0.74, 0.84, 0.92)
+    local categoryBg = MakeInputBg(categoryLabel, "BOTTOMLEFT", 0, -IGAP, 235, IH)
+    local categoryInput = MakeEditBox(categoryBg, 80)
+    frame.categoryLabel = categoryLabel
+    frame.categoryBg = categoryBg
+    frame.categoryInput = categoryInput
+    BindHelp(categoryInput, "CustomTasks_CategoryTooltip", "Type a new category name or choose an existing category. Leave blank for no category.")
+
+    local categoryDropdown = ns.CreateDropdown(frame, {
+        width = 105,
+        height = IH,
+        fontSize = function() return math.max(8, GetFontSize() - 1) end,
+        maxVisibleRows = 9,
+        getOptions = function()
+            local options = {
+                { key = "", label = Text("CustomTasks_NoCategory", "No category") },
+            }
+            local current = (frame.categoryInput and frame.categoryInput:GetText() or ""):gsub("^%s+", ""):gsub("%s+$", "")
+            local foundCurrent = current == ""
+            local categories = MR.GetCustomTaskCategories and MR:GetCustomTaskCategories(frame.resetType) or {}
+            for _, category in ipairs(categories) do
+                options[#options + 1] = { key = category, label = category }
+                if category == current then
+                    foundCurrent = true
+                end
+            end
+            if not foundCurrent then
+                options[#options + 1] = { key = current, label = current }
+            end
+            return options
+        end,
+        getSelected = function()
+            return (frame.categoryInput and frame.categoryInput:GetText() or ""):gsub("^%s+", ""):gsub("%s+$", "")
+        end,
+        onSelect = function(category)
+            if frame.categoryInput then
+                frame.categoryInput:SetText(category or "")
+            end
+        end,
+    })
+    categoryDropdown:SetPoint("TOPLEFT", categoryLabel, "BOTTOMLEFT", 245, -IGAP)
+    frame.categoryDropdown = categoryDropdown
+
+    categoryInput:SetScript("OnTextChanged", function(selfEdit)
+        ApplyDialogEditBoxFont(selfEdit, GetFontSize())
+        if frame.categoryDropdown then frame.categoryDropdown:Update() end
+    end)
+
+
     local COL2W = 170
 
-    local questLabel = MakeLabel(nameBg, "BOTTOMLEFT", 0, -GAP, L["CustomTasks_QuestIdsLabel"] or "Quest ID(s)")
+    local questLabel = MakeLabel(categoryBg, "BOTTOMLEFT", 0, -GAP, L["CustomTasks_QuestIdsLabel"] or "Quest ID(s)")
     local questBg    = MakeInputBg(questLabel, "BOTTOMLEFT", 0, -IGAP, COL2W, IH)
     local questInput = MakeEditBox(questBg, 120)
     frame.questLabel = questLabel
@@ -279,7 +352,7 @@ local function EnsureCustomTaskDialog()
     frame.questInput = questInput
     BindHelp(questInput, "CustomTasks_QuestIdsTooltip", "Enter one or more quest IDs separated by commas or spaces. Target 1 completes when any listed quest is done; increase Target to require more.")
 
-    local encounterLabel = MakeLabel(nameBg, "BOTTOMLEFT", COL2W + GAP, -GAP, L["CustomTasks_EncounterIdsLabel"] or "Encounter ID(s)")
+    local encounterLabel = MakeLabel(categoryBg, "BOTTOMLEFT", COL2W + GAP, -GAP, L["CustomTasks_EncounterIdsLabel"] or "Encounter ID(s)")
     local encounterBg    = MakeInputBg(encounterLabel, "BOTTOMLEFT", 0, -IGAP, COL2W, IH)
     local encounterInput = MakeEditBox(encounterBg, 120)
     frame.encounterLabel  = encounterLabel
@@ -402,6 +475,7 @@ local function EnsureCustomTaskDialog()
             if not selfBtn:GetChecked() then selfBtn:SetChecked(true) end
             frame.resetType = selfBtn._value
             if frame.RefreshResetChecks then frame:RefreshResetChecks() end
+            if frame.categoryDropdown then frame.categoryDropdown:Update() end
         end)
         return cb
     end
@@ -693,9 +767,9 @@ local function EnsureCustomTaskDialog()
         end
 
         if self.taskId then
-            MR:UpdateCustomTask(self.taskId, text, self.resetType, maxValue, self.questInput:GetText() or "", self.allowManualQuestClicks, self.encounterInput and self.encounterInput:GetText() or "", self.autoUpdateInstances, encounterDifficulties, self.taskScope, self.originalTaskScope, self.accountWideComplete, self.orderedQuestSequence)
+            MR:UpdateCustomTask(self.taskId, text, self.resetType, maxValue, self.questInput:GetText() or "", self.allowManualQuestClicks, self.encounterInput and self.encounterInput:GetText() or "", self.autoUpdateInstances, encounterDifficulties, self.taskScope, self.originalTaskScope, self.accountWideComplete, self.orderedQuestSequence, self.categoryInput and self.categoryInput:GetText() or "")
         else
-            MR:AddCustomTask(text, self.resetType, maxValue, self.questInput:GetText() or "", self.allowManualQuestClicks, self.encounterInput and self.encounterInput:GetText() or "", self.autoUpdateInstances, encounterDifficulties, self.taskScope, self.accountWideComplete, self.orderedQuestSequence)
+            MR:AddCustomTask(text, self.resetType, maxValue, self.questInput:GetText() or "", self.allowManualQuestClicks, self.encounterInput and self.encounterInput:GetText() or "", self.autoUpdateInstances, encounterDifficulties, self.taskScope, self.accountWideComplete, self.orderedQuestSequence, self.categoryInput and self.categoryInput:GetText() or "")
         end
         self:Hide()
     end
@@ -705,6 +779,7 @@ local function EnsureCustomTaskDialog()
     questInput:SetScript("OnEnterPressed",    function() frame:Commit() end)
     encounterInput:SetScript("OnEnterPressed",function() frame:Commit() end)
     targetInput:SetScript("OnEnterPressed",   function() frame:Commit() end)
+    categoryInput:SetScript("OnEnterPressed", function() frame:Commit() end)
 
     if frame.RefreshSmartState then frame:RefreshSmartState() end
     MR.customTaskDialog = frame
@@ -724,6 +799,7 @@ function MR:ShowCustomTaskDialog(taskId, presetResetType, taskScope)
     dialog.resetType = (task and task.resetType) or presetResetType or "weekly"
     dialog.title:SetText(task and (L["CustomTasks_EditTitle"] or "Edit Custom Task") or (L["CustomTasks_AddTitle"] or "Add Custom Task"))
     dialog.input:SetText(task and task.label or "")
+    dialog.categoryInput:SetText((task and task.category) or "")
     dialog.questInput:SetText((task and task.questIds and table.concat(task.questIds, ", ")) or "")
     dialog.encounterInput:SetText((task and task.encounterIds and table.concat(task.encounterIds, ", ")) or "")
     dialog.targetInput:SetText(tostring((task and task.max) or 1))
@@ -756,6 +832,9 @@ function MR:ShowCustomTaskDialog(taskId, presetResetType, taskScope)
     end
     if dialog.RefreshSmartState then
         dialog:RefreshSmartState()
+    end
+    if dialog.categoryDropdown then
+        dialog.categoryDropdown:Update()
     end
     ApplyCustomTaskDialogTheme(dialog)
     dialog:Show()
@@ -905,11 +984,216 @@ function MR:ShowCustomTasksTitleDialog()
     dialog.input:HighlightText(0, -1)
 end
 
+local function EnsureCustomTaskCategoryDialog()
+    if MR.customTaskCategoryDialog then
+        return MR.customTaskCategoryDialog
+    end
+
+    local frame = CreateFrame("Frame", nil, UIParent, "BackdropTemplate")
+    frame:SetSize(440, 286)
+    MR:RegisterPriorityFrame(frame)
+    frame:SetFrameLevel(82)
+    frame:SetClampedToScreen(true)
+    frame:SetMovable(true)
+    frame:SetPoint("CENTER", UIParent, "CENTER", 0, 55)
+    frame:SetBackdrop(MakeBackdrop())
+    frame:SetBackdropColor(0.03, 0.08, 0.14, 0.99)
+    frame:SetBackdropBorderColor(0.20, 0.44, 0.48, 1)
+    frame:Hide()
+
+    local dragRegion = CreateFrame("Frame", nil, frame)
+    dragRegion:SetPoint("TOPLEFT", frame, "TOPLEFT", 8, -8)
+    dragRegion:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -8, -8)
+    dragRegion:SetHeight(28)
+    dragRegion:EnableMouse(true)
+    dragRegion:RegisterForDrag("LeftButton")
+    dragRegion:SetScript("OnDragStart", function() frame:StartMoving() end)
+    dragRegion:SetScript("OnDragStop", function() frame:StopMovingOrSizing() end)
+
+    local title = frame:CreateFontString(nil, "OVERLAY")
+    title:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, -14)
+    title:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -14, -14)
+    title:SetJustifyH("LEFT")
+    title:SetText(Text("CustomTasks_ManageCategoryTitle", "Manage Category"))
+    title:SetTextColor(0.92, 0.97, 1)
+    frame.titleText = title
+
+    local separator = frame:CreateTexture(nil, "ARTWORK")
+    separator:SetHeight(1)
+    separator:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -8)
+    separator:SetPoint("TOPRIGHT", title, "BOTTOMRIGHT", 0, -8)
+    separator:SetColorTexture(0.20, 0.44, 0.48, 0.5)
+
+    local subtitle = frame:CreateFontString(nil, "OVERLAY")
+    subtitle:SetPoint("TOPLEFT", separator, "BOTTOMLEFT", 0, -9)
+    subtitle:SetPoint("TOPRIGHT", separator, "BOTTOMRIGHT", 0, -9)
+    subtitle:SetJustifyH("LEFT")
+    subtitle:SetText(Text("CustomTasks_ManageCategoryNote", "Rename this category, show it as its own module, remove only the separator, or permanently delete every task inside it."))
+    subtitle:SetTextColor(0.68, 0.78, 0.86)
+    frame.subtitle = subtitle
+
+    local nameLabel = frame:CreateFontString(nil, "OVERLAY")
+    nameLabel:SetPoint("TOPLEFT", subtitle, "BOTTOMLEFT", 0, -12)
+    nameLabel:SetText(Text("CustomTasks_CategoryName", "Category name"))
+    nameLabel:SetTextColor(0.55, 0.70, 0.82)
+    frame.nameLabel = nameLabel
+
+    local inputBg = CreateFrame("Frame", nil, frame, "BackdropTemplate")
+    inputBg:SetPoint("TOPLEFT", nameLabel, "BOTTOMLEFT", 0, -5)
+    inputBg:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -14, 0)
+    inputBg:SetHeight(34)
+    inputBg:SetBackdrop(MakeBackdrop())
+    inputBg:SetBackdropColor(0.05, 0.10, 0.18, 0.98)
+    inputBg:SetBackdropBorderColor(0.18, 0.40, 0.45, 1)
+
+    local input = CreateFrame("EditBox", nil, inputBg, "InputBoxTemplate")
+    input:SetAutoFocus(false)
+    input:SetPoint("TOPLEFT", inputBg, "TOPLEFT", 8, -8)
+    input:SetPoint("BOTTOMRIGHT", inputBg, "BOTTOMRIGHT", -8, 8)
+    input:SetFontObject(ChatFontNormal)
+    input:SetTextInsets(0, 0, 0, 0)
+    input:SetMaxLetters(80)
+    input:SetTextColor(0.95, 0.97, 1)
+    input:SetScript("OnEscapePressed", function() frame:Hide() end)
+    input:SetScript("OnTextChanged", function(selfInput)
+        ApplyDialogEditBoxFont(selfInput, GetFontSize())
+        if frame.ResetDeleteState then frame:ResetDeleteState() end
+    end)
+    frame.input = input
+
+    local hint = frame:CreateFontString(nil, "OVERLAY")
+    hint:SetPoint("TOPLEFT", inputBg, "BOTTOMLEFT", 0, -8)
+    hint:SetPoint("TOPRIGHT", inputBg, "BOTTOMRIGHT", 0, -8)
+    hint:SetJustifyH("LEFT")
+    hint:SetText(Text("CustomTasks_ManageCategoryHint", "Removing only the category keeps its tasks directly under the reset section."))
+    hint:SetTextColor(0.60, 0.72, 0.82)
+    frame.hint = hint
+
+    local separateModuleCheck = CreateFrame("CheckButton", nil, frame, "UICheckButtonTemplate")
+    separateModuleCheck:SetSize(20, 20)
+    separateModuleCheck:SetPoint("TOPLEFT", hint, "BOTTOMLEFT", -4, -9)
+    local separateModuleText = separateModuleCheck:CreateFontString(nil, "OVERLAY")
+    separateModuleText:SetPoint("LEFT", separateModuleCheck, "RIGHT", 2, 0)
+    separateModuleText:SetText(Text("CustomTasks_ShowAsSeparateModule", "Show as a separate module"))
+    separateModuleText:SetTextColor(0.78, 0.90, 0.94)
+    separateModuleCheck._text = separateModuleText
+    frame.separateModuleCheck = separateModuleCheck
+
+    local function CreateDialogButton(width, label, color, borderColor)
+        local button = CreateFrame("Button", nil, frame, "BackdropTemplate")
+        button:SetSize(width, 24)
+        button:SetBackdrop(MakeBackdrop())
+        button:SetBackdropColor(color[1], color[2], color[3], 0.95)
+        button:SetBackdropBorderColor(borderColor[1], borderColor[2], borderColor[3], 1)
+        local buttonLabel = button:CreateFontString(nil, "OVERLAY")
+        buttonLabel:SetPoint("CENTER", button, "CENTER", 0, 1)
+        buttonLabel:SetText(label)
+        buttonLabel:SetTextColor(0.92, 0.96, 1)
+        button._label = buttonLabel
+        button:SetScript("OnEnter", function(selfButton)
+            selfButton:SetBackdropColor(color[1] + 0.04, color[2] + 0.04, color[3] + 0.04, 1)
+            selfButton:SetBackdropBorderColor(1, 1, 1, 1)
+        end)
+        button:SetScript("OnLeave", function(selfButton)
+            selfButton:SetBackdropColor(color[1], color[2], color[3], 0.95)
+            selfButton:SetBackdropBorderColor(borderColor[1], borderColor[2], borderColor[3], 1)
+        end)
+        return button
+    end
+
+    local saveBtn = CreateDialogButton(92, L["CustomTasks_Save"] or "Save", { 0.10, 0.26, 0.20 }, { 0.28, 0.78, 0.50 })
+    saveBtn:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -14, 12)
+    frame.saveBtn = saveBtn
+
+    local cancelBtn = CreateDialogButton(92, L["CustomTasks_Cancel"] or "Cancel", { 0.10, 0.12, 0.16 }, { 0.28, 0.34, 0.42 })
+    cancelBtn:SetPoint("RIGHT", saveBtn, "LEFT", -8, 0)
+    cancelBtn:SetScript("OnClick", function() frame:Hide() end)
+    frame.cancelBtn = cancelBtn
+
+    local removeBtn = CreateDialogButton(164, Text("CustomTasks_RemoveCategoryOnly", "Remove Category Only"), { 0.18, 0.12, 0.05 }, { 0.68, 0.44, 0.15 })
+    removeBtn:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 14, 46)
+    removeBtn:SetScript("OnClick", function()
+        if MR.RemoveCustomTaskCategory then
+            MR:RemoveCustomTaskCategory(frame.resetType, frame.category)
+        end
+        frame:Hide()
+    end)
+    frame.removeBtn = removeBtn
+
+    local deleteAllBtn = CreateDialogButton(204, Text("CustomTasks_DeleteCategoryTasks", "Delete Category + All Tasks"), { 0.22, 0.06, 0.06 }, { 0.76, 0.18, 0.18 })
+    deleteAllBtn:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -14, 46)
+    deleteAllBtn:SetScript("OnClick", function()
+        if not frame.deleteArmed then
+            frame.deleteArmed = true
+            deleteAllBtn._label:SetText(Text("CustomTasks_ConfirmDeleteCategoryTasks", "Click Again to Delete Everything"))
+            hint:SetText(Text("CustomTasks_DeleteCategoryWarning", "This permanently deletes every task in this category and its saved progress."))
+            hint:SetTextColor(1, 0.38, 0.38)
+            return
+        end
+        if MR.DeleteCustomTaskCategory then
+            MR:DeleteCustomTaskCategory(frame.resetType, frame.category)
+        end
+        frame:Hide()
+    end)
+    frame.deleteAllBtn = deleteAllBtn
+
+    function frame:ResetDeleteState()
+        self.deleteArmed = false
+        self.deleteAllBtn._label:SetText(Text("CustomTasks_DeleteCategoryTasks", "Delete Category + All Tasks"))
+        self.hint:SetText(Text("CustomTasks_ManageCategoryHint", "Removing only the category keeps its tasks directly under the reset section."))
+        self.hint:SetTextColor(0.60, 0.72, 0.82)
+    end
+
+    function frame:Commit()
+        local newCategory = self.input:GetText() or ""
+        newCategory = newCategory:gsub("^%s+", ""):gsub("%s+$", "")
+        if newCategory == "" then
+            if UIErrorsFrame and UIErrorsFrame.AddMessage then
+                UIErrorsFrame:AddMessage(Text("CustomTasks_CategoryEmptyError", "Enter a category name first."), 1, 0.25, 0.25)
+            end
+            self.input:SetFocus()
+            return
+        end
+        if MR.RenameCustomTaskCategory then
+            MR:RenameCustomTaskCategory(self.resetType, self.category, newCategory)
+        end
+        if MR.SetCustomTaskCategorySeparateModule then
+            MR:SetCustomTaskCategorySeparateModule(self.resetType, newCategory, self.separateModuleCheck:GetChecked())
+        end
+        self:Hide()
+    end
+
+    saveBtn:SetScript("OnClick", function() frame:Commit() end)
+    input:SetScript("OnEnterPressed", function() frame:Commit() end)
+    frame:SetScript("OnHide", function(selfFrame) selfFrame:ResetDeleteState() end)
+
+    MR.customTaskCategoryDialog = frame
+    ApplyCustomTaskCategoryDialogTheme(frame)
+    return frame
+end
+
+function MR:ShowCustomTaskCategoryDialog(resetType, category)
+    local dialog = EnsureCustomTaskCategoryDialog()
+    dialog.resetType = resetType
+    dialog.category = category
+    dialog.titleText:SetText(Text("CustomTasks_ManageCategoryTitle", "Manage Category") .. ": " .. tostring(category or ""))
+    dialog.input:SetText(category or "")
+    dialog.separateModuleCheck:SetChecked(self:IsCustomTaskCategorySeparateModule(resetType, category))
+    dialog:ResetDeleteState()
+    ApplyCustomTaskCategoryDialogTheme(dialog)
+    dialog:Show()
+    dialog.input:SetFocus()
+    dialog.input:HighlightText(0, -1)
+end
+
 function MR:RefreshCustomTaskDialogThemes()
     if self.customTaskDialog then
         ApplyCustomTaskDialogTheme(self.customTaskDialog)
     end
     if self.customTasksTitleDialog then
         ApplyCustomTasksTitleDialogTheme(self.customTasksTitleDialog)
+    end
+    if self.customTaskCategoryDialog then
+        ApplyCustomTaskCategoryDialogTheme(self.customTaskCategoryDialog)
     end
 end

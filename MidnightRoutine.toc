@@ -30,8 +30,7 @@ Core/Foundation.lua
 Core/Runtime.lua
 Core/Registry.lua
 Core/Progress.lua
-UI/MapWaypoint.lua
-UI/MapWaypoint.xml
+UI/Components/MapWaypoint.xml
 Core/Settings.lua
 Core/Lifecycle.lua
 Core/Events.lua

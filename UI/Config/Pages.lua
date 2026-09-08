@@ -307,7 +307,7 @@ function MR:PopulateConfigFrame(f)
         Gap(4); Divider()
         SectionLabel(L["Config_SectionKeyBinding"] or "KEY BINDING")
         Gap(2)
-        local bindingKey = GetBindingKey and GetBindingKey("MIDNIGHTROUTINE_TOGGLE_WINDOWS")
+        local bindingKey = GetBindingKey and GetBindingKey(ns.TOGGLE_WINDOWS_BINDING)
         local bindingText = bindingKey and GetBindingText and GetBindingText(bindingKey, "KEY_") or bindingKey
         local bindingLabel = (L["Config_SetKeyBinding"] or "Set Show / Hide Key") .. ": "
             .. (bindingText or L["Config_KeyBindingNotBound"] or "Not Bound")

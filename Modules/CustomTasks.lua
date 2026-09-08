@@ -24,6 +24,14 @@ local function TrimText(value)
     return value
 end
 
+local function NormalizeCategory(value)
+    local category = TrimText(value)
+    if category == "" then
+        return nil
+    end
+    return category:sub(1, 80)
+end
+
 local function Text(key, fallback)
     local value = L[key]
     return (value and value ~= key) and value or fallback
@@ -63,6 +71,22 @@ local function NormalizeResetType(resetType)
     if resetType == "daily" then return "daily" end
     if resetType == "none" then return "none" end
     return "weekly"
+end
+
+local function GetCategoryRowKey(resetType, category)
+    return "__custom_task_category\031" .. NormalizeResetType(resetType) .. "\031" .. tostring(category or "")
+end
+
+local function GetCategoryBackgroundKey(resetType, category)
+    return "custom_tasks_category\031" .. NormalizeResetType(resetType) .. "\031" .. tostring(category or "")
+end
+
+local function GetCategoryModuleSettingKey(resetType, category)
+    return NormalizeResetType(resetType) .. "\031" .. tostring(category or "")
+end
+
+local function GetCategoryModuleKey(entry)
+    return entry and entry.id and ("custom_task_category_module_" .. tostring(entry.id)) or nil
 end
 
 local function NormalizeTaskMax(maxValue)
@@ -456,6 +480,255 @@ function MR:SetCustomTaskGroupHideComplete(resetType, value)
     self:RefreshUI()
 end
 
+function MR:GetCustomTaskCategories(resetType)
+    resetType = resetType and NormalizeResetType(resetType) or nil
+    local categories = {}
+    local seen = {}
+    for _, task in ipairs(self:GetCustomTasks()) do
+        local category = NormalizeCategory(task.category)
+        if category and (not resetType or NormalizeResetType(task.resetType) == resetType) then
+            local categoryKey = category
+            if not seen[categoryKey] then
+                seen[categoryKey] = true
+                categories[#categories + 1] = category
+            end
+        end
+    end
+    table.sort(categories, function(a, b)
+        return a:lower() < b:lower()
+    end)
+    return categories
+end
+
+function MR:IsCustomTaskCategoryCollapsed(resetType, category)
+    resetType = NormalizeResetType(resetType)
+    category = NormalizeCategory(category)
+    local collapsed = self.db and self.db.char and self.db.char.customTaskCategoryCollapsed
+    local section = collapsed and collapsed[resetType]
+    return category and section and section[category] == true or false
+end
+
+function MR:SetCustomTaskCategoryCollapsed(resetType, category, value)
+    resetType = NormalizeResetType(resetType)
+    category = NormalizeCategory(category)
+    if not category or not (self.db and self.db.char) then
+        return false
+    end
+    self.db.char.customTaskCategoryCollapsed = self.db.char.customTaskCategoryCollapsed or {}
+    self.db.char.customTaskCategoryCollapsed[resetType] = self.db.char.customTaskCategoryCollapsed[resetType] or {}
+    self.db.char.customTaskCategoryCollapsed[resetType][category] = value and true or nil
+    RefreshCustomTaskViews(self)
+    return true
+end
+
+function MR:GetCustomTaskCategoryModuleEntry(resetType, category, create)
+    resetType = NormalizeResetType(resetType)
+    category = NormalizeCategory(category)
+    if not category or not (self.db and self.db.profile) then
+        return nil
+    end
+    local profile = self.db.profile
+    profile.customTaskCategoryModules = profile.customTaskCategoryModules or {}
+    local settingKey = GetCategoryModuleSettingKey(resetType, category)
+    local entry = profile.customTaskCategoryModules[settingKey]
+    if type(entry) ~= "table" and create then
+        local id = math.max(1, math.floor(tonumber(profile.customTaskCategoryModuleNextId) or 1))
+        local usedIds = {}
+        for _, existing in pairs(profile.customTaskCategoryModules) do
+            if type(existing) == "table" and existing.id then
+                usedIds[tonumber(existing.id)] = true
+            end
+        end
+        while usedIds[id] do id = id + 1 end
+        profile.customTaskCategoryModuleNextId = id + 1
+        entry = { id = id, enabled = false }
+        profile.customTaskCategoryModules[settingKey] = entry
+    end
+    return type(entry) == "table" and entry or nil
+end
+
+function MR:IsCustomTaskCategorySeparateModule(resetType, category)
+    local entry = self:GetCustomTaskCategoryModuleEntry(resetType, category, false)
+    return entry and entry.enabled == true or false
+end
+
+function MR:SetCustomTaskCategorySeparateModule(resetType, category, enabled)
+    resetType = NormalizeResetType(resetType)
+    category = NormalizeCategory(category)
+    if not category then
+        return false
+    end
+    local entry = self:GetCustomTaskCategoryModuleEntry(resetType, category, enabled == true)
+    if not entry then
+        return false
+    end
+    local wasEnabled = entry.enabled == true
+    entry.enabled = enabled == true
+    if entry.enabled then
+        local profile = self.db.profile
+        local moduleKey = GetCategoryModuleKey(entry)
+        profile.headerColors = profile.headerColors or {}
+        profile.headerBackgroundColors = profile.headerBackgroundColors or {}
+        local rowColors = profile.rowColors and profile.rowColors[CUSTOM_MODULE_KEY]
+        if profile.headerColors[moduleKey] == nil and rowColors then
+            profile.headerColors[moduleKey] = rowColors[GetCategoryRowKey(resetType, category)]
+        end
+        if profile.headerBackgroundColors[moduleKey] == nil then
+            profile.headerBackgroundColors[moduleKey] = profile.headerBackgroundColors[GetCategoryBackgroundKey(resetType, category)]
+        end
+    end
+    RefreshCustomTaskViews(self)
+    if entry.enabled then
+        local moduleKey = GetCategoryModuleKey(entry)
+        local known = self.GetActiveKnownModuleStorage and self:GetActiveKnownModuleStorage()
+        if known then known[moduleKey] = true end
+        if not wasEnabled and self.moduleByKey and self.moduleByKey[moduleKey] and self.SetModuleEnabled then
+            self:SetModuleEnabled(moduleKey, true, true)
+        end
+    end
+    return true
+end
+
+function MR:RenameCustomTaskCategory(resetType, oldCategory, newCategory)
+    resetType = NormalizeResetType(resetType)
+    oldCategory = NormalizeCategory(oldCategory)
+    newCategory = NormalizeCategory(newCategory)
+    if not oldCategory or oldCategory == newCategory then
+        return false
+    end
+
+    local changed = false
+    for _, scope in ipairs({ TASK_SCOPE_CHARACTER, TASK_SCOPE_SHARED }) do
+        for _, task in ipairs(GetTaskStorage(scope) or {}) do
+            if NormalizeResetType(task.resetType) == resetType and NormalizeCategory(task.category) == oldCategory then
+                task.category = newCategory
+                changed = true
+            end
+        end
+    end
+    if not changed then
+        return false
+    end
+
+    local collapsed = self.db and self.db.char and self.db.char.customTaskCategoryCollapsed
+    local section = collapsed and collapsed[resetType]
+    if section then
+        local wasCollapsed = section[oldCategory] == true
+        section[oldCategory] = nil
+        if newCategory and wasCollapsed then
+            section[newCategory] = true
+        end
+    end
+
+    local moduleStorage = self.GetActiveModuleStorage and self:GetActiveModuleStorage()
+    local hiddenRows = moduleStorage and moduleStorage[CUSTOM_MODULE_KEY] and moduleStorage[CUSTOM_MODULE_KEY].hiddenRows
+    if hiddenRows then
+        local oldKey = GetCategoryRowKey(resetType, oldCategory)
+        local newKey = newCategory and GetCategoryRowKey(resetType, newCategory)
+        if newKey and hiddenRows[newKey] == nil then
+            hiddenRows[newKey] = hiddenRows[oldKey]
+        end
+        hiddenRows[oldKey] = nil
+    end
+
+    local profile = self.db and self.db.profile
+    if profile then
+        local categoryModules = profile.customTaskCategoryModules
+        if categoryModules then
+            local oldSettingKey = GetCategoryModuleSettingKey(resetType, oldCategory)
+            local newSettingKey = newCategory and GetCategoryModuleSettingKey(resetType, newCategory)
+            local oldEntry = categoryModules[oldSettingKey]
+            if oldEntry then
+                if newSettingKey and categoryModules[newSettingKey] then
+                    categoryModules[newSettingKey].enabled = categoryModules[newSettingKey].enabled == true or oldEntry.enabled == true
+                elseif newSettingKey then
+                    categoryModules[newSettingKey] = oldEntry
+                end
+                categoryModules[oldSettingKey] = nil
+            end
+        end
+        local rowColors = profile.rowColors and profile.rowColors[CUSTOM_MODULE_KEY]
+        if rowColors then
+            local oldKey = GetCategoryRowKey(resetType, oldCategory)
+            local newKey = newCategory and GetCategoryRowKey(resetType, newCategory)
+            if newKey and rowColors[newKey] == nil then
+                rowColors[newKey] = rowColors[oldKey]
+            end
+            rowColors[oldKey] = nil
+        end
+        local backgrounds = profile.headerBackgroundColors
+        if backgrounds then
+            local oldKey = GetCategoryBackgroundKey(resetType, oldCategory)
+            local newKey = newCategory and GetCategoryBackgroundKey(resetType, newCategory)
+            if newKey and backgrounds[newKey] == nil then
+                backgrounds[newKey] = backgrounds[oldKey]
+            end
+            backgrounds[oldKey] = nil
+        end
+    end
+    RefreshCustomTaskViews(self)
+    return true
+end
+
+function MR:RemoveCustomTaskCategory(resetType, category)
+    return self:RenameCustomTaskCategory(resetType, category, nil)
+end
+
+function MR:DeleteCustomTaskCategory(resetType, category)
+    resetType = NormalizeResetType(resetType)
+    category = NormalizeCategory(category)
+    if not category then
+        return false
+    end
+
+    local targets = {}
+    for _, scope in ipairs({ TASK_SCOPE_CHARACTER, TASK_SCOPE_SHARED }) do
+        for _, task in ipairs(GetTaskStorage(scope) or {}) do
+            if NormalizeResetType(task.resetType) == resetType and NormalizeCategory(task.category) == category then
+                targets[#targets + 1] = { id = task.id, scope = scope }
+            end
+        end
+    end
+    if #targets == 0 then
+        return false
+    end
+
+    for _, target in ipairs(targets) do
+        self:DeleteCustomTask(target.id, target.scope)
+    end
+
+    local categoryRowKey = GetCategoryRowKey(resetType, category)
+    local categoryBackgroundKey = GetCategoryBackgroundKey(resetType, category)
+    local collapsed = self.db and self.db.char and self.db.char.customTaskCategoryCollapsed
+    if collapsed and collapsed[resetType] then
+        collapsed[resetType][category] = nil
+    end
+    local profile = self.db and self.db.profile
+    if profile and profile.customTaskCategoryModules then
+        profile.customTaskCategoryModules[GetCategoryModuleSettingKey(resetType, category)] = nil
+    end
+    if profile and profile.rowColors and profile.rowColors[CUSTOM_MODULE_KEY] then
+        profile.rowColors[CUSTOM_MODULE_KEY][categoryRowKey] = nil
+    end
+    if profile and profile.headerBackgroundColors then
+        profile.headerBackgroundColors[categoryBackgroundKey] = nil
+    end
+    local storage = self.GetActiveModuleStorage and self:GetActiveModuleStorage()
+    local moduleSettings = storage and storage[CUSTOM_MODULE_KEY]
+    if moduleSettings and moduleSettings.hiddenRows then
+        moduleSettings.hiddenRows[categoryRowKey] = nil
+    end
+    if moduleSettings and type(moduleSettings.rowOrder) == "table" then
+        for index = #moduleSettings.rowOrder, 1, -1 do
+            if moduleSettings.rowOrder[index] == categoryRowKey then
+                table.remove(moduleSettings.rowOrder, index)
+            end
+        end
+    end
+    RefreshCustomTaskViews(self)
+    return true
+end
+
 local function SortTasks(tasks)
     table.sort(tasks, function(a, b)
         local aOrder = tonumber(a and a.order) or 0
@@ -515,6 +788,7 @@ function MR:GetCustomTasks()
         task.autoUpdateInstances = NormalizeBoolean(task.autoUpdateInstances)
         task.accountWideComplete = NormalizeBoolean(task.accountWideComplete)
         task.encounterDifficulties = NormalizeEncounterDifficulties(task.encounterDifficulties)
+        task.category = NormalizeCategory(task.category)
         task.questId = nil
     end
     SortTasks(tasks)
@@ -585,10 +859,16 @@ end
 
 local function BuildSectionRows(rows, tasks, resetType, headerKey, addKey, headerLabel, headerNote, addLabel)
     local doneCount = 0
+    local progressEntries = {}
     local addRowVisible = MR:IsRowEnabled(CUSTOM_MODULE_KEY, addKey)
     for _, task in ipairs(tasks) do
         if NormalizeResetType(task.resetType) == resetType then
-            if tonumber(MR:GetProgress(CUSTOM_MODULE_KEY, GetTaskRowKey(task.id, task.scope))) >= NormalizeTaskMax(task.max) then
+            local effectiveMax = NormalizeTaskMax(task.max)
+            local diffCount = CountTrackedDifficulties(task)
+            if diffCount >= 2 then effectiveMax = diffCount end
+            local rowKey = GetTaskRowKey(task.id, task.scope)
+            progressEntries[#progressEntries + 1] = { key = rowKey, max = effectiveMax }
+            if tonumber(MR:GetProgress(CUSTOM_MODULE_KEY, rowKey)) >= effectiveMax then
                 doneCount = doneCount + 1
             end
         end
@@ -606,6 +886,7 @@ local function BuildSectionRows(rows, tasks, resetType, headerKey, addKey, heade
         labelColor = RESET_TYPE_COLORS[resetType],
         headerBackgroundKey = "custom_tasks_section_" .. resetType,
         countText = string.format("%d / %d", doneCount, #tasks),
+        progressEntries = progressEntries,
         countColor = { 0.74, 0.80, 0.88 },
         headerActionStyle = "visibility",
         headerActionVisible = addRowVisible,
@@ -618,8 +899,7 @@ local function BuildSectionRows(rows, tasks, resetType, headerKey, addKey, heade
         end,
     }
 
-    for _, task in ipairs(tasks) do
-        if NormalizeResetType(task.resetType) == resetType then
+    local function AddTaskRow(task, orderGroup, categoryCollapsed)
             local taskId = tonumber(task.id)
             if taskId then
                 local taskScope = NormalizeTaskScope(task.scope)
@@ -701,6 +981,9 @@ local function BuildSectionRows(rows, tasks, resetType, headerKey, addKey, heade
                     accountWideComplete = task.accountWideComplete,
                     preserveCompletion = resetType == "none",
                     configGroup = resetType,
+                    orderGroup = orderGroup,
+                    category = task.category,
+                    categoryCollapsed = categoryCollapsed == true,
                     hideComplete = MR:IsCustomTaskGroupHideComplete(resetType),
                     noDefaultTooltipHint = true,
                     tooltipFunc = function(tip)
@@ -772,6 +1055,95 @@ local function BuildSectionRows(rows, tasks, resetType, headerKey, addKey, heade
                     end,
                 }
             end
+    end
+
+    local categoryGroups = {}
+    local categoryOrder = {}
+    local hasCategories = false
+    for _, task in ipairs(tasks) do
+        local category = NormalizeCategory(task.category)
+        local groupKey = category or false
+        if category then
+            hasCategories = true
+        end
+        if not categoryGroups[groupKey] then
+            categoryGroups[groupKey] = {}
+            categoryOrder[#categoryOrder + 1] = groupKey
+        end
+        categoryGroups[groupKey][#categoryGroups[groupKey] + 1] = task
+    end
+
+    if hasCategories then
+        for _, task in ipairs(categoryGroups[false] or {}) do
+            AddTaskRow(task, resetType .. "\031", false)
+        end
+        for _, groupKey in ipairs(categoryOrder) do
+            if groupKey ~= false then
+                local groupTasks = categoryGroups[groupKey]
+                local category = groupKey
+                local orderGroup = resetType .. "\031" .. category
+                local categoryDone = 0
+                local categoryProgressEntries = {}
+                for _, task in ipairs(groupTasks) do
+                    local effectiveMax = NormalizeTaskMax(task.max)
+                    local diffCount = CountTrackedDifficulties(task)
+                    if diffCount >= 2 then effectiveMax = diffCount end
+                    local rowKey = GetTaskRowKey(task.id, task.scope)
+                    categoryProgressEntries[#categoryProgressEntries + 1] = { key = rowKey, max = effectiveMax }
+                    if tonumber(MR:GetProgress(CUSTOM_MODULE_KEY, rowKey)) >= effectiveMax then
+                        categoryDone = categoryDone + 1
+                    end
+                end
+                local collapsed = MR:IsCustomTaskCategoryCollapsed(resetType, category)
+                rows[#rows + 1] = {
+                    key = GetCategoryRowKey(resetType, category),
+                    label = category,
+                    note = Text("CustomTasks_CategoryHeaderTooltip", "Click to expand or collapse this category. Right-click to rename or remove it."),
+                    control = true,
+                    sectionHeader = true,
+                    categoryHeader = true,
+                    headerIndent = 18,
+                    hideStatus = true,
+                    noDefaultTooltipHint = true,
+                    configGroup = resetType,
+                    orderGroup = orderGroup,
+                    category = category,
+                    headerBackgroundKey = GetCategoryBackgroundKey(resetType, category),
+                    labelColor = RESET_TYPE_COLORS[resetType],
+                    countText = string.format("%d / %d", categoryDone, #groupTasks),
+                    progressEntries = categoryProgressEntries,
+                    countColor = { 0.74, 0.80, 0.88 },
+                    headerActionStyle = "collapse",
+                    headerActionOpen = not collapsed,
+                    headerActionTooltip = collapsed
+                        and Text("CustomTasks_ExpandCategory", "Expand category")
+                        or Text("CustomTasks_CollapseCategory", "Collapse category"),
+                    onHeaderActionClick = function()
+                        MR:SetCustomTaskCategoryCollapsed(resetType, category, not collapsed)
+                    end,
+                    onLeftClick = function()
+                        if IsShiftKeyDown() and MR.ShowCustomTaskCategoryDialog then
+                            MR:ShowCustomTaskCategoryDialog(resetType, category)
+                        else
+                            MR:SetCustomTaskCategoryCollapsed(resetType, category, not collapsed)
+                        end
+                        return true
+                    end,
+                    onRightClick = function()
+                        if MR.ShowCustomTaskCategoryDialog then
+                            MR:ShowCustomTaskCategoryDialog(resetType, category)
+                        end
+                        return true
+                    end,
+                }
+                for _, task in ipairs(groupTasks) do
+                    AddTaskRow(task, orderGroup, collapsed)
+                end
+            end
+        end
+    else
+        for _, task in ipairs(tasks) do
+            AddTaskRow(task, resetType, false)
         end
     end
 
@@ -800,7 +1172,7 @@ local function BuildSectionRows(rows, tasks, resetType, headerKey, addKey, heade
     }
 end
 
-function MR:AddCustomTask(label, resetType, maxValue, questIds, allowManualQuestClicks, encounterIds, autoUpdateInstances, encounterDifficulties, scope, accountWideComplete, orderedQuestSequence)
+function MR:AddCustomTask(label, resetType, maxValue, questIds, allowManualQuestClicks, encounterIds, autoUpdateInstances, encounterDifficulties, scope, accountWideComplete, orderedQuestSequence, category)
     scope = NormalizeTaskScope(scope)
     local tasks = GetTaskStorage(scope)
     local cleanLabel = TrimText(label)
@@ -843,6 +1215,7 @@ function MR:AddCustomTask(label, resetType, maxValue, questIds, allowManualQuest
         accountWideComplete = accountWideComplete,
         orderedQuestSequence = orderedQuestSequence,
         encounterDifficulties = encounterDifficulties,
+        category = NormalizeCategory(category),
     }
 
     if self.RefreshCustomTasksModule then
@@ -855,7 +1228,7 @@ function MR:AddCustomTask(label, resetType, maxValue, questIds, allowManualQuest
     return taskId
 end
 
-function MR:UpdateCustomTask(taskId, label, resetType, maxValue, questIds, allowManualQuestClicks, encounterIds, autoUpdateInstances, encounterDifficulties, scope, originalScope, accountWideComplete, orderedQuestSequence)
+function MR:UpdateCustomTask(taskId, label, resetType, maxValue, questIds, allowManualQuestClicks, encounterIds, autoUpdateInstances, encounterDifficulties, scope, originalScope, accountWideComplete, orderedQuestSequence, category)
     scope = NormalizeTaskScope(scope)
     originalScope = NormalizeTaskScope(originalScope or scope)
     local task = self:GetCustomTaskById(taskId, originalScope)
@@ -956,6 +1329,7 @@ function MR:UpdateCustomTask(taskId, label, resetType, maxValue, questIds, allow
     task.accountWideComplete = accountWideComplete
     task.orderedQuestSequence = orderedQuestSequence
     task.encounterDifficulties = NormalizeEncounterDifficulties(encounterDifficulties)
+    task.category = NormalizeCategory(category)
     if accountWideComplete then
         WriteCustomTaskValue(GetAccountWideProgressStorage(), newRowKey, existingProgressValue)
         WriteCustomTaskValue(GetAccountWideManualOverrideStorage(), newRowKey, existingOverrideValue)
@@ -1125,6 +1499,104 @@ function MR:DeleteCustomTask(taskId, scope)
     return true
 end
 
+local function SyncCustomTaskCategoryModules(rows)
+    for index = #MR.modules, 1, -1 do
+        local module = MR.modules[index]
+        if module and module.customTaskCategoryModule then
+            MR.moduleByKey[module.key] = nil
+            table.remove(MR.modules, index)
+        end
+    end
+
+    local groups = {}
+    local groupOrder = {}
+    for _, row in ipairs(rows) do
+        if not row.control and row.category and MR:IsCustomTaskCategorySeparateModule(row.configGroup, row.category) then
+            local settingKey = GetCategoryModuleSettingKey(row.configGroup, row.category)
+            local group = groups[settingKey]
+            if not group then
+                local entry = MR:GetCustomTaskCategoryModuleEntry(row.configGroup, row.category, false)
+                group = {
+                    entry = entry,
+                    resetType = row.configGroup,
+                    category = row.category,
+                    rows = {},
+                }
+                groups[settingKey] = group
+                groupOrder[#groupOrder + 1] = settingKey
+            end
+            row.progressModuleKey = CUSTOM_MODULE_KEY
+            row.visibilityModuleKey = CUSTOM_MODULE_KEY
+            row.colorModuleKey = CUSTOM_MODULE_KEY
+            row.configGroup = nil
+            row.orderGroup = nil
+            row.categoryCollapsed = false
+            row.hideComplete = nil
+            group.rows[#group.rows + 1] = row
+        end
+    end
+
+    table.sort(groupOrder, function(a, b)
+        local aEntry = groups[a] and groups[a].entry
+        local bEntry = groups[b] and groups[b].entry
+        return (tonumber(aEntry and aEntry.id) or 0) < (tonumber(bEntry and bEntry.id) or 0)
+    end)
+
+    local filtered = {}
+    for _, row in ipairs(rows) do
+        local separate = row.category and MR:IsCustomTaskCategorySeparateModule(row.configGroup, row.category)
+        if row.categoryHeader and separate then
+            local entry = MR:GetCustomTaskCategoryModuleEntry(row.configGroup, row.category, false)
+            row.hideInMain = true
+            row.separateModuleKey = GetCategoryModuleKey(entry)
+            filtered[#filtered + 1] = row
+        elseif not (not row.control and row.progressModuleKey == CUSTOM_MODULE_KEY) then
+            filtered[#filtered + 1] = row
+        end
+    end
+
+    for _, row in ipairs(filtered) do
+        if row.sectionHeader and not row.categoryHeader and row.configGroup then
+            local entries = {}
+            local done = 0
+            for _, taskRow in ipairs(filtered) do
+                if not taskRow.control and taskRow.configGroup == row.configGroup then
+                    entries[#entries + 1] = { key = taskRow.key, max = taskRow.max or 1 }
+                    if tonumber(MR:GetProgress(CUSTOM_MODULE_KEY, taskRow.key)) >= (tonumber(taskRow.max) or 1) then
+                        done = done + 1
+                    end
+                end
+            end
+            row.progressEntries = entries
+            row.countText = string.format("%d / %d", done, #entries)
+        end
+    end
+
+    for _, settingKey in ipairs(groupOrder) do
+        local group = groups[settingKey]
+        local moduleKey = GetCategoryModuleKey(group.entry)
+        if moduleKey and #group.rows > 0 then
+            local module = {
+                key = moduleKey,
+                allExpansions = true,
+                label = group.category,
+                labelColor = RESET_TYPE_COLORS[group.resetType] or "#b07cff",
+                defaultOpen = true,
+                rows = group.rows,
+                customTaskCategoryModule = true,
+                customTaskCategory = group.category,
+                customTaskResetType = group.resetType,
+            }
+            MR.modules[#MR.modules + 1] = module
+            MR.moduleByKey[moduleKey] = module
+        end
+    end
+
+    MR._orderedModulesCache = nil
+    MR._orderedAllModulesCache = nil
+    return filtered
+end
+
 function MR:RefreshCustomTasksModule()
     local mod = self.moduleByKey and self.moduleByKey[CUSTOM_MODULE_KEY]
     if not mod then
@@ -1178,7 +1650,7 @@ function MR:RefreshCustomTasksModule()
         L["CustomTasks_AddNoResetLabel"] or "Add no-reset task"
     )
 
-    mod.rows = rows
+    mod.rows = SyncCustomTaskCategoryModules(rows)
     mod.label = self:GetCustomTasksTitle()
     self._moduleStatsCache = nil
     self._orderedModulesCache = nil
@@ -1197,7 +1669,7 @@ function MR:RefreshEncounterProgress(encounterId, refreshUI, difficultyId)
     local dirty = false
 
     for _, mod in ipairs(self.modules) do
-        if self:IsModuleEnabled(mod.key) then
+        if self:IsModuleEnabled(mod.key) or mod.customTaskCategoryModule then
             for _, row in ipairs(mod.rows) do
                 if row.encounterIds then
                     local shouldMark = encounterId == nil
@@ -1215,23 +1687,24 @@ function MR:RefreshEncounterProgress(encounterId, refreshUI, difficultyId)
                     end
 
                     if shouldMark then
-                        local progressBucket = (self.GetProgressBucket and self:GetProgressBucket(mod.key, row.key)) or progress
-                        if not progressBucket[mod.key] then
-                            progressBucket[mod.key] = {}
+                        local progressModuleKey = row.progressModuleKey or mod.key
+                        local progressBucket = (self.GetProgressBucket and self:GetProgressBucket(progressModuleKey, row.key)) or progress
+                        if not progressBucket[progressModuleKey] then
+                            progressBucket[progressModuleKey] = {}
                         end
-                        local cur = progressBucket[mod.key][row.key] or 0
+                        local cur = progressBucket[progressModuleKey][row.key] or 0
                         local maxVal = row.max or 1
                         if difficultyId and row.taskId then
                             local diffState = GetDiffProgress(self, row.taskId, row.taskScope)
                             if diffState and not diffState[difficultyId] then
                                 diffState[difficultyId] = true
                                 if cur < maxVal then
-                                    progressBucket[mod.key][row.key] = cur + 1
+                                    progressBucket[progressModuleKey][row.key] = cur + 1
                                     dirty = true
                                 end
                             end
                         elseif not row.taskId and cur < maxVal then
-                            progressBucket[mod.key][row.key] = maxVal
+                            progressBucket[progressModuleKey][row.key] = maxVal
                             dirty = true
                         end
                     end

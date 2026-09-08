@@ -4,7 +4,7 @@ local MR = ns.MR
 local cfgFrame
 local keybindCaptureFrame
 local L = LibStub("AceLocale-3.0"):GetLocale("MidnightRoutine")
-local TOGGLE_WINDOWS_BINDING = "MIDNIGHTROUTINE_TOGGLE_WINDOWS"
+local TOGGLE_WINDOWS_BINDING = ns.TOGGLE_WINDOWS_BINDING
 local MODIFIER_KEYS = {
     LALT = true,
     RALT = true,

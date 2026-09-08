@@ -370,6 +370,18 @@ function MR:RequestProfessionKnowledgeSurfaceRefresh(delay)
     end, delay)
 end
 
+local function GetRowSettingModuleKey(self, modKey, rowKey, field)
+    local mod = self.moduleByKey and self.moduleByKey[modKey]
+    if mod then
+        for _, row in ipairs(mod.rows or {}) do
+            if row.key == rowKey then
+                return row[field] or modKey
+            end
+        end
+    end
+    return modKey
+end
+
 function MR:IsRowEnabled(modKey, rowKey)
     local mod = self.moduleByKey and self.moduleByKey[modKey]
     if mod then
@@ -381,18 +393,20 @@ function MR:IsRowEnabled(modKey, rowKey)
     end
 
     local storage = self:GetActiveModuleStorage()
-    local s = storage and storage[modKey]
+    local storageKey = GetRowSettingModuleKey(self, modKey, rowKey, "visibilityModuleKey")
+    local s = storage and storage[storageKey]
     if not s or not s.hiddenRows then return true end
     return s.hiddenRows[rowKey] ~= false
 end
 
 function MR:SetRowEnabled(modKey, rowKey, enabled, skipRefresh)
     local storage = self:GetActiveModuleStorage()
-    if not storage[modKey] then storage[modKey] = {} end
-    if not storage[modKey].hiddenRows then
-        storage[modKey].hiddenRows = {}
+    local storageKey = GetRowSettingModuleKey(self, modKey, rowKey, "visibilityModuleKey")
+    if not storage[storageKey] then storage[storageKey] = {} end
+    if not storage[storageKey].hiddenRows then
+        storage[storageKey].hiddenRows = {}
     end
-    storage[modKey].hiddenRows[rowKey] = enabled and true or false
+    storage[storageKey].hiddenRows[rowKey] = enabled and true or false
     if not skipRefresh then
         self:RefreshUI()
     end
@@ -757,6 +771,7 @@ function MR:RefreshPanelHeaderVisibility(frame)
 end
 
 function MR:GetRowColor(modKey, rowKey)
+    modKey = GetRowSettingModuleKey(self, modKey, rowKey, "colorModuleKey")
     local p = self.db.profile.rowColors
     if p and p[modKey] and p[modKey][rowKey] then
         return p[modKey][rowKey]
@@ -764,6 +779,7 @@ function MR:GetRowColor(modKey, rowKey)
 end
 
 function MR:SetRowColor(modKey, rowKey, hexColor)
+    modKey = GetRowSettingModuleKey(self, modKey, rowKey, "colorModuleKey")
     if not self.db.profile.rowColors then self.db.profile.rowColors = {} end
     if not self.db.profile.rowColors[modKey] then self.db.profile.rowColors[modKey] = {} end
     self.db.profile.rowColors[modKey][rowKey] = hexColor
@@ -771,6 +787,7 @@ function MR:SetRowColor(modKey, rowKey, hexColor)
 end
 
 function MR:ResetRowColor(modKey, rowKey)
+    modKey = GetRowSettingModuleKey(self, modKey, rowKey, "colorModuleKey")
     local p = self.db.profile.rowColors
     if p and p[modKey] then
         p[modKey][rowKey] = nil

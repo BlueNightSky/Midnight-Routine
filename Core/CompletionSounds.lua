@@ -74,6 +74,17 @@ local function SpeakRowName(modKey, rowKey)
             if r.key == rowKey then row = r break end
         end
     end
+    if not row then
+        for _, candidate in ipairs(MR.modules or {}) do
+            for _, candidateRow in ipairs(candidate.rows or {}) do
+                if candidateRow.key == rowKey then
+                    row = candidateRow
+                    break
+                end
+            end
+            if row then break end
+        end
+    end
 
     local text = tostring((row and (row.label or row.key)) or rowKey)
     text = text:gsub("|c%x%x%x%x%x%x%x%x(.-)%|r", "%1"):gsub("|[cCrR]%x*", "")
@@ -209,8 +220,19 @@ local function CheckCompletionSounds()
                         if r.key == rowKey then row = r break end
                     end
                 end
+                if not row then
+                    for _, candidate in ipairs(MR.modules or {}) do
+                        for _, candidateRow in ipairs(candidate.rows or {}) do
+                            if candidateRow.key == rowKey then
+                                row = candidateRow
+                                break
+                            end
+                        end
+                        if row then break end
+                    end
+                end
                 if row then
-                    local done = (MR:GetProgress(modKey, rowKey) or 0) >= (row.max or 1)
+                    local done = (MR:GetProgress(row.progressModuleKey or modKey, rowKey) or 0) >= (row.max or 1)
                     if done and lastKnownDone[key] == false then
                         PlaySoundByValue(soundValue, modKey, rowKey)
                     end
