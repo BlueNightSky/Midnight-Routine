@@ -610,6 +610,9 @@ end
 
 local function RunScanPass(self)
     self.db.char.lastSyncAt = GetServerTime()
+    if self.RefreshCurrentMythicPlusScore then
+        self:RefreshCurrentMythicPlusScore()
+    end
     local beforeProgress = DeepCopy(self.db.char.progress)
     local beforeRows = {}
     for _, mod in ipairs(self.modules) do

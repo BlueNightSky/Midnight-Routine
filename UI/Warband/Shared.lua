@@ -565,6 +565,14 @@ local function WBGetAltBoardView()
     return "character"
 end
 
+local function WBMythicScoreText(entry)
+    local score = entry and tonumber(entry.mythicPlusScore)
+    if score == nil then
+        return ""
+    end
+    return string.format("M+ %d", math.floor(score + 0.5))
+end
+
 local function WBSetAltBoardView(view)
     if MR and MR.db and MR.db.profile then
         MR.db.profile.altBoardView = (view == "concentration" or view == "modules") and view or "character"
@@ -919,6 +927,7 @@ local function WBGetMainAltPickerData(frame)
             entry.name = name or charKey
             entry.realm = realm or ""
             entry.classFile = charData.classFile
+            entry.mythicPlusScore = tonumber(charData.mythicPlusScore)
             entry.isCurrent = false
             entry._order = orderIndex[charKey] or math.huge
             list[#list + 1] = entry
@@ -968,6 +977,7 @@ local function WBRefreshMainAltPicker(frame)
     currentRow.name = UnitName and UnitName("player") or (L["AltPicker_CurrentCharacter"] or "Current Character")
     currentRow.realm = GetRealmName and GetRealmName() or ""
     currentRow.classFile = select(2, UnitClass("player"))
+    currentRow.mythicPlusScore = MR.db and MR.db.char and tonumber(MR.db.char.mythicPlusScore) or nil
     currentRow.isCurrent = true
 
     local rows = frame._characterRows or {}
@@ -1011,16 +1021,23 @@ local function WBRefreshMainAltPicker(frame)
 
             local name = row:CreateFontString(nil, "OVERLAY")
             name:SetPoint("LEFT", row, "LEFT", 29, 0)
-            name:SetPoint("RIGHT", row, "RIGHT", -76, 0)
             name:SetJustifyH("LEFT")
             name:SetWordWrap(false)
             row._name = name
 
             local realm = row:CreateFontString(nil, "OVERLAY")
             realm:SetPoint("RIGHT", row, "RIGHT", -8, 0)
+            realm:SetWidth(68)
             realm:SetJustifyH("RIGHT")
             realm:SetTextColor(0.68, 0.70, 0.74)
             row._realm = realm
+
+            local score = row:CreateFontString(nil, "OVERLAY")
+            score:SetPoint("LEFT", name, "RIGHT", 6, 0)
+            score:SetJustifyH("LEFT")
+            score:SetWordWrap(false)
+            score:SetTextColor(0.78, 0.57, 1.00)
+            row._score = score
 
             row:SetScript("OnClick", function(selfRow)
                 local selectedEntry = selfRow._entry
@@ -1073,6 +1090,11 @@ local function WBRefreshMainAltPicker(frame)
         name:SetFont(ns.FONT_HEADERS, math.max(9, GetFontSize()), GetFontFlags())
         name:SetText(entry.name)
         name:SetTextColor(cr, cg, cb)
+
+        local score = row._score
+        score:SetFont(ns.FONT_ROWS, math.max(8, GetFontSize() - 2), GetFontFlags())
+        local scoreText = WBMythicScoreText(entry)
+        score:SetText(scoreText)
 
         local realm = row._realm
         realm:SetFont(ns.FONT_ROWS, math.max(8, GetFontSize() - 2), GetFontFlags())
@@ -1291,6 +1313,7 @@ local Warband = {
     WBStatusColor = WBStatusColor,
     WBCharacterMatchesSearch = WBCharacterMatchesSearch,
     WBClassColor = WBClassColor,
+    WBMythicScoreText = WBMythicScoreText,
     WBEnsureDragGhost = WBEnsureDragGhost,
     WBStartDragVisual = WBStartDragVisual,
     WBStopDragVisual = WBStopDragVisual,

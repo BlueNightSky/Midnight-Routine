@@ -1483,11 +1483,17 @@ function MR:ApplySharedMediaSettings()
         if frame.heroName then
             frame.heroName:SetFont(ns.FONT_HEADERS, math.max(13, fontSize + 3), GetFontFlags())
         end
+        if frame.heroScore then
+            frame.heroScore:SetFont(ns.FONT_ROWS, math.max(10, fontSize), GetFontFlags())
+        end
         if frame.heroMeta then
             frame.heroMeta:SetFont(ns.FONT_ROWS, math.max(8, fontSize - 1), GetFontFlags())
         end
         if frame.heroStatus then
             frame.heroStatus:SetFont(ns.FONT_ROWS, math.max(10, fontSize), GetFontFlags())
+        end
+        if frame.moduleScore then
+            frame.moduleScore:SetFont(ns.FONT_ROWS, math.max(9, fontSize - 1), GetFontFlags())
         end
         if frame.expansionDropdown and frame.expansionDropdown.ApplyFonts then
             frame.expansionDropdown:ApplyFonts()

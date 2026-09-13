@@ -39,6 +39,14 @@ function MR:OnEnteringWorld()
         self.db.char.classFile = classFile
     end
     self.db.char.lastSyncAt = GetServerTime()
+    if self.RefreshCurrentMythicPlusScore then
+        self:RefreshCurrentMythicPlusScore()
+        self:ScheduleTimer(function()
+            if self:RefreshCurrentMythicPlusScore() then
+                self:RequestDataRefresh()
+            end
+        end, 2)
+    end
     self:RebuildTurnInCompletions()
     local temporarilyHidden = self._toggleRestoreState ~= nil
     local mainPanelOpen = self:GetMainPanelOpen()
@@ -377,7 +385,18 @@ function MR:OnProfessionChange()
 end
 
 function MR:OnVaultEvent()
+    local scoreChanged = self.RefreshCurrentMythicPlusScore and self:RefreshCurrentMythicPlusScore()
     self:RefreshModuleScans(SCAN_VAULT_DELVES, true)
+    if scoreChanged then
+        self:RequestDataRefresh()
+    end
+    if self.RefreshCurrentMythicPlusScore then
+        self:ScheduleTimer(function()
+            if self:RefreshCurrentMythicPlusScore() then
+                self:RequestDataRefresh()
+            end
+        end, 2)
+    end
 end
 
 function MR:OnZoneChanged()

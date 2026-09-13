@@ -756,6 +756,21 @@ function MR:GetMainAltViewCharacterInfo()
     }
 end
 
+function MR:RefreshCurrentMythicPlusScore()
+    if not (self.db and self.db.char and C_PlayerInfo and C_PlayerInfo.GetPlayerMythicPlusRatingSummary) then
+        return false
+    end
+
+    local summary = C_PlayerInfo.GetPlayerMythicPlusRatingSummary("player")
+    local score = summary and tonumber(summary.currentSeasonScore)
+    if not score or self.db.char.mythicPlusScore == score then
+        return false
+    end
+
+    self.db.char.mythicPlusScore = score
+    return true
+end
+
 local function GetCharacterModuleSettings(self, charData, mod)
     if mod.profSkillLine then
         local storage = type(charData.professionModuleStates) == "table" and charData.professionModuleStates or nil
@@ -819,6 +834,7 @@ function MR:GetWarbandWeeklyData(showHiddenOverride)
                 name = name,
                 realm = realm,
                 classFile = charData.classFile,
+                mythicPlusScore = tonumber(charData.mythicPlusScore),
                 note = note,
                 professionLabels = professionLabels,
                 isCurrent = (charKey == currentKey),

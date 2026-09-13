@@ -35,6 +35,7 @@ local WBStatusText = Warband.WBStatusText
 local WBStatusColor = Warband.WBStatusColor
 local WBCharacterMatchesSearch = Warband.WBCharacterMatchesSearch
 local WBClassColor = Warband.WBClassColor
+local WBMythicScoreText = Warband.WBMythicScoreText
 local WBEnsureDragGhost = Warband.WBEnsureDragGhost
 local WBStartDragVisual = Warband.WBStartDragVisual
 local WBStopDragVisual = Warband.WBStopDragVisual
@@ -145,9 +146,20 @@ local function EnsureWarbandCharacterButton(frame, index)
 
     btn._name = btn:CreateFontString(nil, "OVERLAY")
     btn._name:SetPoint("TOPLEFT", btn, "TOPLEFT", 10, -7)
-    btn._name:SetPoint("TOPRIGHT", btn, "TOPRIGHT", -30, -7)
     btn._name:SetJustifyH("LEFT")
     btn._name:SetWordWrap(false)
+
+    btn._score = btn:CreateFontString(nil, "OVERLAY")
+    btn._score:SetPoint("LEFT", btn._name, "RIGHT", 7, 0)
+    btn._score:SetJustifyH("LEFT")
+    btn._score:SetWordWrap(false)
+    btn._score:SetTextColor(0.78, 0.57, 1.00)
+
+    btn._current = btn:CreateFontString(nil, "OVERLAY")
+    btn._current:SetPoint("LEFT", btn._score, "RIGHT", 7, 0)
+    btn._current:SetJustifyH("LEFT")
+    btn._current:SetWordWrap(false)
+    btn._current:SetTextColor(0.49, 0.91, 0.85)
 
     btn._meta = btn:CreateFontString(nil, "OVERLAY")
     btn._meta:SetPoint("TOPLEFT", btn, "TOPLEFT", 10, -22)
@@ -496,6 +508,8 @@ local function PopulateWarbandModuleView(frame, selected)
         and (L["AltBoard_ModuleScopeCharacter"] or "Module visibility for this character")
         or (L["AltBoard_ModuleScopeShared"] or "Shared layout: changes apply to every character"))
     frame.moduleCharacter:SetText(selected.name .. (selected.realm ~= "" and ("  |cff667788" .. selected.realm .. "|r") or ""))
+    frame.moduleScore:SetFont(ns.FONT_ROWS, math.max(9, GetFontSize() - 1), GetFontFlags())
+    frame.moduleScore:SetText(WBMythicScoreText(selected))
     if frame.moduleScrollUpdate then frame.moduleScrollUpdate() end
 end
 
@@ -731,7 +745,12 @@ function MR:RefreshWarbandBoard(reuseData)
         btn._accent:SetColorTexture(sr, sg, sb, isSelected and 0.92 or 0.62)
 
         btn._name:SetFont(ns.FONT_HEADERS, math.max(9, GetFontSize() - 1), GetFontFlags())
-        btn._name:SetText(entry.isCurrent and (entry.name .. "  |cff7ce7d8" .. (L["AltBoard_Current"] or "Current") .. "|r") or entry.name)
+        btn._name:SetText(entry.name)
+        btn._score:SetFont(ns.FONT_ROWS, math.max(8, GetFontSize() - 2), GetFontFlags())
+        local scoreText = WBMythicScoreText(entry)
+        btn._score:SetText(scoreText)
+        btn._current:SetFont(ns.FONT_ROWS, math.max(8, GetFontSize() - 2), GetFontFlags())
+        btn._current:SetText(entry.isCurrent and (L["AltBoard_Current"] or "Current") or "")
         btn._meta:SetFont(ns.FONT_ROWS, math.max(8, GetFontSize() - 2), GetFontFlags())
         btn._meta:SetText(GetCharacterDetailsText(entry))
         btn._note:SetFont(ns.FONT_ROWS, math.max(8, GetFontSize() - 2), GetFontFlags())
@@ -810,6 +829,8 @@ function MR:RefreshWarbandBoard(reuseData)
     if frame.detailScroll then frame.detailScroll:Show() end
 
     frame.heroName:SetText(selected.name)
+    frame.heroScore:SetFont(ns.FONT_ROWS, math.max(10, GetFontSize()), GetFontFlags())
+    frame.heroScore:SetText(WBMythicScoreText(selected))
     local syncAt = selected.lastSyncAt and selected.lastSyncAt > 0 and selected.lastSyncAt or selected.lastResetAt
     frame.heroMeta:SetText(string.format(L["AltBoard_LastSynced"] or "%s  |  Last synced: %s", selected.realm ~= "" and selected.realm or (L["AltBoard_UnknownRealm"] or "Unknown Realm"), WBFormatTimestamp(syncAt)))
     if frame.heroNoteBox and not frame.heroNoteBox:HasFocus() then
@@ -1295,14 +1316,19 @@ function MR:ToggleWarbandBoard()
         local heroName = hero:CreateFontString(nil, "OVERLAY")
         heroName:SetFont(ns.FONT_HEADERS, math.max(13, GetFontSize() + 3), GetFontFlags())
         heroName:SetPoint("TOPLEFT", hero, "TOPLEFT", 14, -10)
-        heroName:SetPoint("RIGHT", hero, "RIGHT", -244, 0)
         heroName:SetJustifyH("LEFT")
         heroName:SetTextColor(0.96, 0.99, 1.00)
+
+        local heroScore = hero:CreateFontString(nil, "OVERLAY")
+        heroScore:SetFont(ns.FONT_ROWS, math.max(10, GetFontSize()), GetFontFlags())
+        heroScore:SetPoint("LEFT", heroName, "RIGHT", 8, 0)
+        heroScore:SetJustifyH("LEFT")
+        heroScore:SetTextColor(0.78, 0.57, 1.00)
 
         local heroMeta = hero:CreateFontString(nil, "OVERLAY")
         heroMeta:SetFont(ns.FONT_ROWS, math.max(8, GetFontSize() - 1), GetFontFlags())
         heroMeta:SetPoint("TOPLEFT", heroName, "BOTTOMLEFT", 0, -4)
-        heroMeta:SetPoint("RIGHT", heroName, "RIGHT", 0, 0)
+        heroMeta:SetPoint("RIGHT", hero, "RIGHT", -244, 0)
         heroMeta:SetJustifyH("LEFT")
         heroMeta:SetTextColor(0.70, 0.78, 0.86)
 
@@ -1462,9 +1488,14 @@ function MR:ToggleWarbandBoard()
         local moduleCharacter = modulePane:CreateFontString(nil, "OVERLAY")
         moduleCharacter:SetFont(ns.FONT_HEADERS, math.max(12, GetFontSize() + 2), GetFontFlags())
         moduleCharacter:SetPoint("TOPLEFT", modulePane, "TOPLEFT", 14, -11)
-        moduleCharacter:SetPoint("RIGHT", modulePane, "RIGHT", -160, 0)
         moduleCharacter:SetJustifyH("LEFT")
         moduleCharacter:SetTextColor(0.94, 0.98, 1.00)
+
+        local moduleScore = modulePane:CreateFontString(nil, "OVERLAY")
+        moduleScore:SetFont(ns.FONT_ROWS, math.max(9, GetFontSize() - 1), GetFontFlags())
+        moduleScore:SetPoint("LEFT", moduleCharacter, "RIGHT", 8, 0)
+        moduleScore:SetJustifyH("LEFT")
+        moduleScore:SetTextColor(0.78, 0.57, 1.00)
 
         local moduleScope = modulePane:CreateFontString(nil, "OVERLAY")
         moduleScope:SetFont(ns.FONT_ROWS, math.max(8, GetFontSize() - 1), GetFontFlags())
@@ -1520,6 +1551,7 @@ function MR:ToggleWarbandBoard()
         frame.moduleContent = moduleContent
         frame.moduleScrollUpdate = moduleScrollUpdate
         frame.moduleCharacter = moduleCharacter
+        frame.moduleScore = moduleScore
         frame.moduleScope = moduleScope
         frame.moduleSettingsBtn = moduleSettingsBtn
         frame.summaryValue = summaryValue
@@ -1535,6 +1567,7 @@ function MR:ToggleWarbandBoard()
         frame.characterSearchBox = searchBox
         frame.hideCompletedBtn = hideCompletedBtn
         frame.heroName = heroName
+        frame.heroScore = heroScore
         frame.heroMeta = heroMeta
         frame.heroStatus = heroStatus
         frame.heroNoteLabel = heroNoteLabel
