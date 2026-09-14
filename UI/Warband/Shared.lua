@@ -573,6 +573,16 @@ local function WBMythicScoreText(entry)
     return string.format("M+ %d", math.floor(score + 0.5))
 end
 
+local function WBFormatGold(copper)
+    copper = tonumber(copper)
+    if copper == nil then
+        return ""
+    end
+    local gold = math.floor(copper / 10000)
+    local amount = tostring(gold):reverse():gsub("(%d%d%d)", "%1,"):reverse():gsub("^,", "")
+    return amount .. " |TInterface\\MoneyFrame\\UI-GoldIcon:0:0:2:0|t"
+end
+
 local function WBSetAltBoardView(view)
     if MR and MR.db and MR.db.profile then
         MR.db.profile.altBoardView = (view == "concentration" or view == "modules") and view or "character"
@@ -928,6 +938,7 @@ local function WBGetMainAltPickerData(frame)
             entry.realm = realm or ""
             entry.classFile = charData.classFile
             entry.mythicPlusScore = tonumber(charData.mythicPlusScore)
+            entry.gold = tonumber(charData.gold)
             entry.isCurrent = false
             entry._order = orderIndex[charKey] or math.huge
             list[#list + 1] = entry
@@ -978,6 +989,7 @@ local function WBRefreshMainAltPicker(frame)
     currentRow.realm = GetRealmName and GetRealmName() or ""
     currentRow.classFile = select(2, UnitClass("player"))
     currentRow.mythicPlusScore = MR.db and MR.db.char and tonumber(MR.db.char.mythicPlusScore) or nil
+    currentRow.gold = MR.db and MR.db.char and tonumber(MR.db.char.gold) or nil
     currentRow.isCurrent = true
 
     local rows = frame._characterRows or {}
@@ -1001,9 +1013,9 @@ local function WBRefreshMainAltPicker(frame)
         if not row then
             row = CreateFrame("Button", nil, frame.charRail, "BackdropTemplate")
             MR._mainAltPickerRowCreatedCount = (MR._mainAltPickerRowCreatedCount or 0) + 1
-            row:SetHeight(28)
-            row:SetPoint("TOPLEFT", frame.charRail, "TOPLEFT", 0, -((index - 1) * 30))
-            row:SetPoint("TOPRIGHT", frame.charRail, "TOPRIGHT", 0, -((index - 1) * 30))
+            row:SetHeight(40)
+            row:SetPoint("TOPLEFT", frame.charRail, "TOPLEFT", 0, -((index - 1) * 42))
+            row:SetPoint("TOPRIGHT", frame.charRail, "TOPRIGHT", 0, -((index - 1) * 42))
             row:SetBackdrop(MakeBackdrop())
 
             local iconPlate = CreateFrame("Frame", nil, row, "BackdropTemplate")
@@ -1020,24 +1032,34 @@ local function WBRefreshMainAltPicker(frame)
             row._classIcon = classIcon
 
             local name = row:CreateFontString(nil, "OVERLAY")
-            name:SetPoint("LEFT", row, "LEFT", 29, 0)
+            name:SetPoint("TOPLEFT", row, "TOPLEFT", 29, -6)
+            name:SetPoint("TOPRIGHT", row, "TOP", -4, -6)
             name:SetJustifyH("LEFT")
             name:SetWordWrap(false)
             row._name = name
 
             local realm = row:CreateFontString(nil, "OVERLAY")
-            realm:SetPoint("RIGHT", row, "RIGHT", -8, 0)
-            realm:SetWidth(68)
-            realm:SetJustifyH("RIGHT")
+            realm:SetPoint("TOPLEFT", row, "TOPLEFT", 29, -22)
+            realm:SetPoint("TOPRIGHT", row, "TOP", -4, -22)
+            realm:SetJustifyH("LEFT")
             realm:SetTextColor(0.68, 0.70, 0.74)
             row._realm = realm
 
             local score = row:CreateFontString(nil, "OVERLAY")
-            score:SetPoint("LEFT", name, "RIGHT", 6, 0)
-            score:SetJustifyH("LEFT")
+            score:SetPoint("TOPLEFT", row, "TOP", 4, -6)
+            score:SetPoint("TOPRIGHT", row, "TOPRIGHT", -8, -6)
+            score:SetJustifyH("RIGHT")
             score:SetWordWrap(false)
             score:SetTextColor(0.78, 0.57, 1.00)
             row._score = score
+
+            local gold = row:CreateFontString(nil, "OVERLAY")
+            gold:SetPoint("TOPRIGHT", row, "TOPRIGHT", -8, -21)
+            gold:SetPoint("TOPLEFT", row, "TOP", 4, -21)
+            gold:SetJustifyH("RIGHT")
+            gold:SetWordWrap(false)
+            gold:SetTextColor(0.94, 0.78, 0.22)
+            row._gold = gold
 
             row:SetScript("OnClick", function(selfRow)
                 local selectedEntry = selfRow._entry
@@ -1099,12 +1121,17 @@ local function WBRefreshMainAltPicker(frame)
         local realm = row._realm
         realm:SetFont(ns.FONT_ROWS, math.max(8, GetFontSize() - 2), GetFontFlags())
         realm:SetText(entry.realm ~= "" and entry.realm or (L["AltBoard_UnknownRealm"] or "Unknown Realm"))
+
+        local gold = row._gold
+        gold:SetFont(ns.FONT_ROWS, math.max(8, GetFontSize() - 2), GetFontFlags())
+        local goldText = WBFormatGold(entry.gold)
+        gold:SetText(goldText ~= "" and string.format(L["AltBoard_CharacterGold"] or "Gold: %s", goldText) or "")
         row:Show()
     end
 
     HideUnusedWidgets(characterButtons, #rows, ResetSelectableWidget)
 
-    frame.charRail:SetHeight(math.max(#rows * 30, 1))
+    frame.charRail:SetHeight(math.max(#rows * 42, 1))
     if frame.leftScrollUpdate then frame.leftScrollUpdate() end
 end
 
@@ -1314,6 +1341,7 @@ local Warband = {
     WBCharacterMatchesSearch = WBCharacterMatchesSearch,
     WBClassColor = WBClassColor,
     WBMythicScoreText = WBMythicScoreText,
+    WBFormatGold = WBFormatGold,
     WBEnsureDragGhost = WBEnsureDragGhost,
     WBStartDragVisual = WBStartDragVisual,
     WBStopDragVisual = WBStopDragVisual,

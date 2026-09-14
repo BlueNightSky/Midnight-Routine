@@ -771,6 +771,41 @@ function MR:RefreshCurrentMythicPlusScore()
     return true
 end
 
+function MR:RefreshCurrentGold()
+    if not (self.db and self.db.char and GetMoney) then
+        return false
+    end
+
+    local gold = tonumber(GetMoney())
+    if gold == nil or self.db.char.gold == gold then
+        return false
+    end
+
+    self.db.char.gold = gold
+    return true
+end
+
+function MR:RefreshWarbandGold()
+    if not (self.db and self.db.global and C_Bank and C_Bank.FetchDepositedMoney
+        and Enum and Enum.BankType and Enum.BankType.Account) then
+        return false
+    end
+    if C_PlayerInfo and C_PlayerInfo.HasAccountInventoryLock and not C_PlayerInfo.HasAccountInventoryLock() then
+        return false
+    end
+
+    local ok, gold = pcall(C_Bank.FetchDepositedMoney, Enum.BankType.Account)
+    gold = ok and tonumber(gold) or nil
+    if gold == nil then
+        return false
+    end
+
+    local changed = self.db.global.warbandGold ~= gold
+    self.db.global.warbandGold = gold
+    self.db.global.warbandGoldUpdatedAt = (GetServerTime and GetServerTime()) or time()
+    return changed
+end
+
 local function GetCharacterModuleSettings(self, charData, mod)
     if mod.profSkillLine then
         local storage = type(charData.professionModuleStates) == "table" and charData.professionModuleStates or nil
@@ -794,6 +829,13 @@ end
 function MR:GetWarbandWeeklyData(showHiddenOverride)
     if not (self and self.db and self.db.sv and self.db.sv.char) then
         return {}
+    end
+    local auditStarted = self._memoryAuditTrace and debugprofilestop and debugprofilestop() or nil
+    if auditStarted and self.NoteIdleWork then
+        self:NoteIdleWork("phase:WarbandDataBuild")
+    end
+    if auditStarted and self.NoteRefreshSource then
+        self:NoteRefreshSource("WarbandDataBuild", false, 4)
     end
 
     local results = {}
@@ -835,6 +877,7 @@ function MR:GetWarbandWeeklyData(showHiddenOverride)
                 realm = realm,
                 classFile = charData.classFile,
                 mythicPlusScore = tonumber(charData.mythicPlusScore),
+                gold = tonumber(charData.gold),
                 note = note,
                 professionLabels = professionLabels,
                 isCurrent = (charKey == currentKey),
@@ -1015,6 +1058,9 @@ function MR:GetWarbandWeeklyData(showHiddenOverride)
         return a.name < b.name
     end)
 
+    if auditStarted and self.NoteIdleWorkTime then
+        self:NoteIdleWorkTime("phase:WarbandDataBuild", math.max(0, debugprofilestop() - auditStarted))
+    end
     return results
 end
 

@@ -45,17 +45,6 @@ for parentSkillLine, tierSkillLines in pairs(PARENT_TIER_SKILL_LINES) do
     end
 end
 
-local PROFESSION_CONCENTRATION_CURRENCIES = {
-    [2906] = 3161,
-    [2907] = 3162,
-    [2909] = 3163,
-    [2910] = 3164,
-    [2913] = 3165,
-    [2914] = 3166,
-    [2915] = 3167,
-    [2918] = 3168,
-}
-
 MR.playerProfessions = MR.playerProfessions or {}
 
 local function CopyProfessionMap(source)
@@ -327,10 +316,15 @@ function MR:RefreshProfessionConcentration()
     self._lastProfessionConcentrationRefreshAt = GetTime and GetTime() or 0
 
     local previous = self.db.char.professionConcentration
+    if not (C_TradeSkillUI and C_TradeSkillUI.GetConcentrationCurrencyID) then
+        return false
+    end
+
     local concentration = {}
-    for skillLineID, currencyID in pairs(PROFESSION_CONCENTRATION_CURRENCIES) do
+    for _, skillLineID in pairs(PARENT_TO_MIDNIGHT) do
         if self.playerProfessions and self.playerProfessions[skillLineID] then
-            local info = C_CurrencyInfo and C_CurrencyInfo.GetCurrencyInfo and C_CurrencyInfo.GetCurrencyInfo(currencyID)
+            local currencyID = C_TradeSkillUI.GetConcentrationCurrencyID(skillLineID)
+            local info = currencyID and currencyID > 0 and C_CurrencyInfo and C_CurrencyInfo.GetCurrencyInfo and C_CurrencyInfo.GetCurrencyInfo(currencyID)
             if info then
                 local quantity = info.quantity or 0
                 local maxQuantity = info.maxQuantity or 0

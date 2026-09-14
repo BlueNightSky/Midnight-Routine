@@ -613,6 +613,9 @@ local function RunScanPass(self)
     if self.RefreshCurrentMythicPlusScore then
         self:RefreshCurrentMythicPlusScore()
     end
+    if self.RefreshCurrentGold then
+        self:RefreshCurrentGold()
+    end
     local beforeProgress = DeepCopy(self.db.char.progress)
     local beforeRows = {}
     for _, mod in ipairs(self.modules) do

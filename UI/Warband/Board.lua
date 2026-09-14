@@ -36,6 +36,7 @@ local WBStatusColor = Warband.WBStatusColor
 local WBCharacterMatchesSearch = Warband.WBCharacterMatchesSearch
 local WBClassColor = Warband.WBClassColor
 local WBMythicScoreText = Warband.WBMythicScoreText
+local WBFormatGold = Warband.WBFormatGold
 local WBEnsureDragGhost = Warband.WBEnsureDragGhost
 local WBStartDragVisual = Warband.WBStartDragVisual
 local WBStopDragVisual = Warband.WBStopDragVisual
@@ -72,24 +73,20 @@ local function GetSharedHeaderHeight()
     return getHeight and getHeight() or 30
 end
 
-local CHARACTER_ROW_HEIGHT = 58
+local CHARACTER_ROW_HEIGHT = 70
 local CHARACTER_ROW_GAP = 4
 
 local function GetCharacterDetailsText(entry)
     local details = entry.realm ~= "" and entry.realm or ""
     local professions = entry.professionLabels
-    if type(professions) ~= "table" or #professions == 0 then
-        return details
+    if type(professions) == "table" and #professions > 0 then
+        local professionText = table.concat(professions, ", ", 1, math.min(#professions, 2))
+        if #professions > 2 then
+            professionText = professionText .. " +" .. (#professions - 2)
+        end
+        details = details ~= "" and (details .. " | " .. professionText) or professionText
     end
-
-    local professionText = table.concat(professions, ", ", 1, math.min(#professions, 2))
-    if #professions > 2 then
-        professionText = professionText .. " +" .. (#professions - 2)
-    end
-    if details == "" then
-        return professionText
-    end
-    return details .. " | " .. professionText
+    return details
 end
 
 local function MoveAltBoardCharacter(sourceKey, targetKey, afterTarget)
@@ -163,16 +160,24 @@ local function EnsureWarbandCharacterButton(frame, index)
 
     btn._meta = btn:CreateFontString(nil, "OVERLAY")
     btn._meta:SetPoint("TOPLEFT", btn, "TOPLEFT", 10, -22)
-    btn._meta:SetPoint("TOPRIGHT", btn, "TOPRIGHT", -10, -22)
+    btn._meta:SetPoint("TOPRIGHT", btn, "TOPRIGHT", -30, -22)
     btn._meta:SetJustifyH("LEFT")
     btn._meta:SetTextColor(0.62, 0.70, 0.80)
     btn._meta:SetWordWrap(false)
 
     btn._note = btn:CreateFontString(nil, "OVERLAY")
-    btn._note:SetPoint("TOPLEFT", btn, "TOPLEFT", 10, -39)
-    btn._note:SetPoint("TOPRIGHT", btn, "TOPRIGHT", -10, -39)
+    btn._note:SetPoint("TOPLEFT", btn, "TOPLEFT", 10, -53)
+    btn._note:SetPoint("TOPRIGHT", btn, "TOPRIGHT", -10, -53)
     btn._note:SetJustifyH("LEFT")
     btn._note:SetWordWrap(false)
+
+    btn._gold = btn:CreateFontString(nil, "OVERLAY")
+    btn._gold:SetPoint("TOPLEFT", btn, "TOPLEFT", 10, -38)
+    btn._gold:SetPoint("TOPRIGHT", btn, "TOPRIGHT", -30, -38)
+    btn._gold:SetJustifyH("LEFT")
+    btn._gold:SetWordWrap(false)
+    btn._gold:SetTextColor(0.94, 0.78, 0.22)
+
 
     local hideBtn = CreateFrame("Button", nil, btn, "BackdropTemplate")
     hideBtn:SetSize(16, 16)
@@ -665,11 +670,13 @@ function MR:RefreshWarbandBoard(reuseData)
         frame.summaryValue:SetTextColor(countColor(totalDone, math.max(totalRows, 1)))
     end
 
-    if #data <= 1 then
-        frame.summarySub:SetText(WBAltLoginPrompt())
-    else
-        frame.summarySub:SetText(string.format(L["AltBoard_CharactersTracked"] or "%d characters tracked", #data))
+    local summaryText = #data <= 1 and WBAltLoginPrompt()
+        or string.format(L["AltBoard_CharactersTracked"] or "%d characters tracked", #data)
+    local warbandGold = self.db and self.db.global and self.db.global.warbandGold
+    if warbandGold ~= nil then
+        summaryText = summaryText .. "  |  " .. string.format(L["AltBoard_WarbandGold"] or "Warband gold: %s", WBFormatGold(warbandGold))
     end
+    frame.summarySub:SetText(summaryText)
 
     if frame.showHiddenBtn and frame.showHiddenBtn._label then
         frame.showHiddenBtn._label:SetText(MR.db.profile.altBoardShowHidden and (L["AltBoard_HideHidden"] or "Hide Hidden") or (L["AltBoard_ShowHidden"] or "Show Hidden"))
@@ -753,6 +760,9 @@ function MR:RefreshWarbandBoard(reuseData)
         btn._current:SetText(entry.isCurrent and (L["AltBoard_Current"] or "Current") or "")
         btn._meta:SetFont(ns.FONT_ROWS, math.max(8, GetFontSize() - 2), GetFontFlags())
         btn._meta:SetText(GetCharacterDetailsText(entry))
+        btn._gold:SetFont(ns.FONT_ROWS, math.max(8, GetFontSize() - 2), GetFontFlags())
+        local goldText = WBFormatGold(entry.gold)
+        btn._gold:SetText(goldText ~= "" and string.format(L["AltBoard_CharacterGold"] or "Gold: %s", goldText) or "")
         btn._note:SetFont(ns.FONT_ROWS, math.max(8, GetFontSize() - 2), GetFontFlags())
         local statusText = WBStatusText(entry)
         if entry.note and entry.note ~= "" then
@@ -832,11 +842,14 @@ function MR:RefreshWarbandBoard(reuseData)
     frame.heroScore:SetFont(ns.FONT_ROWS, math.max(10, GetFontSize()), GetFontFlags())
     frame.heroScore:SetText(WBMythicScoreText(selected))
     local syncAt = selected.lastSyncAt and selected.lastSyncAt > 0 and selected.lastSyncAt or selected.lastResetAt
-    frame.heroMeta:SetText(string.format(L["AltBoard_LastSynced"] or "%s  |  Last synced: %s", selected.realm ~= "" and selected.realm or (L["AltBoard_UnknownRealm"] or "Unknown Realm"), WBFormatTimestamp(syncAt)))
+    local heroMeta = string.format(L["AltBoard_LastSynced"] or "%s  |  Last synced: %s", selected.realm ~= "" and selected.realm or (L["AltBoard_UnknownRealm"] or "Unknown Realm"), WBFormatTimestamp(syncAt))
+    local goldText = WBFormatGold(selected.gold)
+    frame.heroMeta:SetText(heroMeta)
+    frame.heroStatus:SetText(goldText ~= "" and string.format(L["AltBoard_CharacterGold"] or "Gold: %s", goldText) or "")
+    frame.heroStatus:SetTextColor(0.94, 0.78, 0.22)
     if frame.heroNoteBox and not frame.heroNoteBox:HasFocus() then
         frame.heroNoteBox:SetText(selected.note or "")
     end
-    frame.heroStatus:SetText("")
 
     local showHiddenCharacters = MR.db and MR.db.profile and MR.db.profile.altBoardShowHidden == true
     local concentrationEntries = (not showHiddenCharacters) and type(selected.concentration) == "table" and selected.concentration or nil
@@ -1189,7 +1202,7 @@ function MR:ToggleWarbandBoard()
             end
             frame.characterSearchText = text
             UpdateSearchVisuals(text)
-            MR:RequestWarbandBoardRefresh(true)
+            MR:RefreshWarbandBoardSelection()
         end)
         searchBox:SetScript("OnEscapePressed", function(selfBox)
             selfBox:SetText("")
@@ -1239,7 +1252,7 @@ function MR:ToggleWarbandBoard()
             btn:SetBackdrop(MakeBackdrop())
             btn:SetScript("OnClick", function()
                 WBSetAltBoardView(viewKey)
-                MR:RefreshWarbandBoard()
+                MR:RefreshWarbandBoardSelection()
             end)
             btn:SetScript("OnEnter", function(selfBtn)
                 if WBGetAltBoardView() ~= viewKey then
@@ -1436,7 +1449,7 @@ function MR:ToggleWarbandBoard()
 
         hideCompletedBtn:SetScript("OnClick", function()
             MR.db.profile.altBoardHideCompleted = not MR.db.profile.altBoardHideCompleted
-            MR:RefreshWarbandBoard()
+            MR:RefreshWarbandBoardSelection()
         end)
         hideCompletedBtn:SetScript("OnEnter", function(selfBtn)
             WBStylePillButton(selfBtn, true)

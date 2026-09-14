@@ -11,11 +11,30 @@ local function ResolveCallback(owner, callback)
     return nil
 end
 
-local function CallbackLabel(callback)
+local function CallbackLabel(callback, stackDepth)
     if type(callback) == "string" then
         return callback
     end
+    if debugstack then
+        local ok, stack = pcall(debugstack, stackDepth or 2, 1, 0)
+        if ok and type(stack) == "string" then
+            local line = stack:match("[^\n]+")
+            if line and line ~= "" then
+                return line:gsub("^%s+", "")
+            end
+        end
+    end
     return "anonymous"
+end
+
+local function StartAuditTiming(owner)
+    return owner._memoryAuditTrace and debugprofilestop and debugprofilestop() or nil
+end
+
+local function FinishAuditTiming(owner, label, started)
+    if started and owner.NoteIdleWorkTime then
+        owner:NoteIdleWorkTime(label, math.max(0, debugprofilestop() - started))
+    end
 end
 
 function MR:RegisterEvent(event, callback)
@@ -36,9 +55,11 @@ function MR:RegisterEvent(event, callback)
     self._eventHandlers[event] = handlers
 
     self._eventController:Register(event, function(firedEvent, ...)
+        local label = "event:" .. tostring(firedEvent)
         if self._trackIdleWork and self.NoteIdleWork then
-            self:NoteIdleWork("event:" .. tostring(firedEvent))
+            self:NoteIdleWork(label)
         end
+        local started = StartAuditTiming(self)
         for i = 1, #handlers do
             local entry = handlers[i]
             if entry.bindSelf then
@@ -47,6 +68,7 @@ function MR:RegisterEvent(event, callback)
                 xpcall(entry.fn, CallErrorHandler, firedEvent, ...)
             end
         end
+        FinishAuditTiming(self, label, started)
     end)
 end
 
@@ -68,18 +90,22 @@ function MR:RegisterBucketEvent(events, interval, callback)
         error("MidnightRoutine:RegisterBucketEvent missing callback", 2)
     end
 
+    local callbackLabel = CallbackLabel(callback, 4)
     local bucket = self._eventController:RegisterBucket({
         events = events,
         interval = interval,
         handler = function()
+            local label = "bucket:" .. callbackLabel
             if self._trackIdleWork and self.NoteIdleWork then
-                self:NoteIdleWork("bucket:" .. CallbackLabel(callback))
+                self:NoteIdleWork(label)
             end
+            local started = StartAuditTiming(self)
             if bindSelf then
                 fn(self)
             else
                 fn()
             end
+            FinishAuditTiming(self, label, started)
         end,
     })
 
@@ -128,13 +154,17 @@ function MR:ScheduleTimer(callback, delay, ...)
         error("MidnightRoutine:ScheduleTimer missing callback", 2)
     end
 
+    local callbackLabel = CallbackLabel(callback, 4)
     local timer
     timer = C_Timer.NewTimer(delay, function()
         self._timers[timer] = nil
+        local label = "timer:" .. callbackLabel
         if self._trackIdleWork and self.NoteIdleWork then
-            self:NoteIdleWork("timer:" .. CallbackLabel(callback))
+            self:NoteIdleWork(label)
         end
+        local started = StartAuditTiming(self)
         invoke()
+        FinishAuditTiming(self, label, started)
     end)
     self._timers[timer] = true
     return timer
@@ -146,11 +176,14 @@ function MR:ScheduleRepeatingTimer(callback, delay, ...)
         error("MidnightRoutine:ScheduleRepeatingTimer missing callback", 2)
     end
 
+    local label = "ticker:" .. CallbackLabel(callback, 4)
     local timer = C_Timer.NewTicker(delay, function()
         if self._trackIdleWork and self.NoteIdleWork then
-            self:NoteIdleWork("ticker:" .. CallbackLabel(callback))
+            self:NoteIdleWork(label)
         end
+        local started = StartAuditTiming(self)
         invoke()
+        FinishAuditTiming(self, label, started)
     end)
     self._timers[timer] = true
     return timer

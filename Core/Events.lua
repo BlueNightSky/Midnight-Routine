@@ -47,6 +47,12 @@ function MR:OnEnteringWorld()
             end
         end, 2)
     end
+    if self.RefreshCurrentGold then
+        self:RefreshCurrentGold()
+    end
+    if self.RefreshWarbandGold then
+        self:RefreshWarbandGold()
+    end
     self:RebuildTurnInCompletions()
     local temporarilyHidden = self._toggleRestoreState ~= nil
     local mainPanelOpen = self:GetMainPanelOpen()
@@ -396,6 +402,18 @@ function MR:OnVaultEvent()
                 self:RequestDataRefresh()
             end
         end, 2)
+    end
+end
+
+function MR:OnPlayerMoney()
+    if self.RefreshCurrentGold and self:RefreshCurrentGold() then
+        self:RequestDataRefresh()
+    end
+end
+
+function MR:OnWarbandMoney()
+    if self.RefreshWarbandGold and self:RefreshWarbandGold() then
+        self:RequestDataRefresh()
     end
 end
 
