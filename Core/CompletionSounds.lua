@@ -245,4 +245,14 @@ local function CheckCompletionSounds()
     end
 end
 
-C_Timer.NewTicker(2, CheckCompletionSounds)
+function MR:RequestCompletionSoundCheck()
+    if self._completionSoundCheckTimer then
+        return
+    end
+    self._completionSoundCheckTimer = self:ScheduleTimer(function()
+        self._completionSoundCheckTimer = nil
+        CheckCompletionSounds()
+    end, 0.05)
+end
+
+CheckCompletionSounds()

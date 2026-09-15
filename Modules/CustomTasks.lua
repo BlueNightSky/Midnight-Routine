@@ -1375,16 +1375,9 @@ function MR:ToggleCustomTask(taskId, scope)
     return true
 end
 
-function MR:ResetCustomTasksByType(resetType)
+function MR:ResetCustomTasksByType(resetType, forceSharedReset, resetCharacters)
     resetType = NormalizeResetType(resetType)
     if resetType == "none" then
-        return
-    end
-    local tasks = self:GetCustomTasks()
-    local progress = self.db and self.db.char and self.db.char.progress and self.db.char.progress[CUSTOM_MODULE_KEY]
-    local overrides = self.db and self.db.char and self.db.char.manualOverrides and self.db.char.manualOverrides[CUSTOM_MODULE_KEY]
-    local diffProg = self.db and self.db.char and self.db.char.customTaskDiffProgress
-    if not tasks then
         return
     end
 
@@ -1395,37 +1388,67 @@ function MR:ResetCustomTasksByType(resetType)
     local globalStampKey = ((resetType == "daily") and "lastCustomTaskDailyResetAt" or "lastCustomTaskWeeklyResetAt")
         .. "_" .. tostring(region)
     local sharedAlreadyReset = false
-    if self.db and self.db.global and resetAt then
+    if not forceSharedReset and self.db and self.db.global and resetAt then
         local prevGlobalResetAt = tonumber(self.db.global[globalStampKey]) or 0
         if prevGlobalResetAt >= resetAt then
             sharedAlreadyReset = true
         else
             self.db.global[globalStampKey] = resetAt
         end
+    elseif self.db and self.db.global and resetAt then
+        self.db.global[globalStampKey] = resetAt
     end
 
-    local globalProgress = (not sharedAlreadyReset) and self.db and self.db.global and self.db.global.customTaskProgress and self.db.global.customTaskProgress[CUSTOM_MODULE_KEY] or nil
-    local globalOverrides = (not sharedAlreadyReset) and self.db and self.db.global and self.db.global.customTaskManualOverrides and self.db.global.customTaskManualOverrides[CUSTOM_MODULE_KEY] or nil
-    local globalDiffProg = (not sharedAlreadyReset) and self.db and self.db.global and self.db.global.customTaskDiffProgress or nil
-
-    if not progress and not overrides and not diffProg and not globalProgress and not globalOverrides and not globalDiffProg then
-        return
-    end
-
-    for _, task in ipairs(tasks) do
-        if NormalizeResetType(task.resetType) == resetType then
-            local rowKey = GetTaskRowKey(task.id, task.scope)
-            if progress then progress[rowKey] = nil end
-            if overrides then overrides[rowKey] = nil end
-            if globalProgress then globalProgress[rowKey] = nil end
-            if globalOverrides then globalOverrides[rowKey] = nil end
-            if diffProg then
-                diffProg[tostring(task.id)] = nil
-                diffProg[GetTaskProgressKey(task.id, task.scope)] = nil
+    local sharedTasks = self.db and self.db.global and self.db.global.customTasks or {}
+    local function clearTasks(charData, tasks, scope)
+        local progress = type(charData.progress) == "table" and charData.progress[CUSTOM_MODULE_KEY] or nil
+        local overrides = type(charData.manualOverrides) == "table" and charData.manualOverrides[CUSTOM_MODULE_KEY] or nil
+        local diffProg = charData.customTaskDiffProgress
+        for _, task in ipairs(tasks or {}) do
+            if type(task) == "table" and NormalizeResetType(task.resetType) == resetType then
+                local taskId = tonumber(task.id)
+                if taskId then
+                    local rowKey = GetTaskRowKey(taskId, scope)
+                    if progress then progress[rowKey] = nil end
+                    if overrides then overrides[rowKey] = nil end
+                    if diffProg then
+                        diffProg[tostring(taskId)] = nil
+                        diffProg[rowKey] = nil
+                    end
+                end
             end
-            if globalDiffProg then
-                globalDiffProg[tostring(task.id)] = nil
-                globalDiffProg[GetTaskProgressKey(task.id, task.scope)] = nil
+        end
+    end
+
+    if type(resetCharacters) == "table" then
+        for _, charData in ipairs(resetCharacters) do
+            if type(charData) == "table" then
+                clearTasks(charData, charData.customTasks, TASK_SCOPE_CHARACTER)
+                clearTasks(charData, sharedTasks, TASK_SCOPE_SHARED)
+            end
+        end
+    elseif self.db and self.db.char then
+        clearTasks(self.db.char, self.db.char.customTasks, TASK_SCOPE_CHARACTER)
+        clearTasks(self.db.char, sharedTasks, TASK_SCOPE_SHARED)
+    end
+
+    if not sharedAlreadyReset then
+        local globalData = self.db and self.db.global
+        local globalProgress = globalData and globalData.customTaskProgress and globalData.customTaskProgress[CUSTOM_MODULE_KEY]
+        local globalOverrides = globalData and globalData.customTaskManualOverrides and globalData.customTaskManualOverrides[CUSTOM_MODULE_KEY]
+        local globalDiffProg = globalData and globalData.customTaskDiffProgress
+        for _, task in ipairs(sharedTasks) do
+            if type(task) == "table" and NormalizeResetType(task.resetType) == resetType then
+                local taskId = tonumber(task.id)
+                if taskId then
+                    local rowKey = GetTaskRowKey(taskId, TASK_SCOPE_SHARED)
+                    if globalProgress then globalProgress[rowKey] = nil end
+                    if globalOverrides then globalOverrides[rowKey] = nil end
+                    if globalDiffProg then
+                        globalDiffProg[tostring(taskId)] = nil
+                        globalDiffProg[rowKey] = nil
+                    end
+                end
             end
         end
     end

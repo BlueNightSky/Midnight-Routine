@@ -102,6 +102,18 @@ local warbandHoveredOwner
 local warbandHoveredBuild
 local warbandLastShiftState = false
 
+local function UpdateWarbandShiftState()
+    if not warbandHoveredOwner then
+        return
+    end
+
+    local shiftDown = IsShiftKeyDown()
+    if shiftDown ~= warbandLastShiftState then
+        warbandLastShiftState = shiftDown
+        ns.ShowWarbandTooltip(warbandHoveredOwner, warbandHoveredBuild)
+    end
+end
+
 local function EnsureWarbandTooltip()
     if warbandTooltip then
         return warbandTooltip
@@ -118,17 +130,6 @@ local function EnsureWarbandShiftWatcher()
     end
 
     warbandShiftWatcher = CreateFrame("Frame")
-    warbandShiftWatcher:SetScript("OnUpdate", function()
-        if not warbandHoveredOwner then
-            return
-        end
-
-        local shiftDown = IsShiftKeyDown()
-        if shiftDown ~= warbandLastShiftState then
-            warbandLastShiftState = shiftDown
-            ns.ShowWarbandTooltip(warbandHoveredOwner, warbandHoveredBuild)
-        end
-    end)
 end
 
 function ns.ShowWarbandTooltip(owner, build)
@@ -150,6 +151,7 @@ function ns.ShowWarbandTooltip(owner, build)
     warbandHoveredOwner = owner
     warbandHoveredBuild = build
     warbandLastShiftState = IsShiftKeyDown()
+    warbandShiftWatcher:SetScript("OnUpdate", UpdateWarbandShiftState)
 
     local tip = EnsureWarbandTooltip()
     tip:SetOwner(owner, "ANCHOR_NONE")
@@ -162,7 +164,7 @@ function ns.ShowWarbandTooltip(owner, build)
         tip:Show()
         return true
     else
-        tip:Hide()
+        ns.HideWarbandTooltip()
         return false
     end
 end
@@ -170,6 +172,10 @@ end
 function ns.HideWarbandTooltip()
     warbandHoveredOwner = nil
     warbandHoveredBuild = nil
+    warbandLastShiftState = false
+    if warbandShiftWatcher then
+        warbandShiftWatcher:SetScript("OnUpdate", nil)
+    end
     if warbandTooltip then
         warbandTooltip:Hide()
     end

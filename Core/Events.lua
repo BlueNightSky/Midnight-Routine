@@ -136,6 +136,7 @@ function MR:OnEnteringWorld()
         self._enteringWorldRefreshTimer = nil
         self:CheckWeeklyReset()
         self:CheckDailyReset()
+        self:ScheduleNextResetCheck()
         if not self._raresInitialSyncComplete and self.SyncAllRareKills then
             self._raresInitialSyncComplete = true
             self:SyncAllRareKills(true)
@@ -161,13 +162,31 @@ function MR:OnEnteringWorld()
     self:RequestScan(1.0)
 end
 
-function MR:OnCurrencyDisplayUpdate(_, currencyID)
+local function ProcessCurrencyDisplayUpdates(self)
+    self._currencyDisplayUpdateTimer = nil
     if not self:HasVisibleMainTrackingSurface() then
+        if self._pendingCurrencyDisplayIDs then
+            wipe(self._pendingCurrencyDisplayIDs)
+        end
+        self._pendingAllCurrencyDisplays = nil
         self:MarkBackgroundDataDirty()
         return
     end
 
-    local dirty = self:RefreshCurrencyProgress(currencyID, false)
+    local dirty = false
+    if self._pendingAllCurrencyDisplays then
+        dirty = self:RefreshCurrencyProgress(nil, false)
+    else
+        for currencyID in pairs(self._pendingCurrencyDisplayIDs or {}) do
+            if self:RefreshCurrencyProgress(currencyID, false) then
+                dirty = true
+            end
+        end
+    end
+    if self._pendingCurrencyDisplayIDs then
+        wipe(self._pendingCurrencyDisplayIDs)
+    end
+    self._pendingAllCurrencyDisplays = nil
 
     if self:RefreshModuleScans(SCAN_S1, false) then
         dirty = true
@@ -189,6 +208,21 @@ function MR:OnCurrencyDisplayUpdate(_, currencyID)
             self:RequestProfessionKnowledgeSurfaceRefresh()
         end
     end
+end
+
+function MR:OnCurrencyDisplayUpdate(_, currencyID)
+    self._pendingCurrencyDisplayIDs = self._pendingCurrencyDisplayIDs or {}
+    if currencyID then
+        self._pendingCurrencyDisplayIDs[currencyID] = true
+    else
+        self._pendingAllCurrencyDisplays = true
+    end
+    if self._currencyDisplayUpdateTimer then
+        return
+    end
+    self._currencyDisplayUpdateTimer = self:ScheduleTimer(function()
+        ProcessCurrencyDisplayUpdates(self)
+    end, 0.1)
 end
 
 function MR:OnDelveWidgetUpdate()

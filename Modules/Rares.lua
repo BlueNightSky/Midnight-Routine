@@ -729,14 +729,21 @@ local RefreshRaresFrame
 local LayoutRaresFrame
 local PopulateRaresConfig
 
+local RARES_UPDATE_INTERVAL = 0.05
 local RARES_POLL_INTERVAL = 0.1
 
 local function ApplyRaresFrameUpdater(frame)
     if not frame then return end
 
     frame.raresPollElapsed = 0
+    frame.raresUpdateElapsed = 0
     frame:SetScript("OnUpdate", function(self, dt)
         dt = dt or 0
+
+        self.raresUpdateElapsed = (self.raresUpdateElapsed or 0) + dt
+        if self.raresUpdateElapsed < RARES_UPDATE_INTERVAL then return end
+        dt = self.raresUpdateElapsed
+        self.raresUpdateElapsed = 0
 
         if MR.db and MR.db.profile and MR.db.profile.raresShimmer then
             self.shimmerElapsed = (self.shimmerElapsed or 0) + dt
@@ -1245,6 +1252,17 @@ BuildRaresFrame = function()
     end)
 
     local dragStartW, dragStartH, dragStartX, dragStartY
+    local function UpdateRaresResize()
+        if not dragger._dragging then
+            dragger:SetScript("OnUpdate", nil)
+            return
+        end
+        local cx, cy = GetCursorPosition()
+        local scale  = f:GetEffectiveScale()
+        cx = cx / scale;  cy = cy / scale
+        f:SetWidth( math.max(MIN_W, math.min(MAX_W, dragStartW + (cx - dragStartX))))
+        f:SetHeight(math.max(MIN_H, math.min(MAX_H, dragStartH + (dragStartY - cy))))
+    end
     dragger:SetScript("OnMouseDown", function(_, button)
         if button == "LeftButton" and not db.raresLocked then
             dragStartW  = f:GetWidth()
@@ -1254,11 +1272,13 @@ BuildRaresFrame = function()
             dragStartX = dragStartX / scale
             dragStartY = dragStartY / scale
             dragger._dragging = true
+            dragger:SetScript("OnUpdate", UpdateRaresResize)
         end
     end)
     dragger:SetScript("OnMouseUp", function(_, button)
         if button == "LeftButton" and dragger._dragging then
             dragger._dragging = false
+            dragger:SetScript("OnUpdate", nil)
             local newW = math.max(MIN_W, math.min(MAX_W, math.floor(f:GetWidth())))
             local newH = math.max(MIN_H, math.min(MAX_H, math.floor(f:GetHeight())))
             if MR.db then
@@ -1268,13 +1288,9 @@ BuildRaresFrame = function()
             LayoutRaresFrame(f)
         end
     end)
-    dragger:SetScript("OnUpdate", function()
-        if not dragger._dragging then return end
-        local cx, cy = GetCursorPosition()
-        local scale  = f:GetEffectiveScale()
-        cx = cx / scale;  cy = cy / scale
-        f:SetWidth( math.max(MIN_W, math.min(MAX_W, dragStartW + (cx - dragStartX))))
-        f:SetHeight(math.max(MIN_H, math.min(MAX_H, dragStartH + (dragStartY - cy))))
+    dragger:SetScript("OnHide", function()
+        dragger._dragging = false
+        dragger:SetScript("OnUpdate", nil)
     end)
 
     if minimized then

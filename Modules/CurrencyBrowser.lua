@@ -970,32 +970,11 @@ function MR:ShowCurrencyBrowserFrame()
         end)
 
         local dragStartW, dragStartH, dragStartX, dragStartY
-        dragger:SetScript("OnMouseDown", function(_, button)
-            if button ~= "LeftButton" then return end
-            dragStartW = frame:GetWidth()
-            dragStartH = frame:GetHeight()
-            dragStartX, dragStartY = GetCursorPosition()
-            local scale = frame:GetEffectiveScale()
-            dragStartX = dragStartX / scale
-            dragStartY = dragStartY / scale
-            dragger._dragging = true
-        end)
-        dragger:SetScript("OnMouseUp", function(_, button)
-            if button ~= "LeftButton" or not dragger._dragging then return end
-            dragger._dragging = false
-            local newW = math.max(FRAME_MIN_WIDTH, math.min(FRAME_MAX_WIDTH, math.floor(frame:GetWidth())))
-            local newH = math.max(FRAME_MIN_HEIGHT, math.min(FRAME_MAX_HEIGHT, math.floor(frame:GetHeight())))
-            frame:SetSize(newW, newH)
-            if MR.db and MR.db.profile then
-                MR.db.profile.currencyBrowserWidth = newW
-                MR.db.profile.currencyBrowserHeight = newH
+        local function UpdateBrowserResize()
+            if not dragger._dragging then
+                dragger:SetScript("OnUpdate", nil)
+                return
             end
-            if MR.RefreshCurrencyBrowserFrame then
-                MR:RefreshCurrencyBrowserFrame(true)
-            end
-        end)
-        dragger:SetScript("OnUpdate", function()
-            if not dragger._dragging then return end
             local cx, cy = GetCursorPosition()
             local scale = frame:GetEffectiveScale()
             cx = cx / scale
@@ -1009,6 +988,36 @@ function MR:ShowCurrencyBrowserFrame()
             if frame.UpdateScrollBar then
                 frame:UpdateScrollBar()
             end
+        end
+        dragger:SetScript("OnMouseDown", function(_, button)
+            if button ~= "LeftButton" then return end
+            dragStartW = frame:GetWidth()
+            dragStartH = frame:GetHeight()
+            dragStartX, dragStartY = GetCursorPosition()
+            local scale = frame:GetEffectiveScale()
+            dragStartX = dragStartX / scale
+            dragStartY = dragStartY / scale
+            dragger._dragging = true
+            dragger:SetScript("OnUpdate", UpdateBrowserResize)
+        end)
+        dragger:SetScript("OnMouseUp", function(_, button)
+            if button ~= "LeftButton" or not dragger._dragging then return end
+            dragger._dragging = false
+            dragger:SetScript("OnUpdate", nil)
+            local newW = math.max(FRAME_MIN_WIDTH, math.min(FRAME_MAX_WIDTH, math.floor(frame:GetWidth())))
+            local newH = math.max(FRAME_MIN_HEIGHT, math.min(FRAME_MAX_HEIGHT, math.floor(frame:GetHeight())))
+            frame:SetSize(newW, newH)
+            if MR.db and MR.db.profile then
+                MR.db.profile.currencyBrowserWidth = newW
+                MR.db.profile.currencyBrowserHeight = newH
+            end
+            if MR.RefreshCurrencyBrowserFrame then
+                MR:RefreshCurrencyBrowserFrame(true)
+            end
+        end)
+        dragger:SetScript("OnHide", function()
+            dragger._dragging = false
+            dragger:SetScript("OnUpdate", nil)
         end)
 
         frame:SetScript("OnSizeChanged", function(selfFrame)

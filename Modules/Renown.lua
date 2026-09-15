@@ -783,7 +783,10 @@ local function BuildRenownFrame()
 
     local function RestoreRenownOnUpdate(frame)
         frame:SetScript("OnUpdate", db.renownShimmer ~= false and function(selfFrame, tickDt)
-            selfFrame.shimmerElapsed = selfFrame.shimmerElapsed + tickDt
+            selfFrame.renownUpdateElapsed = (selfFrame.renownUpdateElapsed or 0) + (tickDt or 0)
+            if selfFrame.renownUpdateElapsed < 0.05 then return end
+            selfFrame.shimmerElapsed = selfFrame.shimmerElapsed + selfFrame.renownUpdateElapsed
+            selfFrame.renownUpdateElapsed = 0
             local pulse = 0.06 + 0.04 * math.sin(selfFrame.shimmerElapsed * 2)
             if selfFrame.UpdatePanelHeaderVisibility then
                 selfFrame:UpdatePanelHeaderVisibility(MR:IsCursorWithinBounds(selfFrame))
@@ -791,7 +794,10 @@ local function BuildRenownFrame()
             for _, row in pairs(selfFrame.factionRows) do
                 if row.shimmer then row.shimmer:SetAlpha(pulse) end
             end
-        end or function(selfFrame)
+        end or function(selfFrame, tickDt)
+            selfFrame.renownUpdateElapsed = (selfFrame.renownUpdateElapsed or 0) + (tickDt or 0)
+            if selfFrame.renownUpdateElapsed < 0.1 then return end
+            selfFrame.renownUpdateElapsed = 0
             if selfFrame.UpdatePanelHeaderVisibility then
                 selfFrame:UpdatePanelHeaderVisibility(MR:IsCursorWithinBounds(selfFrame))
             end
@@ -1255,13 +1261,27 @@ PopulateRenownConfig = function(f)
             function(v)
                 db.renownShimmer = v
                 if renownFrame then
+                    renownFrame.renownUpdateElapsed = 0
                     renownFrame:SetScript("OnUpdate", v and function(self, dt)
-                        self.shimmerElapsed = (self.shimmerElapsed or 0) + dt
+                        self.renownUpdateElapsed = (self.renownUpdateElapsed or 0) + (dt or 0)
+                        if self.renownUpdateElapsed < 0.05 then return end
+                        self.shimmerElapsed = (self.shimmerElapsed or 0) + self.renownUpdateElapsed
+                        self.renownUpdateElapsed = 0
                         local pulse = 0.06 + 0.04 * math.sin(self.shimmerElapsed * 2)
                         for _, row in pairs(self.factionRows) do
                             if row.shimmer then row.shimmer:SetAlpha(pulse) end
                         end
-                    end or nil)
+                        if self.UpdatePanelHeaderVisibility then
+                            self:UpdatePanelHeaderVisibility(MR:IsCursorWithinBounds(self))
+                        end
+                    end or function(self, dt)
+                        self.renownUpdateElapsed = (self.renownUpdateElapsed or 0) + (dt or 0)
+                        if self.renownUpdateElapsed < 0.1 then return end
+                        self.renownUpdateElapsed = 0
+                        if self.UpdatePanelHeaderVisibility then
+                            self:UpdatePanelHeaderVisibility(MR:IsCursorWithinBounds(self))
+                        end
+                    end)
                     if not v then
                         for _, row in pairs(renownFrame.factionRows) do
                             if row.shimmer then row.shimmer:SetAlpha(0) end
@@ -1408,13 +1428,10 @@ PopulateRenownConfig = function(f)
         end
     end
 
-    f:SetScript("OnUpdate", function()
-        if drag.active then DragOnUpdate() end
-    end)
-
     local function CommitDrag()
         if not drag.active then return end
         drag.active = false
+        f:SetScript("OnUpdate", nil)
         for _, row in ipairs(_facRows) do row.frame:SetAlpha(1) end
         dragGhost:Hide()
         dragLine:Hide()
@@ -1484,6 +1501,7 @@ PopulateRenownConfig = function(f)
             drag.srcKey = faction.key
             drag.targetIdx = nil
             dragGhostLbl:SetText(faction.label)
+            f:SetScript("OnUpdate", DragOnUpdate)
         end)
         grip:SetScript("OnClick", function()
             if drag.active then CommitDrag() end

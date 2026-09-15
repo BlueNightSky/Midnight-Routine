@@ -1094,6 +1094,7 @@ function MR:CheckScheduledResets()
             self:RequestProfessionKnowledgeSurfaceRefresh()
         end
     end
+    self:ScheduleNextResetCheck()
 end
 
 function MR:OnQuestTurnInCompletion(_, questID)
@@ -1196,7 +1197,7 @@ function MR:OnEnable()
         self:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED", "OnRareCombatLogEvent")
     end
 
-    self:ScheduleRepeatingTimer("CheckScheduledResets", 60)
+    self:ScheduleNextResetCheck()
 
 
 end

@@ -2349,6 +2349,17 @@ local function BuildGatheringLocationsFrame(isRetry)
     dragger:SetScript("OnLeave", function() dTex:SetTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Up") end)
 
     local dragStartW, dragStartH, dragStartX, dragStartY
+    local function UpdateGatheringResize()
+        if not dragger._dragging then
+            dragger:SetScript("OnUpdate", nil)
+            return
+        end
+        local cx, cy = GetCursorPosition()
+        local scale = frame:GetEffectiveScale()
+        cx, cy = cx / scale, cy / scale
+        frame:SetWidth(math.max(MIN_W, math.min(MAX_W, dragStartW + (cx - dragStartX))))
+        frame:SetHeight(math.max(MIN_H, math.min(MAX_H, dragStartH + (dragStartY - cy))))
+    end
     dragger:SetScript("OnMouseDown", function(_, button)
         local currentDb = MR.db and MR.db.profile or db
         if button == "LeftButton" and not currentDb.gatheringLocked then
@@ -2358,11 +2369,13 @@ local function BuildGatheringLocationsFrame(isRetry)
             dragStartX, dragStartY = dragStartX / scale, dragStartY / scale
             dragger._dragging = true
             gatheringFrameInteractionActive = true
+            dragger:SetScript("OnUpdate", UpdateGatheringResize)
         end
     end)
     dragger:SetScript("OnMouseUp", function(_, button)
         if button == "LeftButton" and dragger._dragging then
             dragger._dragging = false
+            dragger:SetScript("OnUpdate", nil)
             if MR.db then
                 MR.db.profile.gatheringWidth = math.max(MIN_W, math.min(MAX_W, math.floor(frame:GetWidth())))
                 MR.db.profile.gatheringHeight = math.max(MIN_H, math.min(MAX_H, math.floor(frame:GetHeight())))
@@ -2374,13 +2387,10 @@ local function BuildGatheringLocationsFrame(isRetry)
             if gatheringCfgFrame and gatheringCfgFrame:IsShown() then PopulateGatheringConfig(gatheringCfgFrame) end
         end
     end)
-    dragger:SetScript("OnUpdate", function()
-        if not dragger._dragging then return end
-        local cx, cy = GetCursorPosition()
-        local scale = frame:GetEffectiveScale()
-        cx, cy = cx / scale, cy / scale
-        frame:SetWidth(math.max(MIN_W, math.min(MAX_W, dragStartW + (cx - dragStartX))))
-        frame:SetHeight(math.max(MIN_H, math.min(MAX_H, dragStartH + (dragStartY - cy))))
+    dragger:SetScript("OnHide", function()
+        dragger._dragging = false
+        gatheringFrameInteractionActive = false
+        dragger:SetScript("OnUpdate", nil)
     end)
 
     ApplyMinimized = function(isMin, animate)

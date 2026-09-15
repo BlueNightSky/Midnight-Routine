@@ -282,29 +282,11 @@ function MR:ToggleConcentrationTracker()
         end)
 
         local dragStartW, dragStartH, dragStartX, dragStartY
-        dragger:SetScript("OnMouseDown", function(_, button)
-            if button == "LeftButton" and not (MR.db and MR.db.profile and MR.db.profile.locked) then
-                dragStartW = frame:GetWidth()
-                dragStartH = frame:GetHeight()
-                dragStartX, dragStartY = GetCursorPosition()
-                local scale = frame:GetEffectiveScale()
-                dragStartX = dragStartX / scale
-                dragStartY = dragStartY / scale
-                dragger._dragging = true
+        local function UpdateTrackerResize()
+            if not dragger._dragging then
+                dragger:SetScript("OnUpdate", nil)
+                return
             end
-        end)
-        dragger:SetScript("OnMouseUp", function(_, button)
-            if button == "LeftButton" and dragger._dragging then
-                dragger._dragging = false
-                local newW = math.max(320, math.min(700, math.floor(frame:GetWidth())))
-                local newH = math.max(260, math.min(800, math.floor(frame:GetHeight())))
-                frame:SetSize(newW, newH)
-                SetWindowLayoutValue("concentrationTrackerSize", { width = newW, height = newH })
-                WBPopulateConcentrationTracker(frame)
-            end
-        end)
-        dragger:SetScript("OnUpdate", function()
-            if not dragger._dragging then return end
             local cx, cy = GetCursorPosition()
             local scale = frame:GetEffectiveScale()
             cx = cx / scale
@@ -322,6 +304,33 @@ function MR:ToggleConcentrationTracker()
             if frame.scrollUpdate then
                 frame.scrollUpdate()
             end
+        end
+        dragger:SetScript("OnMouseDown", function(_, button)
+            if button == "LeftButton" and not (MR.db and MR.db.profile and MR.db.profile.locked) then
+                dragStartW = frame:GetWidth()
+                dragStartH = frame:GetHeight()
+                dragStartX, dragStartY = GetCursorPosition()
+                local scale = frame:GetEffectiveScale()
+                dragStartX = dragStartX / scale
+                dragStartY = dragStartY / scale
+                dragger._dragging = true
+                dragger:SetScript("OnUpdate", UpdateTrackerResize)
+            end
+        end)
+        dragger:SetScript("OnMouseUp", function(_, button)
+            if button == "LeftButton" and dragger._dragging then
+                dragger._dragging = false
+                dragger:SetScript("OnUpdate", nil)
+                local newW = math.max(320, math.min(700, math.floor(frame:GetWidth())))
+                local newH = math.max(260, math.min(800, math.floor(frame:GetHeight())))
+                frame:SetSize(newW, newH)
+                SetWindowLayoutValue("concentrationTrackerSize", { width = newW, height = newH })
+                WBPopulateConcentrationTracker(frame)
+            end
+        end)
+        dragger:SetScript("OnHide", function()
+            dragger._dragging = false
+            dragger:SetScript("OnUpdate", nil)
         end)
 
         frame.titleBar = titleBar

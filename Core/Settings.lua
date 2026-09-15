@@ -177,6 +177,9 @@ function MR:ActivateVisibleTrackingSurface()
 end
 
 function MR:RequestUIRefresh(delay)
+    if self.RequestCompletionSoundCheck then
+        self:RequestCompletionSoundCheck()
+    end
     if not self:HasVisibleMainTrackingSurface() then
         self:MarkBackgroundDataDirty()
         return
@@ -228,6 +231,9 @@ function MR:RequestConfigRefresh()
 end
 
 function MR:RequestDataRefresh(delay)
+    if self.RequestCompletionSoundCheck then
+        self:RequestCompletionSoundCheck()
+    end
     if self.NoteRefreshSource then
         self:NoteRefreshSource("RequestDataRefresh")
     end
