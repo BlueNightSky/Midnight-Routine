@@ -1795,26 +1795,54 @@ UpdateMainRowWidget = function(self, section, mod, row, done, yOff, colW)
         end
     end
 
-    if row.timerEpoch and not isComplete and not collapsed then
+    if (row.timerEpoch or row.timerStateFunc) and not isComplete and not collapsed then
         local liveFormat = L["Timer_Live"] .. "%d:%02d"
         local nextFormat = L["Timer_Next"] .. "%d:%02d"
         local timerPhase
         local function UpdateTimer()
-            local now = GetServerTime()
-            local offset = (now - row.timerEpoch) % row.timerInterval
-            if offset < row.timerDuration then
-                local rem = row.timerDuration - offset
-                rowFrame._count:SetFormattedText(liveFormat, math.floor(rem / 60), rem % 60)
+            local phase, rem
+            if row.timerStateFunc then
+                phase, rem = row.timerStateFunc()
+            else
+                local now = GetServerTime()
+                local offset = (now - row.timerEpoch) % row.timerInterval
+                if offset < row.timerDuration then
+                    phase = "live"
+                    rem = row.timerDuration - offset
+                else
+                    phase = "next"
+                    rem = row.timerInterval - offset
+                end
+            end
+
+            if phase == "live" then
+                if rem then
+                    rowFrame._count:SetFormattedText(liveFormat, math.floor(rem / 60), rem % 60)
+                else
+                    rowFrame._count:SetText(L["Timer_LiveNow"] or "LIVE")
+                end
                 if timerPhase ~= "live" then
                     timerPhase = "live"
                     rowFrame._count:SetTextColor(0.25, 0.88, 0.50, 1)
                 end
-            else
-                local rem = row.timerInterval - offset
+            elseif phase == "next" and rem then
+                rem = math.max(0, math.floor(rem))
                 rowFrame._count:SetFormattedText(nextFormat, math.floor(rem / 60), rem % 60)
                 if timerPhase ~= "next" then
                     timerPhase = "next"
                     rowFrame._count:SetTextColor(0.55, 0.55, 0.55, 1)
+                end
+            elseif phase == "starting" then
+                rowFrame._count:SetText(L["Timer_Starting"] or "Starting")
+                if timerPhase ~= "starting" then
+                    timerPhase = "starting"
+                    rowFrame._count:SetTextColor(0.95, 0.72, 0.25, 1)
+                end
+            else
+                rowFrame._count:SetText(L["Timer_ScheduleUnavailable"] or "Schedule unavailable")
+                if timerPhase ~= "unavailable" then
+                    timerPhase = "unavailable"
+                    rowFrame._count:SetTextColor(0.75, 0.55, 0.30, 1)
                 end
             end
         end
