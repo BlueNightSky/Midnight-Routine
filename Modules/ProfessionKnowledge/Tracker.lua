@@ -420,8 +420,8 @@ local function GetProfessionTaskModules(profession, filterFn)
 end
 
 local function GetProfessionTaskProgress(mod, row)
-    if row and row.professionKnowledgeEntry then
-        local current, required = Progress(row.professionKnowledgeEntry)
+    if row and (row.professionKnowledgeEntry or row.profKnowledgeSectionKey) then
+        local current, required = Progress(row.professionKnowledgeEntry or row)
         local max = tonumber(row.max) or required
         if max and max > 0 and not row.noMax then
             return math.min(current or 0, max), max, (current or 0) >= max
@@ -526,23 +526,9 @@ local function GetEntryIcon(entry)
     return ENTRY_FALLBACK_ICONS[entry.kind] or "Interface\\Icons\\INV_Misc_QuestionMark"
 end
 
-local watchedItemIDs = {}
-local watchedQuestIDs = {}
-local watchedCurrencyIDs = {}
-for _, expansion in ipairs(ALL_EXPANSIONS or {}) do
-    for _, profession in ipairs(expansion.professions or {}) do
-        if profession.catchupCurrency then watchedCurrencyIDs[profession.catchupCurrency] = true end
-        for _, section in ipairs(profession.sections or {}) do
-            for _, entry in ipairs(section.entries or {}) do
-                if entry.itemID then watchedItemIDs[entry.itemID] = true end
-                if entry.questID then watchedQuestIDs[entry.questID] = true end
-                for _, questID in ipairs(entry.questIDs or {}) do
-                    watchedQuestIDs[questID] = true
-                end
-            end
-        end
-    end
-end
+local watchedItemIDs
+local watchedQuestIDs
+local watchedCurrencyIDs
 
 local waypointAlt = {}
 local waypointLocationIndex = {}
@@ -607,13 +593,7 @@ local function GetWaypointTarget(entry, cycleKey)
     return nil, 0
 end
 
-local itemCacheFrame = CreateFrame("Frame")
-itemCacheFrame:RegisterEvent("GET_ITEM_INFO_RECEIVED")
-itemCacheFrame:RegisterEvent("QUEST_TURNED_IN")
-itemCacheFrame:RegisterEvent("CURRENCY_DISPLAY_UPDATE")
-itemCacheFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
-itemCacheFrame:RegisterEvent("TRADE_SKILL_SHOW")
-itemCacheFrame:RegisterEvent("TRADE_SKILL_DATA_SOURCE_CHANGED")
+local itemCacheFrame
 local itemCacheRefreshPending
 local function QueueGatheringLocationsRebuild(force)
     if not (gatheringLocationsFrame and gatheringLocationsFrame:IsShown()) then return end
@@ -628,32 +608,71 @@ local function QueueGatheringLocationsRebuild(force)
     end)
 end
 
-itemCacheFrame:SetScript("OnEvent", function(self, event, itemID)
-    if event == "GET_ITEM_INFO_RECEIVED" then
-        if not watchedItemIDs[itemID] then return end
-        QueueGatheringLocationsRebuild()
-        return
-    end
-
-    if event == "QUEST_TURNED_IN" and itemID and not watchedQuestIDs[itemID] then
-        return
-    end
-
-    if event == "CURRENCY_DISPLAY_UPDATE" and itemID and not watchedCurrencyIDs[itemID] then
-        return
-    end
-
-    if event == "TRADE_SKILL_SHOW" or event == "TRADE_SKILL_DATA_SOURCE_CHANGED" then
-        local changed = MR.RefreshPlayerProfessions and MR:RefreshPlayerProfessions()
-        if changed then
-            if MR.RequestScan then MR:RequestScan(1) end
-            QueueGatheringLocationsRebuild(true)
+local function EnsureGatheringWatchFrame()
+    if itemCacheFrame then return end
+    watchedItemIDs = {}
+    watchedQuestIDs = {}
+    watchedCurrencyIDs = {}
+    for _, expansion in ipairs(ALL_EXPANSIONS or {}) do
+        for _, profession in ipairs(expansion.professions or {}) do
+            if profession.catchupCurrency then watchedCurrencyIDs[profession.catchupCurrency] = true end
+            for _, section in ipairs(profession.sections or {}) do
+                for _, entry in ipairs(section.entries or {}) do
+                    if entry.itemID then watchedItemIDs[entry.itemID] = true end
+                    if entry.questID then watchedQuestIDs[entry.questID] = true end
+                    for _, questID in ipairs(entry.questIDs or {}) do
+                        watchedQuestIDs[questID] = true
+                    end
+                end
+            end
         end
-        return
     end
 
-    QueueGatheringLocationsRebuild()
-end)
+    itemCacheFrame = CreateFrame("Frame")
+    itemCacheFrame:RegisterEvent("GET_ITEM_INFO_RECEIVED")
+    itemCacheFrame:RegisterEvent("QUEST_TURNED_IN")
+    itemCacheFrame:RegisterEvent("CURRENCY_DISPLAY_UPDATE")
+    itemCacheFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
+    itemCacheFrame:RegisterEvent("TRADE_SKILL_SHOW")
+    itemCacheFrame:RegisterEvent("TRADE_SKILL_DATA_SOURCE_CHANGED")
+    itemCacheFrame:SetScript("OnEvent", function(self, event, itemID)
+        if event == "GET_ITEM_INFO_RECEIVED" then
+            if not watchedItemIDs[itemID] then return end
+            QueueGatheringLocationsRebuild()
+            return
+        end
+
+        if event == "QUEST_TURNED_IN" and itemID and not watchedQuestIDs[itemID] then
+            return
+        end
+
+        if event == "CURRENCY_DISPLAY_UPDATE" and itemID and not watchedCurrencyIDs[itemID] then
+            return
+        end
+
+        if event == "TRADE_SKILL_SHOW" or event == "TRADE_SKILL_DATA_SOURCE_CHANGED" then
+            local changed = MR.RefreshPlayerProfessions and MR:RefreshPlayerProfessions()
+            if changed then
+                if MR.RequestScan then MR:RequestScan(1) end
+                QueueGatheringLocationsRebuild(true)
+            end
+            return
+        end
+
+        QueueGatheringLocationsRebuild()
+    end)
+end
+
+function MR:GetProfessionKnowledgeWatchCounts()
+    local function Count(values)
+        local total = 0
+        for _ in pairs(values or {}) do
+            total = total + 1
+        end
+        return total
+    end
+    return Count(watchedItemIDs), Count(watchedQuestIDs), Count(watchedCurrencyIDs), itemCacheFrame ~= nil
+end
 
 local function GetProfessionColor(professionKey)
     local colors = MR.db.profile.gatheringProfColors or {}
@@ -1606,7 +1625,7 @@ local function RenderProfessionTasksSection(card, cardW, cardY, fontSize, conten
         elseif row.key == "prof_catchup" then
             valueText:SetText(tostring(task.current or 0))
             valueText:SetTextColor(rr, rg, rb, 0.95)
-        elseif row.professionKnowledgeEntry and row.professionKnowledgeEntry.mode == "count" then
+        elseif row.mode == "count" then
             valueText:SetText(string.format("%d/%d", task.current or 0, task.max or maxValue))
             if ns.CountColor then
                 valueText:SetTextColor(ns.CountColor(task.current or 0, task.max or maxValue))
@@ -2141,6 +2160,7 @@ local function CreateKnowledgeExpansionDropdown(titleBar, gearBtn)
 end
 
 local function BuildGatheringLocationsFrame(isRetry)
+    EnsureGatheringWatchFrame()
     MR._professionKnowledgeWindowBuildCount = (MR._professionKnowledgeWindowBuildCount or 0) + 1
     if MR.NoteRefreshSource then MR:NoteRefreshSource("ProfessionKnowledge:Build", true) end
     RefreshFonts()
@@ -2550,6 +2570,7 @@ local function ResetProfessionColor(professionKey)
 end
 
 local function BuildGatheringConfigFrame()
+    EnsureGatheringWatchFrame()
     local frame = StyledFrame(UIParent, nil, "HIGH", 20)
     MR:RegisterPriorityFrame(frame)
     frame:SetWidth(268)

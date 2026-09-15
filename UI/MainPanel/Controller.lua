@@ -1229,6 +1229,9 @@ function MR:RefreshUI()
         for _, mod in ipairs(MR:GetOrderedMainModules()) do
             local modVisible = not mod.isVisible or mod:isVisible()
             if MR:IsModuleEnabled(mod.key) and modVisible and not MR:IsModuleDetached(mod.key) and not (MR.ShouldHideProfessionModuleInMain and MR:ShouldHideProfessionModuleInMain(mod)) then
+                if MR.PrimeProfessionKnowledgeModuleLabels then
+                    MR:PrimeProfessionKnowledgeModuleLabels(mod)
+                end
                 local stats = GetModuleStats(self, mod)
                 local totalRows = stats and stats.totalRows or 0
                 local doneRows = stats and stats.doneRows or 0

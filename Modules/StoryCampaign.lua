@@ -30,6 +30,13 @@ local function GetChapterPosition(chapterIds, chapterId)
 end
 
 local function IsChapterDone(campaignId, chapterId, chapterIds)
+    local chapterInfo = C_CampaignInfo.GetCampaignChapterInfo and C_CampaignInfo.GetCampaignChapterInfo(chapterId)
+    local rewardQuestID = chapterInfo and chapterInfo.rewardQuestID
+    if rewardQuestID and C_QuestLog and C_QuestLog.IsQuestFlaggedCompleted
+        and C_QuestLog.IsQuestFlaggedCompleted(rewardQuestID) then
+        return true
+    end
+
     local currentChapterId = C_CampaignInfo.GetCurrentChapterID and
                              C_CampaignInfo.GetCurrentChapterID(campaignId)
     if not currentChapterId then return false end
@@ -40,6 +47,13 @@ local function IsChapterDone(campaignId, chapterId, chapterIds)
 end
 
 local function IsCampaignFullyComplete(campaignId, chapterIds)
+    if C_CampaignInfo.GetState then
+        local completeState = Enum and Enum.CampaignState and Enum.CampaignState.Complete or 1
+        if C_CampaignInfo.GetState(campaignId) == completeState then
+            return true
+        end
+    end
+
     for _, chapterId in ipairs(chapterIds) do
         if not IsChapterDone(campaignId, chapterId, chapterIds) then return false end
     end
@@ -79,24 +93,6 @@ local function CollectCampaignIDs()
             AddFromList(list)
         end
     end
-    if C_CampaignInfo.GetCampaignIDs then
-        local ok, list = pcall(C_CampaignInfo.GetCampaignIDs)
-        if ok then
-            AddFromList(list)
-        end
-    end
-    if C_CampaignInfo.GetCurrentCampaignID then
-        local ok, campaignId = pcall(C_CampaignInfo.GetCurrentCampaignID)
-        if ok then
-            AddCampaignID(ids, seen, campaignId)
-        end
-    end
-    if C_CampaignInfo.GetCurrentCampaignInfo then
-        local ok, info = pcall(C_CampaignInfo.GetCurrentCampaignInfo)
-        if ok and type(info) == "table" then
-            AddCampaignID(ids, seen, info.campaignID or info.campaignId or info.id)
-        end
-    end
 
     return ids
 end
@@ -105,9 +101,10 @@ local function ScanCampaign(mod)
     if not C_CampaignInfo then return end
     local progress = MR.db.char.progress
     local dirty = false
+    local fullyComplete = IsCampaignFullyComplete(mod._campaignId, mod._chapterIds)
     for _, chapterId in ipairs(mod._chapterIds) do
         local key = "ch_" .. chapterId
-        local value = IsChapterDone(mod._campaignId, chapterId, mod._chapterIds) and 1 or 0
+        local value = (fullyComplete or IsChapterDone(mod._campaignId, chapterId, mod._chapterIds)) and 1 or 0
         if SetProgressValue(progress, mod.key, key, value) then
             dirty = true
         end

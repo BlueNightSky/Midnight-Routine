@@ -19,6 +19,9 @@ local RAID_DIFF = {
 }
 
 local DIFF_RANK = { [17]=1, [14]=2, [15]=3, [16]=4 }
+local DEFAULT_RAID_THRESHOLDS = { 2, 4, 6 }
+local DEFAULT_DUNGEON_THRESHOLDS = { 1, 4, 8 }
+local DEFAULT_WORLD_THRESHOLDS = { 2, 4, 8 }
 
 local function IsCombinedMode()
     return MR.db and MR.db.profile and MR.db.profile.greatVaultCombined == true
@@ -49,20 +52,65 @@ local function SlotLine(tt, slotNum, count, threshold)
     end
 end
 
+local function GetActivityThresholds(activities, defaults)
+    local thresholds = {}
+    for _, activity in ipairs(activities or {}) do
+        local threshold = tonumber(activity.threshold)
+        if threshold and threshold > 0 then
+            thresholds[#thresholds + 1] = threshold
+        end
+    end
+    if #thresholds == 0 then
+        for _, threshold in ipairs(defaults) do
+            thresholds[#thresholds + 1] = threshold
+        end
+    end
+    table.sort(thresholds)
+    return thresholds
+end
+
+local function CountUnlockedSlots(activities)
+    local unlocked = 0
+    for _, activity in ipairs(activities or {}) do
+        local threshold = tonumber(activity.threshold) or 0
+        if threshold > 0 and (tonumber(activity.progress) or 0) >= threshold then
+            unlocked = unlocked + 1
+        end
+    end
+    return unlocked
+end
+
+local function AddSlotLines(tt, progress, thresholds)
+    for index, threshold in ipairs(thresholds or {}) do
+        SlotLine(tt, index, progress, threshold)
+    end
+end
+
+local function SetRowMax(mod, rowKey, maxValue)
+    for _, row in ipairs(mod.rows or {}) do
+        if row.key == rowKey then
+            row.max = maxValue
+            return
+        end
+    end
+end
+
 local function IsDungeonVaultMaxed()
     local vd = MR.db and MR.db.char and MR.db.char.progress and MR.db.char.progress["great_vault"] or {}
-    return (vd["vault_d_slots"] or 0) >= 3 and (vd["vault_d_max_level"] or 0) >= 10
+    return (vd["vault_d_slots"] or 0) >= (vd["vault_d_slot_count"] or 3) and (vd["vault_d_max_level"] or 0) >= 10
 end
 
 local function IsRaidVaultMaxed()
     local vd = MR.db and MR.db.char and MR.db.char.progress and MR.db.char.progress["great_vault"] or {}
-    return (vd["vault_r_slots"] or 0) >= 3 and (vd["vault_r_diff_id"] or 0) == 16
+    return (vd["vault_r_slots"] or 0) >= (vd["vault_r_slot_count"] or 3) and (vd["vault_r_diff_id"] or 0) == 16
 end
 
 local VAULT_SCAN_KEYS = {
     "vault_d_progress",
     "vault_d_max_level",
     "vault_d_slots",
+    "vault_d_slot_count",
+    "vault_d_thresholds",
     "vault_d_tier_label",
     "vault_d_tier_color",
     "vault_r_progress",
@@ -70,15 +118,22 @@ local VAULT_SCAN_KEYS = {
     "vault_r_diff_label",
     "vault_r_diff_color",
     "vault_r_slots",
+    "vault_r_slot_count",
+    "vault_r_thresholds",
     "vault_w_progress",
     "vault_w_slots",
+    "vault_w_slot_count",
+    "vault_w_thresholds",
     "vault_combined_slots",
+    "vault_reward_pending",
+    "vault_reward_status",
 }
 
 local function GetVaultScanSignature(vaultData)
     local values = {}
     for index, key in ipairs(VAULT_SCAN_KEYS) do
-        values[index] = tostring(vaultData[key])
+        local value = vaultData[key]
+        values[index] = type(value) == "table" and table.concat(value, ",") or tostring(value)
     end
     return table.concat(values, "\031")
 end
@@ -104,6 +159,20 @@ MR:RegisterModule({
         vd["vault_r_progress"]  = 0
         vd["vault_r_diff_id"]   = nil
         vd["vault_w_progress"]  = 0
+        vd["vault_d_thresholds"] = GetActivityThresholds(buckets.dungeon, DEFAULT_DUNGEON_THRESHOLDS)
+        vd["vault_r_thresholds"] = GetActivityThresholds(buckets.raid, DEFAULT_RAID_THRESHOLDS)
+        vd["vault_w_thresholds"] = GetActivityThresholds(buckets.world, DEFAULT_WORLD_THRESHOLDS)
+        vd["vault_d_slot_count"] = #vd["vault_d_thresholds"]
+        vd["vault_r_slot_count"] = #vd["vault_r_thresholds"]
+        vd["vault_w_slot_count"] = #vd["vault_w_thresholds"]
+        vd["vault_d_slots"] = CountUnlockedSlots(buckets.dungeon)
+        vd["vault_r_slots"] = CountUnlockedSlots(buckets.raid)
+        vd["vault_w_slots"] = CountUnlockedSlots(buckets.world)
+
+        local hasAvailableRewards = C_WeeklyRewards and C_WeeklyRewards.HasAvailableRewards
+            and C_WeeklyRewards.HasAvailableRewards() == true
+        vd["vault_reward_pending"] = hasAvailableRewards and 1 or 0
+        vd["vault_reward_status"] = hasAvailableRewards and (L["Vault_RewardWaiting"] or "Reward waiting") or nil
 
         for _, act in ipairs(buckets.dungeon) do
             vd["vault_d_progress"] = UpdateMax(vd["vault_d_progress"], act.progress)
@@ -150,20 +219,37 @@ MR:RegisterModule({
             vd["vault_d_tier_color"] = nil
         end
 
-        local r = vd["vault_r_progress"]
-        vd["vault_r_slots"] = (r >= 6 and 3) or (r >= 4 and 2) or (r >= 2 and 1) or 0
-
-        local d = vd["vault_d_progress"]
-        vd["vault_d_slots"] = (d >= 8 and 3) or (d >= 4 and 2) or (d >= 1 and 1) or 0
-
-        local w = vd["vault_w_progress"]
-        vd["vault_w_slots"] = (w >= 8 and 3) or (w >= 4 and 2) or (w >= 2 and 1) or 0
-
         vd["vault_combined_slots"] = (vd["vault_r_slots"] or 0) + (vd["vault_d_slots"] or 0) + (vd["vault_w_slots"] or 0)
+        SetRowMax(mod, "vault_raid", vd["vault_r_slot_count"])
+        SetRowMax(mod, "vault_dungeon", vd["vault_d_slot_count"])
+        SetRowMax(mod, "vault_world", vd["vault_w_slot_count"])
+        SetRowMax(mod, "vault_combined", vd["vault_r_slot_count"] + vd["vault_d_slot_count"] + vd["vault_w_slot_count"])
         return before ~= GetVaultScanSignature(vd)
     end,
 
     rows = {
+        {
+            key           = "vault_reward",
+            label         = L["Vault_RewardAvailable_Label"] or "|cffffcc33Unclaimed Vault Reward:|r",
+            max           = 1,
+            autoTracked   = true,
+            countText     = L["Vault_RewardWaiting"] or "Reward waiting",
+            countColor    = { 1.00, 0.82, 0.30 },
+            activeNameKey = "vault_reward_status",
+            activeNameRequiredKey = "vault_reward_pending",
+            noDefaultTooltipHint = true,
+            isVisible = function()
+                local vd = MR.db and MR.db.char and MR.db.char.progress and MR.db.char.progress["great_vault"] or {}
+                return vd["vault_reward_pending"] == 1
+            end,
+            completeFunc = function()
+                return false
+            end,
+            tooltipFunc = function(tt)
+                tt:AddLine(" ")
+                tt:AddLine(L["Vault_RewardAvailable_Note"] or "A Great Vault reward is waiting to be claimed.", 1.00, 0.82, 0.30, true)
+            end,
+        },
         {
             key           = "vault_combined",
             label         = L["GreatVault_Title"],
@@ -180,19 +266,13 @@ MR:RegisterModule({
                 local w  = vd["vault_w_progress"] or 0
                 tt:AddLine(" ")
                 tt:AddLine("Raid", 0.9, 0.7, 0.3)
-                SlotLine(tt, 1, r, 2)
-                SlotLine(tt, 2, r, 4)
-                SlotLine(tt, 3, r, 6)
+                AddSlotLines(tt, r, vd["vault_r_thresholds"] or DEFAULT_RAID_THRESHOLDS)
                 tt:AddLine(" ")
                 tt:AddLine("Dungeon", 0.3, 0.8, 1)
-                SlotLine(tt, 1, d, 1)
-                SlotLine(tt, 2, d, 4)
-                SlotLine(tt, 3, d, 8)
+                AddSlotLines(tt, d, vd["vault_d_thresholds"] or DEFAULT_DUNGEON_THRESHOLDS)
                 tt:AddLine(" ")
                 tt:AddLine("World", 0.78, 0.59, 0.42)
-                SlotLine(tt, 1, w, 2)
-                SlotLine(tt, 2, w, 4)
-                SlotLine(tt, 3, w, 8)
+                AddSlotLines(tt, w, vd["vault_w_thresholds"] or DEFAULT_WORLD_THRESHOLDS)
             end,
         },
         {
@@ -211,9 +291,7 @@ MR:RegisterModule({
                 local prog = vd["vault_r_progress"] or 0
                 tt:AddLine(" ")
                 tt:AddLine(string.format(L["Vault_TT_Raid_Header"], prog), 0.9, 0.7, 0.3)
-                SlotLine(tt, 1, prog, 2)
-                SlotLine(tt, 2, prog, 4)
-                SlotLine(tt, 3, prog, 6)
+                AddSlotLines(tt, prog, vd["vault_r_thresholds"] or DEFAULT_RAID_THRESHOLDS)
             end,
         },
         {
@@ -232,9 +310,7 @@ MR:RegisterModule({
                 local prog = vd["vault_d_progress"] or 0
                 tt:AddLine(" ")
                 tt:AddLine(string.format(L["Vault_TT_Dungeon_Header"], prog), 0.3, 0.8, 1)
-                SlotLine(tt, 1, prog, 1)
-                SlotLine(tt, 2, prog, 4)
-                SlotLine(tt, 3, prog, 8)
+                AddSlotLines(tt, prog, vd["vault_d_thresholds"] or DEFAULT_DUNGEON_THRESHOLDS)
             end,
         },
         {
@@ -248,9 +324,7 @@ MR:RegisterModule({
                 local prog = vd["vault_w_progress"] or 0
                 tt:AddLine(" ")
                 tt:AddLine(string.format(L["Vault_TT_World_Header"], prog), 0.78, 0.59, 0.42)
-                SlotLine(tt, 1, prog, 2)
-                SlotLine(tt, 2, prog, 4)
-                SlotLine(tt, 3, prog, 8)
+                AddSlotLines(tt, prog, vd["vault_w_thresholds"] or DEFAULT_WORLD_THRESHOLDS)
             end,
         },
     },

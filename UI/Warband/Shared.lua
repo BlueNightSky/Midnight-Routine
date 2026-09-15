@@ -1260,7 +1260,7 @@ end
 local function WBPopulateConcentrationTracker(frame, data)
     if not frame or not frame.content then return end
 
-    data = data or MR:GetWarbandWeeklyData()
+    data = data or MR:GetWarbandWeeklyData(nil, false)
     local frameWidth = frame:GetWidth()
     if not frameWidth or frameWidth <= 0 then frameWidth = 440 end
     local contentWidth = math.max(frameWidth - 40, 300)

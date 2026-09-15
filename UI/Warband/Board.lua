@@ -76,6 +76,110 @@ end
 local CHARACTER_ROW_HEIGHT = 70
 local CHARACTER_ROW_GAP = 4
 
+local CHARACTER_SORT_KEYS = {
+    custom = true,
+    name_asc = true,
+    name_desc = true,
+    gold_desc = true,
+    gold_asc = true,
+    profession = true,
+    progress = true,
+    sync = true,
+    score = true,
+}
+
+local CHARACTER_SORT_OPTIONS = {
+    { key = "custom", label = L["AltBoard_SortCustom"] or "Custom order" },
+    { key = "name_asc", label = L["AltBoard_SortNameAsc"] or "Name: A to Z" },
+    { key = "name_desc", label = L["AltBoard_SortNameDesc"] or "Name: Z to A" },
+    { key = "gold_desc", label = L["AltBoard_SortGoldDesc"] or "Gold: highest first" },
+    { key = "gold_asc", label = L["AltBoard_SortGoldAsc"] or "Gold: lowest first" },
+    { key = "profession", label = L["AltBoard_SortProfession"] or "Profession: A to Z" },
+    { key = "progress", label = L["AltBoard_SortProgress"] or "Progress: most complete" },
+    { key = "sync", label = L["AltBoard_SortSync"] or "Last synced: newest" },
+    { key = "score", label = L["AltBoard_SortScore"] or "Mythic+: highest first" },
+}
+
+local function GetCharacterSortKey()
+    local key = MR.db and MR.db.profile and MR.db.profile.altBoardCharacterSort or "custom"
+    return CHARACTER_SORT_KEYS[key] and key or "custom"
+end
+
+local function CompareCharacterNames(a, b, descending)
+    local aName = string.lower(a.name or "")
+    local bName = string.lower(b.name or "")
+    if aName ~= bName then
+        if descending then return aName > bName end
+        return aName < bName
+    end
+    local aRealm = string.lower(a.realm or "")
+    local bRealm = string.lower(b.realm or "")
+    if aRealm ~= bRealm then
+        if descending then return aRealm > bRealm end
+        return aRealm < bRealm
+    end
+    return (a.key or "") < (b.key or "")
+end
+
+local function CompareOptionalNumbers(aValue, bValue, descending)
+    if aValue == nil or bValue == nil then
+        if aValue ~= nil then return true end
+        if bValue ~= nil then return false end
+        return nil
+    end
+    if aValue ~= bValue then
+        if descending then return aValue > bValue end
+        return aValue < bValue
+    end
+    return nil
+end
+
+local function SortBoardCharacters(list, sortKey)
+    if sortKey == "custom" then return end
+    table.sort(list, function(a, b)
+        if sortKey == "name_asc" then
+            return CompareCharacterNames(a, b, false)
+        end
+        if sortKey == "name_desc" then
+            return CompareCharacterNames(a, b, true)
+        end
+        if sortKey == "profession" then
+            local aProfession = type(a.professionLabels) == "table" and a.professionLabels[1] or nil
+            local bProfession = type(b.professionLabels) == "table" and b.professionLabels[1] or nil
+            if aProfession or bProfession then
+                if not aProfession then return false end
+                if not bProfession then return true end
+                aProfession = string.lower(aProfession)
+                bProfession = string.lower(bProfession)
+                if aProfession ~= bProfession then return aProfession < bProfession end
+            end
+        elseif sortKey == "progress" then
+            local aProgress = a.totalRows > 0 and (a.doneRows / a.totalRows) or nil
+            local bProgress = b.totalRows > 0 and (b.doneRows / b.totalRows) or nil
+            local result = CompareOptionalNumbers(aProgress, bProgress, true)
+            if result ~= nil then return result end
+            if a.doneRows ~= b.doneRows then return a.doneRows > b.doneRows end
+            if a.activeRows ~= b.activeRows then return a.activeRows > b.activeRows end
+        elseif sortKey == "gold_desc" or sortKey == "gold_asc" then
+            local result = CompareOptionalNumbers(a.gold, b.gold, sortKey == "gold_desc")
+            if result ~= nil then return result end
+        elseif sortKey == "sync" then
+            local aSync = a.lastSyncAt and a.lastSyncAt > 0 and a.lastSyncAt or a.lastResetAt
+            local bSync = b.lastSyncAt and b.lastSyncAt > 0 and b.lastSyncAt or b.lastResetAt
+            local result = CompareOptionalNumbers(aSync, bSync, true)
+            if result ~= nil then return result end
+        elseif sortKey == "score" then
+            local result = CompareOptionalNumbers(a.mythicPlusScore, b.mythicPlusScore, true)
+            if result ~= nil then return result end
+        end
+        return CompareCharacterNames(a, b, false)
+    end)
+end
+
+local function GetCharacterSortOptions()
+    return CHARACTER_SORT_OPTIONS
+end
+
 local function GetCharacterDetailsText(entry)
     local details = entry.realm ~= "" and entry.realm or ""
     local professions = entry.professionLabels
@@ -87,6 +191,18 @@ local function GetCharacterDetailsText(entry)
         details = details ~= "" and (details .. " | " .. professionText) or professionText
     end
     return details
+end
+
+local function GetTrackedCharacterGold()
+    local total = 0
+    local characters = MR.db and MR.db.sv and MR.db.sv.char
+    if type(characters) ~= "table" then return total end
+    for _, charData in pairs(characters) do
+        if type(charData) == "table" and type(charData.progress) == "table" then
+            total = total + (tonumber(charData.gold) or 0)
+        end
+    end
+    return total
 end
 
 local function MoveAltBoardCharacter(sourceKey, targetKey, afterTarget)
@@ -233,7 +349,7 @@ local function EnsureWarbandCharacterButton(frame, index)
     end)
     btn:SetScript("OnMouseDown", function(selfBtn, button)
         local entry = selfBtn._entry
-        if button ~= "LeftButton" or not entry or entry.isCurrent or not IsShiftKeyDown() then return end
+        if button ~= "LeftButton" or not entry or entry.isCurrent or not selfBtn._canDrag or not IsShiftKeyDown() then return end
         selfBtn._dragStarted = true
         WBState.WBDraggingAltBoardCharacterKey = entry.key
         frame.charRail:SetScript("OnUpdate", UpdateAltBoardCharacterDrag)
@@ -253,7 +369,11 @@ local function EnsureWarbandCharacterButton(frame, index)
             selfBtn:SetBackdropColor(0.026, 0.046, 0.072, 0.96)
             selfBtn:SetBackdropBorderColor(selfBtn._classR * 0.42, selfBtn._classG * 0.42, selfBtn._classB * 0.42, 0.86)
         end
-        ns.ShowTooltip(selfBtn, { text = L["AltBoard_DragCharacterOrder"] or "Click to view. Hold Shift and drag to reorder." })
+        ns.ShowTooltip(selfBtn, {
+            text = selfBtn._canDrag
+                and (L["AltBoard_DragCharacterOrder"] or "Click to view. Hold Shift and drag to reorder.")
+                or (L["AltBoard_SortedCharacterOrder"] or "Click to view. Choose Custom order to Shift-drag characters."),
+        })
     end)
     btn:SetScript("OnLeave", function(selfBtn)
         if not selfBtn._selected then
@@ -268,56 +388,118 @@ local function EnsureWarbandCharacterButton(frame, index)
     return btn
 end
 
-local function EnsureWarbandDetailRow(card, index)
+local function EnsureWarbandDetailRow(frame, card, index)
     local rows = GetWidgetCache(card, "_rows")
-    local row = rows[index]
-    if row then return row end
+    local pool = GetWidgetCache(frame, "_detailRowPool")
+    local poolIndex = (frame._detailRowPoolUsed or 0) + 1
+    frame._detailRowPoolUsed = poolIndex
+    local row = pool[poolIndex]
 
-    row = CreateFrame("Frame", nil, card)
+    if not row then
+        row = CreateFrame("Frame", nil, card)
+        row:SetHeight(23)
+        row:EnableMouse(true)
+        row._bg = row:CreateTexture(nil, "BACKGROUND")
+        row._bg:SetAllPoints()
+        row._dot = row:CreateTexture(nil, "ARTWORK")
+        row._dot:SetSize(4, 13)
+        row._dot:SetPoint("LEFT", row, "LEFT", 2, 0)
+        row._label = row:CreateFontString(nil, "OVERLAY")
+        row._label:SetPoint("LEFT", row, "LEFT", 16, 0)
+        row._label:SetPoint("RIGHT", row, "RIGHT", -120, 0)
+        row._label:SetJustifyH("LEFT")
+        row._value = row:CreateFontString(nil, "OVERLAY")
+        row._value:SetPoint("RIGHT", row, "RIGHT", -2, 0)
+        row._value:SetJustifyH("RIGHT")
+        row._accent = row:CreateFontString(nil, "OVERLAY")
+        row._accent:SetPoint("RIGHT", row._value, "LEFT", -8, 0)
+        row._accent:SetJustifyH("RIGHT")
+
+        row:SetScript("OnEnter", function(selfRow)
+            local entry = selfRow._entry
+            if not entry then return end
+            ns.ShowTooltip(selfRow, {
+                build = function(tooltip)
+                    if entry.currencyId and not entry.noBlizzardTooltip then
+                        tooltip:SetCurrencyByID(entry.currencyId)
+                        if entry.trackWeeklyEarned then
+                            tooltip:AddLine(" ")
+                            tooltip:AddLine(string.format("Collected this week: %s", entry.displayValue), 0.72, 0.86, 1, true)
+                            tooltip:AddLine(string.format("Currently held: %d", entry.wallet or 0), 0.72, 0.86, 1, true)
+                        else
+                            tooltip:AddLine(L["Tooltip_AutoBlizzard"], 0.4, 0.8, 1)
+                        end
+                    else
+                        tooltip:SetText(entry.label, 1, 1, 1, 1, true)
+                    end
+                end,
+            })
+        end)
+        row:SetScript("OnLeave", function(selfRow) ns.HideOwnedTooltip(selfRow) end)
+        pool[poolIndex] = row
+        MR._warbandDetailRowCreatedCount = (MR._warbandDetailRowCreatedCount or 0) + 1
+    elseif row:GetParent() ~= card then
+        row:SetParent(card)
+    end
+
+    row:ClearAllPoints()
     row:SetPoint("TOPLEFT", card, "TOPLEFT", 11, -42 - ((index - 1) * 24))
     row:SetPoint("TOPRIGHT", card, "TOPRIGHT", -11, -42 - ((index - 1) * 24))
-    row:SetHeight(23)
-    row:EnableMouse(true)
-    row._bg = row:CreateTexture(nil, "BACKGROUND")
-    row._bg:SetAllPoints()
-    row._dot = row:CreateTexture(nil, "ARTWORK")
-    row._dot:SetSize(4, 13)
-    row._dot:SetPoint("LEFT", row, "LEFT", 2, 0)
-    row._label = row:CreateFontString(nil, "OVERLAY")
-    row._label:SetPoint("LEFT", row, "LEFT", 16, 0)
-    row._label:SetPoint("RIGHT", row, "RIGHT", -120, 0)
-    row._label:SetJustifyH("LEFT")
-    row._value = row:CreateFontString(nil, "OVERLAY")
-    row._value:SetPoint("RIGHT", row, "RIGHT", -2, 0)
-    row._value:SetJustifyH("RIGHT")
-    row._accent = row:CreateFontString(nil, "OVERLAY")
-    row._accent:SetPoint("RIGHT", row._value, "LEFT", -8, 0)
-    row._accent:SetJustifyH("RIGHT")
-
-    row:SetScript("OnEnter", function(selfRow)
-        local entry = selfRow._entry
-        if not entry then return end
-        ns.ShowTooltip(selfRow, {
-            build = function(tooltip)
-                if entry.currencyId and not entry.noBlizzardTooltip then
-                    tooltip:SetCurrencyByID(entry.currencyId)
-                    if entry.trackWeeklyEarned then
-                        tooltip:AddLine(" ")
-                        tooltip:AddLine(string.format("Collected this week: %s", entry.displayValue), 0.72, 0.86, 1, true)
-                        tooltip:AddLine(string.format("Currently held: %d", entry.wallet or 0), 0.72, 0.86, 1, true)
-                    else
-                        tooltip:AddLine(L["Tooltip_AutoBlizzard"], 0.4, 0.8, 1)
-                    end
-                else
-                    tooltip:SetText(entry.label, 1, 1, 1, 1, true)
-                end
-            end,
-        })
-    end)
-    row:SetScript("OnLeave", function(selfRow) ns.HideOwnedTooltip(selfRow) end)
     rows[index] = row
-    MR._warbandDetailRowCreatedCount = (MR._warbandDetailRowCreatedCount or 0) + 1
     return row
+end
+
+local function RenderWarbandDetailRows(frame)
+    if not frame or not frame.detailScroll then return end
+    frame._detailRowPoolUsed = 0
+    for _, card in ipairs(frame._detailCards or {}) do
+        if card._rows then
+            wipe(card._rows)
+        end
+    end
+
+    local scrollTop = frame.detailScroll:GetVerticalScroll() or 0
+    local scrollBottom = scrollTop + math.max(frame.detailScroll:GetHeight() or 0, 480)
+    local stale = frame._detailSelectedStale == true
+    for _, card in ipairs(frame._detailCards or {}) do
+        if card._detailActive and not card._collapsed then
+            for rowIndex, rowEntry in ipairs(card._visibleRows or {}) do
+                local rowTop = (card._detailY or 0) + 42 + ((rowIndex - 1) * 24)
+                if rowTop + 23 >= scrollTop - 48 and rowTop <= scrollBottom + 48 then
+                    local row = EnsureWarbandDetailRow(frame, card, rowIndex)
+                    row._entry = rowEntry
+                    row._bg:SetColorTexture(1, 1, 1, rowIndex % 2 == 0 and 0.018 or 0)
+                    local rr, rg, rb
+                    if stale then
+                        rr, rg, rb = 0.42, 0.42, 0.46
+                    elseif rowEntry.complete then
+                        rr, rg, rb = 0.20, 0.95, 0.60
+                    elseif rowEntry.value > 0 then
+                        rr, rg, rb = 1.00, 0.76, 0.28
+                    else
+                        rr, rg, rb = 0.42, 0.48, 0.56
+                    end
+                    row._dot:SetColorTexture(rr, rg, rb, 0.92)
+                    row._label:SetFont(ns.FONT_ROWS, GetFontSize(), GetFontFlags())
+                    row._label:SetText(rowEntry.label)
+                    row._label:SetTextColor(0.84, 0.88, 0.93)
+                    row._value:SetFont(ns.FONT_ROWS, GetFontSize(), GetFontFlags())
+                    row._value:SetText(stale and (L["AltBoard_AwaitingRefresh"] or "Awaiting refresh") or rowEntry.displayValue)
+                    row._value:SetTextColor(rr, rg, rb)
+                    if rowEntry.accentLabel then
+                        row._accent:SetFont(ns.FONT_ROWS, math.max(8, GetFontSize() - 1), GetFontFlags())
+                        row._accent:SetText(WBClean(rowEntry.accentLabel))
+                        row._accent:SetTextColor(WBHexColor(rowEntry.accentColor, 0.78, 0.82, 0.95))
+                        row._accent:Show()
+                    else
+                        row._accent:Hide()
+                    end
+                    row:Show()
+                end
+            end
+        end
+    end
+    HideUnusedWidgets(frame._detailRowPool, frame._detailRowPoolUsed, ResetCachedWidget)
 end
 
 local function EnsureWarbandDetailCard(frame, index)
@@ -399,13 +581,15 @@ local function PopulateWarbandModuleView(frame, selected)
     local professionEnabled = 0
     local professionTotal = 0
     local professionKnown = 0
-    local charData = MR.db and MR.db.sv and MR.db.sv.char and MR.db.sv.char[selected.key]
+    local selectedKey = selected.key
+    local selectedIsCurrent = selected.isCurrent
+    local charData = MR.db and MR.db.sv and MR.db.sv.char and MR.db.sv.char[selectedKey]
     local savedProfessions = charData and type(charData.professions) == "table" and charData.professions or nil
 
     for _, expansion in ipairs(ns.AllExpansions or {}) do
         for _, profession in ipairs(expansion.professions or {}) do
             professionTotal = professionTotal + 1
-            if (selected.isCurrent and MR.HasProfessionForModule and MR:HasProfessionForModule(profession.skillLine))
+            if (selectedIsCurrent and MR.HasProfessionForModule and MR:HasProfessionForModule(profession.skillLine))
                 or (savedProfessions and savedProfessions[profession.skillLine] == true) then
                 professionKnown = professionKnown + 1
             end
@@ -414,7 +598,7 @@ local function PopulateWarbandModuleView(frame, selected)
 
     for _, mod in ipairs(modules) do
         if mod.profSkillLine and IsBoardModule(mod) then
-            local enabled, _, learned = MR:GetWarbandCharacterModuleState(selected.key, mod)
+            local enabled, _, learned = MR:GetWarbandCharacterModuleState(selectedKey, mod)
             if learned then
                 professionModules[#professionModules + 1] = mod
                 if enabled then
@@ -431,7 +615,7 @@ local function PopulateWarbandModuleView(frame, selected)
     local function RenderModule(mod)
         rowIndex = rowIndex + 1
         local currentMod = mod
-        local enabled, available = MR:GetWarbandCharacterModuleState(selected.key, mod)
+        local enabled, available = MR:GetWarbandCharacterModuleState(selectedKey, mod)
         local label = WBClean(mod.label or mod.key)
         if not available then
             label = label .. "  |cff667788" .. (L["AltBoard_ModuleUnavailable"] or "Not available in this version") .. "|r"
@@ -454,7 +638,7 @@ local function PopulateWarbandModuleView(frame, selected)
                 return enabled
             end,
             setEnabled = function(value)
-                MR:SetWarbandCharacterModuleEnabled(selected.key, currentMod.key, value)
+                MR:SetWarbandCharacterModuleEnabled(selectedKey, currentMod.key, value)
             end,
         })
         yOff = yOff - moduleHeight - 1
@@ -483,7 +667,7 @@ local function PopulateWarbandModuleView(frame, selected)
                         allEnabled = #professionModules > 0 and professionEnabled >= #professionModules,
                         onSetEnabled = function(value)
                             for _, professionMod in ipairs(professionModules) do
-                                MR:SetWarbandCharacterModuleEnabled(selected.key, professionMod.key, value, true)
+                                MR:SetWarbandCharacterModuleEnabled(selectedKey, professionMod.key, value, true)
                             end
                             MR:RequestUIRefresh(0.01)
                             MR:RequestWarbandBoardRefresh(true)
@@ -602,7 +786,7 @@ function MR:RefreshWarbandBoard(reuseData)
     local reusedData = reuseData and type(frame._data) == "table"
     local data = reusedData and frame._data or nil
     if type(data) ~= "table" then
-        data = self:GetWarbandWeeklyData()
+        data = self:GetWarbandWeeklyData(nil, frame.selectedCharKey or self:GetCurrentCharacterKey())
         frame._data = data
     end
     if reusedData then
@@ -622,6 +806,8 @@ function MR:RefreshWarbandBoard(reuseData)
             listData[#listData + 1] = entry
         end
     end
+    local characterSortKey = GetCharacterSortKey()
+    SortBoardCharacters(listData, characterSortKey)
 
     if not frame.selectedCharKey or not data then
         frame.selectedCharKey = nil
@@ -650,6 +836,24 @@ function MR:RefreshWarbandBoard(reuseData)
             frame.selectedCharKey = selected and selected.key or nil
         end
     end
+    if selected and not selected._detailsLoaded then
+        local detailData = self:GetWarbandWeeklyData(nil, selected.key, selected.key)
+        local detail = detailData and detailData[1]
+        if detail then
+            for index, entry in ipairs(data) do
+                if entry._detailsLoaded then
+                    entry.modules = nil
+                    entry._detailsLoaded = false
+                end
+                if entry.key == selected.key then
+                    data[index] = detail
+                end
+            end
+            frame._data = data
+            self._warbandBoardDetailBuildCount = (self._warbandBoardDetailBuildCount or 0) + 1
+            return self:RefreshWarbandBoard(true)
+        end
+    end
 
     frame.charRail._characterDragRows = frame.charRail._characterDragRows or {}
     wipe(frame.charRail._characterDragRows)
@@ -672,9 +876,13 @@ function MR:RefreshWarbandBoard(reuseData)
 
     local summaryText = #data <= 1 and WBAltLoginPrompt()
         or string.format(L["AltBoard_CharactersTracked"] or "%d characters tracked", #data)
+    local characterGold = GetTrackedCharacterGold()
+    summaryText = summaryText .. "  |  " .. string.format(L["AltBoard_CharacterGoldTotal"] or "Character gold: %s", WBFormatGold(characterGold))
     local warbandGold = self.db and self.db.global and self.db.global.warbandGold
     if warbandGold ~= nil then
-        summaryText = summaryText .. "  |  " .. string.format(L["AltBoard_WarbandGold"] or "Warband gold: %s", WBFormatGold(warbandGold))
+        summaryText = summaryText
+            .. "  |  " .. string.format(L["AltBoard_WarbandBankGold"] or "Warband bank: %s", WBFormatGold(warbandGold))
+            .. "  |  " .. string.format(L["AltBoard_TotalGold"] or "Total: %s", WBFormatGold(characterGold + warbandGold))
     end
     frame.summarySub:SetText(summaryText)
 
@@ -684,6 +892,9 @@ function MR:RefreshWarbandBoard(reuseData)
     end
     if frame.characterSearchBox and not frame.characterSearchBox:HasFocus() and frame.characterSearchBox:GetText() ~= searchText then
         frame.characterSearchBox:SetText(searchText)
+    end
+    if frame.characterSortDropdown then
+        frame.characterSortDropdown:Update()
     end
     if frame.hideCompletedBtn and frame.hideCompletedBtn._label then
         frame.hideCompletedBtn._label:SetText(MR.db.profile.altBoardHideCompleted and (L["AltBoard_ShowCompleted"] or "Show Completed") or (L["AltBoard_HideCompleted"] or "Hide Completed"))
@@ -782,11 +993,12 @@ function MR:RefreshWarbandBoard(reuseData)
         hideBtn:SetShown(not entry.isCurrent)
 
         btn.dragID = entry.key
+        btn._canDrag = characterSortKey == "custom"
         btn._dragBorderColor[1] = isSelected and sr * 0.52 or 0.07
         btn._dragBorderColor[2] = isSelected and sg * 0.52 or 0.12
         btn._dragBorderColor[3] = isSelected and sb * 0.52 or 0.18
         btn._dragBorderColor[4] = isSelected and 0.90 or 0.56
-        if not entry.isCurrent then
+        if not entry.isCurrent and btn._canDrag then
             frame.charRail._characterDragRows[#frame.charRail._characterDragRows + 1] = btn
         end
         btn:Show()
@@ -946,6 +1158,10 @@ function MR:RefreshWarbandBoard(reuseData)
     local cardIndex = 0
     local hideCompletedRows = WBShouldHideCompletedCharacters()
     local collapsedModules = (MR.db and MR.db.profile and MR.db.profile.altBoardCollapsedModules) or {}
+    for _, card in ipairs(frame._detailCards or {}) do
+        card._detailActive = false
+    end
+    frame._detailSelectedStale = selected.stale == true
 
     for _, moduleEntry in ipairs(selected.modules) do
         cardIndex = cardIndex + 1
@@ -967,6 +1183,8 @@ function MR:RefreshWarbandBoard(reuseData)
             local isCollapsed = collapsedModules[moduleEntry.key] == true
             card._entry = moduleEntry
             card._collapsed = isCollapsed
+            card._detailActive = true
+            card._detailY = yOff
             card:ClearAllPoints()
             card:SetPoint("TOPLEFT", frame.detailContent, "TOPLEFT", 0, -yOff)
             card:SetWidth(detailWidth)
@@ -986,43 +1204,6 @@ function MR:RefreshWarbandBoard(reuseData)
             card._progressFill:SetWidth(math.max(1, (detailWidth - 26) * math.min(1, moduleEntry.doneRows / math.max(moduleEntry.totalRows, 1))))
 
             local usedRowCount = isCollapsed and 0 or #visibleRows
-            for rowIndex = 1, usedRowCount do
-                local rowEntry = visibleRows[rowIndex]
-                local row = EnsureWarbandDetailRow(card, rowIndex)
-                row._entry = rowEntry
-                row._bg:SetColorTexture(1, 1, 1, rowIndex % 2 == 0 and 0.018 or 0)
-                local rr, rg, rb
-                if selected.stale then
-                    rr, rg, rb = 0.42, 0.42, 0.46
-                elseif rowEntry.complete then
-                    rr, rg, rb = 0.20, 0.95, 0.60
-                elseif rowEntry.value > 0 then
-                    rr, rg, rb = 1.00, 0.76, 0.28
-                else
-                    rr, rg, rb = 0.42, 0.48, 0.56
-                end
-                row._dot:SetColorTexture(rr, rg, rb, 0.92)
-                row._label:SetFont(ns.FONT_ROWS, GetFontSize(), GetFontFlags())
-                row._label:SetText(rowEntry.label)
-                row._label:SetTextColor(0.84, 0.88, 0.93)
-                row._value:SetFont(ns.FONT_ROWS, GetFontSize(), GetFontFlags())
-                row._value:SetText(selected.stale and (L["AltBoard_AwaitingRefresh"] or "Awaiting refresh") or rowEntry.displayValue)
-                row._value:SetTextColor(rr, rg, rb)
-                if rowEntry.accentLabel then
-                    row._accent:SetFont(ns.FONT_ROWS, math.max(8, GetFontSize() - 1), GetFontFlags())
-                    row._accent:SetText(WBClean(rowEntry.accentLabel))
-                    row._accent:SetTextColor(WBHexColor(rowEntry.accentColor, 0.78, 0.82, 0.95))
-                    row._accent:Show()
-                else
-                    row._accent:Hide()
-                end
-                row:Show()
-            end
-            for rowIndex = usedRowCount + 1, #(card._rows or {}) do
-                card._rows[rowIndex]._entry = nil
-                card._rows[rowIndex]:Hide()
-            end
-
             local moduleY = 42 + (usedRowCount * 24)
             card:SetHeight(moduleY + 8)
             card:Show()
@@ -1030,6 +1211,7 @@ function MR:RefreshWarbandBoard(reuseData)
         end
     end
     HideUnusedWidgets(frame._detailCards, cardIndex, ResetCachedWidget)
+    RenderWarbandDetailRows(frame)
 
     if yOff == 0 and hideCompletedRows and frame.detailEmptyLabel then
         frame.detailEmptyLabel:SetPoint("TOPLEFT", frame.detailContent, "TOPLEFT", 8, -6)
@@ -1229,9 +1411,29 @@ function MR:ToggleWarbandBoard()
             clearSearchLabel:SetTextColor(0.58, 0.68, 0.76)
         end)
 
+        local sortDropdown = ns.CreateDropdown(leftPane, {
+            width = 214,
+            height = 20,
+            fontSize = function()
+                return math.max(8, GetFontSize() - 2)
+            end,
+            getOptions = GetCharacterSortOptions,
+            getSelected = GetCharacterSortKey,
+            onSelect = function(key)
+                MR.db.profile.altBoardCharacterSort = key
+                MR:RefreshWarbandBoardSelection()
+            end,
+            minMenuWidth = 214,
+            dynamicMenuWidth = true,
+            maxWidth = 240,
+            maxVisibleRows = 9,
+            style = "teal",
+        })
+        sortDropdown:SetPoint("TOPLEFT", leftPane, "TOPLEFT", 10, -64)
+
         local leftScroll, charRail, leftScrollUpdate = WBCreateScrollArea(
             leftPane,
-            { "TOPLEFT", leftPane, "TOPLEFT", 8, -64 },
+            { "TOPLEFT", leftPane, "TOPLEFT", 8, -90 },
             { "BOTTOMRIGHT", leftPane, "BOTTOMRIGHT", -12, 8 }
         )
 
@@ -1564,6 +1766,8 @@ function MR:ToggleWarbandBoard()
         frame.moduleContent = moduleContent
         frame.moduleScrollUpdate = moduleScrollUpdate
         frame.moduleCharacter = moduleCharacter
+        detailScroll:HookScript("OnVerticalScroll", function() RenderWarbandDetailRows(frame) end)
+        detailScroll:HookScript("OnSizeChanged", function() RenderWarbandDetailRows(frame) end)
         frame.moduleScore = moduleScore
         frame.moduleScope = moduleScope
         frame.moduleSettingsBtn = moduleSettingsBtn
@@ -1578,6 +1782,7 @@ function MR:ToggleWarbandBoard()
         frame.leftPane = leftPane
         frame.showHiddenBtn = showHiddenBtn
         frame.characterSearchBox = searchBox
+        frame.characterSortDropdown = sortDropdown
         frame.hideCompletedBtn = hideCompletedBtn
         frame.heroName = heroName
         frame.heroScore = heroScore
@@ -1608,6 +1813,27 @@ function MR:ToggleWarbandBoard()
                 MR._tickFrame:Hide()
             end
             if MR.SuspendHiddenSurfaceWork then MR:SuspendHiddenSurfaceWork() end
+            frame._data = nil
+            if frame._filteredBoardCharacters then
+                wipe(frame._filteredBoardCharacters)
+            end
+            for _, button in ipairs(frame.charButtons or {}) do
+                ResetSelectableWidget(button)
+            end
+            for _, card in ipairs(frame._detailCards or {}) do
+                ResetCachedWidget(card)
+            end
+            for _, row in ipairs(frame._detailRowPool or {}) do
+                ResetCachedWidget(row)
+            end
+            for _, chip in ipairs(frame.heroConcentrationWidgets or {}) do
+                ResetCachedWidget(chip)
+            end
+            for _, card in ipairs(frame._overviewCards or {}) do
+                for _, row in ipairs(card._rows or {}) do
+                    ResetCachedWidget(row)
+                end
+            end
         end)
 
         self.altBoardFrame = frame

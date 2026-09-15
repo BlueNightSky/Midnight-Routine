@@ -362,6 +362,9 @@ function MR:RefreshVisibleDetachedFrames()
         local shownRows = stats and stats.shownRows or 0
 
         if detached and MR:IsModuleEnabled(mod.key) and modVisible and shownRows > 0 then
+            if MR.PrimeProfessionKnowledgeModuleLabels then
+                MR:PrimeProfessionKnowledgeModuleLabels(mod)
+            end
             frame = self:EnsureDetachedFrame(mod)
             seenDetached[mod.key] = true
 

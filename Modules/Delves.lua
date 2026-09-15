@@ -361,7 +361,8 @@ MR:RegisterModule({
         end
 
         local bountyLooted = IsQuestCompleted(QUEST_DELVERS_BOUNTY_LOOTED) and 1 or 0
-        local bountyProgress = bountyLooted > 0 and not HasDelversBounty() and 1 or 0
+        local manualBounty = MR.GetManualOverride and tonumber(MR:GetManualOverride("delves", "delve_bounty")) or 0
+        local bountyProgress = math.max(bountyLooted > 0 and not HasDelversBounty() and 1 or 0, manualBounty)
 
         if mdb["delve_bounty"] ~= bountyProgress then
             mdb["delve_bounty"] = bountyProgress

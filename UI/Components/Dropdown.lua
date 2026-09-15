@@ -220,6 +220,14 @@ function ns.CreateDropdown(parent, opts)
             SetBackdropColor(self, self._checked and SELECTED_BG or ROW_BG, alpha)
             SetBackdropBorderColor(self, self._checked and style.selectedBorder or ROW_BORDER, alpha)
         end)
+        row:SetScript("OnClick", function(self)
+            local option = self._option
+            if not option then return end
+            popup:Hide()
+            dismiss:Hide()
+            if opts.onSelect then opts.onSelect(OptionKey(option), option) end
+            button:Update()
+        end)
 
         popup.buttons[index] = row
         return row
@@ -283,6 +291,7 @@ function ns.CreateDropdown(parent, opts)
             row:SetPoint("TOPLEFT", popupContent, "TOPLEFT", 0, -3 - ((index - 1) * (rowHeight + rowSpacing)))
             row:SetPoint("TOPRIGHT", popupContent, "TOPRIGHT", 0, -3 - ((index - 1) * (rowHeight + rowSpacing)))
             row:SetHeight(rowHeight)
+            row._option = option
             row._checked = OptionKey(option) == selectedKey
             row._label:SetText(OptionLabel(option))
             SetTextColor(row._label, row._checked and style.selectedLabel or style.optionLabel, alpha)
@@ -290,18 +299,11 @@ function ns.CreateDropdown(parent, opts)
             SetTextColor(row._check, style.check, alpha)
             SetBackdropColor(row, row._checked and SELECTED_BG or ROW_BG, alpha)
             SetBackdropBorderColor(row, row._checked and style.selectedBorder or ROW_BORDER, alpha)
-            row:SetScript("OnClick", function()
-                popup:Hide()
-                dismiss:Hide()
-                if opts.onSelect then opts.onSelect(OptionKey(option), option) end
-                if self:GetParent() then
-                    self:Update()
-                end
-            end)
             row:Show()
         end
 
         for index = #options + 1, #popup.buttons do
+            popup.buttons[index]._option = nil
             popup.buttons[index]:Hide()
         end
 

@@ -826,16 +826,16 @@ local function GetCharacterModuleSettings(self, charData, mod)
     return storage and storage[mod.key] or nil
 end
 
-function MR:GetWarbandWeeklyData(showHiddenOverride)
+function MR:GetWarbandWeeklyData(showHiddenOverride, detailCharKey, onlyCharKey)
     if not (self and self.db and self.db.sv and self.db.sv.char) then
         return {}
     end
     local auditStarted = self._memoryAuditTrace and debugprofilestop and debugprofilestop() or nil
     if auditStarted and self.NoteIdleWork then
-        self:NoteIdleWork("phase:WarbandDataBuild")
+        self:NoteIdleWork(onlyCharKey and "phase:WarbandDetailBuild" or "phase:WarbandDataBuild")
     end
     if auditStarted and self.NoteRefreshSource then
-        self:NoteRefreshSource("WarbandDataBuild", false, 4)
+        self:NoteRefreshSource(onlyCharKey and "WarbandDetailBuild" or "WarbandDataBuild", false, 4)
     end
 
     local results = {}
@@ -849,7 +849,7 @@ function MR:GetWarbandWeeklyData(showHiddenOverride)
         showHidden = showHidden == true
     end
     for charKey, charData in pairs(self.db.sv.char) do
-        if type(charData) == "table" and type(charData.progress) == "table" then
+        if (onlyCharKey == nil or charKey == onlyCharKey) and type(charData) == "table" and type(charData.progress) == "table" then
             local name, realm = ParseCharacterKey(charKey)
             local lastSyncAt = charData.lastSyncAt or 0
             local stale = resetAt > 0 and lastSyncAt > 0 and lastSyncAt < resetAt
@@ -871,6 +871,7 @@ function MR:GetWarbandWeeklyData(showHiddenOverride)
                 end
                 table.sort(professionLabels)
             end
+            local includeModuleDetails = detailCharKey == nil or detailCharKey == charKey
             local snapshot = {
                 key = charKey,
                 name = name,
@@ -885,12 +886,14 @@ function MR:GetWarbandWeeklyData(showHiddenOverride)
                 hidden = hidden,
                 lastSyncAt = lastSyncAt,
                 lastResetAt = charData.lastResetAt or 0,
-                modules = {},
+                modules = includeModuleDetails and {} or nil,
                 totalRows = 0,
                 doneRows = 0,
                 activeRows = 0,
             }
+            snapshot._detailsLoaded = includeModuleDetails
 
+            if detailCharKey ~= false then
             for _, mod in ipairs(self:GetOrderedMainModules()) do
                 if IsAltBoardModule(mod) then
                     local effectiveSettings = GetCharacterModuleSettings(self, charData, mod)
@@ -904,14 +907,19 @@ function MR:GetWarbandWeeklyData(showHiddenOverride)
                         or ((not charData.professionsScanned) and (not HasAnyProfessionRecord(savedProfessions)) and savedConcentration and savedConcentration[mod.profSkillLine] ~= nil)
 
                     if moduleVisible and knowsProfession then
-                        local moduleEntry = {
+                        if includeModuleDetails and self.PrimeProfessionKnowledgeModuleLabels then
+                            self:PrimeProfessionKnowledgeModuleLabels(mod)
+                        end
+                        local moduleEntry = includeModuleDetails and {
                             key = mod.key,
                             label = CleanAccountLabel(mod.key == "custom_tasks" and charData.customTasksTitle or mod.label),
                             color = mod.labelColor or "#ffffff",
                             rows = {},
                             totalRows = 0,
                             doneRows = 0,
-                        }
+                        } or nil
+                        local moduleTotalRows = 0
+                        local moduleDoneRows = 0
 
                         local sourceRows = GetAltBoardModuleRows(mod, charData, self.db.global)
                         local orderedRows = mod.key ~= "custom_tasks" and self.GetOrderedRows and self:GetOrderedRows(mod) or sourceRows
@@ -934,50 +942,47 @@ function MR:GetWarbandWeeklyData(showHiddenOverride)
                                     maxValue = tonumber(row.weeklyCap or row.max) or maxValue
                                 end
                                 local complete = (row.trackWeeklyEarned or not row.noMax) and maxValue > 0 and value >= maxValue
-                                local rowLabel = CleanAccountLabel(row.label)
-                                local displayValue
-                                local accentLabel = (not stale) and (modProgress[row.liveTierLabelKey or ""] or (snapshot.isCurrent and row.vaultLabel)) or nil
-                                local accentColor = (not stale) and (modProgress[row.liveTierColorKey or ""] or (snapshot.isCurrent and row.vaultColor)) or nil
-
-                                if row.countText and not stale and snapshot.isCurrent then
-                                    displayValue = row.countText
-                                elseif complete and row.completedNameKey and not stale and modProgress[row.completedNameKey] then
-                                    displayValue = modProgress[row.completedNameKey]
-                                elseif (not complete)
-                                    and row.activeNameKey
-                                    and not stale
-                                    and modProgress[row.activeNameKey]
-                                    and (not row.activeNameRequiredKey or modProgress[row.activeNameRequiredKey]) then
-                                    displayValue = modProgress[row.activeNameKey]
-                                elseif row.trackWeeklyEarned then
-                                    displayValue = string.format("%d / %d", value, maxValue)
-                                elseif row.noMax then
-                                    displayValue = tostring(value)
-                                else
-                                    displayValue = string.format("%d / %d", value, maxValue)
+                                if moduleEntry then
+                                    local displayValue
+                                    if row.countText and not stale and snapshot.isCurrent then
+                                        displayValue = row.countText
+                                    elseif complete and row.completedNameKey and not stale and modProgress[row.completedNameKey] then
+                                        displayValue = modProgress[row.completedNameKey]
+                                    elseif (not complete)
+                                        and row.activeNameKey
+                                        and not stale
+                                        and modProgress[row.activeNameKey]
+                                        and (not row.activeNameRequiredKey or modProgress[row.activeNameRequiredKey]) then
+                                        displayValue = modProgress[row.activeNameKey]
+                                    elseif row.trackWeeklyEarned then
+                                        displayValue = string.format("%d / %d", value, maxValue)
+                                    elseif row.noMax then
+                                        displayValue = tostring(value)
+                                    else
+                                        displayValue = string.format("%d / %d", value, maxValue)
+                                    end
+                                    table.insert(moduleEntry.rows, {
+                                        key = row.key,
+                                        label = CleanAccountLabel(row.label),
+                                        value = value,
+                                        max = maxValue,
+                                        noMax = row.trackWeeklyEarned and false or (row.noMax and true or false),
+                                        currencyId = row.currencyId,
+                                        noBlizzardTooltip = row.noBlizzardTooltip and true or false,
+                                        trackWeeklyEarned = row.trackWeeklyEarned and true or false,
+                                        wallet = tonumber(modProgress[row.key .. "_wallet"]) or 0,
+                                        complete = complete,
+                                        displayValue = displayValue,
+                                        accentLabel = (not stale) and (modProgress[row.liveTierLabelKey or ""] or (snapshot.isCurrent and row.vaultLabel)) or nil,
+                                        accentColor = (not stale) and (modProgress[row.liveTierColorKey or ""] or (snapshot.isCurrent and row.vaultColor)) or nil,
+                                    })
                                 end
 
-                                table.insert(moduleEntry.rows, {
-                                    key = row.key,
-                                    label = rowLabel,
-                                    value = value,
-                                    max = maxValue,
-                                    noMax = row.trackWeeklyEarned and false or (row.noMax and true or false),
-                                    currencyId = row.currencyId,
-                                    noBlizzardTooltip = row.noBlizzardTooltip and true or false,
-                                    trackWeeklyEarned = row.trackWeeklyEarned and true or false,
-                                    wallet = tonumber(modProgress[row.key .. "_wallet"]) or 0,
-                                    complete = complete,
-                                    displayValue = displayValue,
-                                    accentLabel = accentLabel,
-                                    accentColor = accentColor,
-                                })
-
-                                moduleEntry.totalRows = moduleEntry.totalRows + 1
+                                moduleTotalRows = moduleTotalRows + 1
                                 snapshot.totalRows = snapshot.totalRows + 1
 
                                 if complete then
-                                    moduleEntry.doneRows = moduleEntry.doneRows + 1
+                                    moduleDoneRows = moduleDoneRows + 1
                                     snapshot.doneRows = snapshot.doneRows + 1
                                 elseif value > 0 then
                                     snapshot.activeRows = snapshot.activeRows + 1
@@ -985,11 +990,16 @@ function MR:GetWarbandWeeklyData(showHiddenOverride)
                             end
                         end
 
-                        if moduleEntry.totalRows > 0 and (mod.resetType == "weekly" or mod.key == "custom_tasks" or moduleEntry.doneRows < moduleEntry.totalRows) then
+                        if moduleEntry then
+                            moduleEntry.totalRows = moduleTotalRows
+                            moduleEntry.doneRows = moduleDoneRows
+                        end
+                        if moduleEntry and moduleTotalRows > 0 and (mod.resetType == "weekly" or mod.key == "custom_tasks" or moduleDoneRows < moduleTotalRows) then
                             table.insert(snapshot.modules, moduleEntry)
                         end
                     end
                 end
+            end
             end
 
             if savedConcentration then
@@ -1059,7 +1069,7 @@ function MR:GetWarbandWeeklyData(showHiddenOverride)
     end)
 
     if auditStarted and self.NoteIdleWorkTime then
-        self:NoteIdleWorkTime("phase:WarbandDataBuild", math.max(0, debugprofilestop() - auditStarted))
+        self:NoteIdleWorkTime(onlyCharKey and "phase:WarbandDetailBuild" or "phase:WarbandDataBuild", math.max(0, debugprofilestop() - auditStarted))
     end
     return results
 end

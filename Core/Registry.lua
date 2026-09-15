@@ -294,6 +294,7 @@ function MR:RegisterModule(def)
     self.moduleByKey[def.key] = def
     self._orderedModulesCache = nil
     self._orderedAllModulesCache = nil
+    self._trackingRowIndexes = nil
     self._trackingRowIndexesDirty = true
 
     if self.RebuildTurnInCompletions then
@@ -1028,6 +1029,8 @@ function MR:SetModuleEnabled(key, enabled, skipRefresh)
         storage[key].professionManual = enabled and true or nil
         storage[key].professionDisabled = enabled and nil or true
     end
+    self._trackingRowIndexes = nil
+    self._trackingRowIndexesDirty = true
     if enabled and mod and self.PrimeModuleData then
         self:PrimeModuleData(mod)
         self._moduleStatsCache = nil

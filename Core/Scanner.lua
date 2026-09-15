@@ -87,6 +87,31 @@ local function RowScanSignature(row)
         .. "\031" .. tostring(row.vaultLabel)
 end
 
+local function SyncLiveRows(self, progress, mod)
+    local mdb = progress[mod.key]
+    if not mdb then
+        return false
+    end
+
+    local dirty = false
+    for _, row in ipairs(mod.rows or {}) do
+        if row.liveKey and row.liveKey ~= row.key and mdb[row.liveKey] ~= nil then
+            local rowMax = row.max or mdb[row.liveKey]
+            local capped = row.noMax and mdb[row.liveKey] or math.min(mdb[row.liveKey], rowMax)
+            if WriteProgress(progress, mod.key, row.key, capped, self.db.char.manualOverrides) then
+                dirty = true
+            end
+        end
+        if row.liveTierLabelKey then
+            row.vaultLabel = mdb[row.liveTierLabelKey]
+        end
+        if row.liveTierColorKey then
+            row.vaultColor = mdb[row.liveTierColorKey]
+        end
+    end
+    return dirty
+end
+
 local function UpdateCurrencyProgressForRow(self, progress, mod, row)
     local info = C_CurrencyInfo.GetCurrencyInfo(row.currencyId)
     if not info then
@@ -215,13 +240,18 @@ local function RebuildTrackingRowIndexes(self)
         items = {},
     }
     for _, mod in ipairs(self.modules) do
-        for _, row in ipairs(mod.rows or {}) do
-            for _, questId in ipairs(row.questIds or {}) do
-                AddIndexedRow(indexes.quests, questId, mod, row)
+        if self:IsModuleEnabled(mod.key) or mod.customTaskCategoryModule then
+            if self.PrimeProfessionKnowledgeModuleLabels then
+                self:PrimeProfessionKnowledgeModuleLabels(mod)
             end
-            AddIndexedRow(indexes.currencies, row.currencyId, mod, row)
-            if not row.noItemProgress then
-                AddIndexedRow(indexes.items, row.itemId, mod, row)
+            for _, row in ipairs(mod.rows or {}) do
+                for _, questId in ipairs(row.questIds or {}) do
+                    AddIndexedRow(indexes.quests, questId, mod, row)
+                end
+                AddIndexedRow(indexes.currencies, row.currencyId, mod, row)
+                if not row.noItemProgress then
+                    AddIndexedRow(indexes.items, row.itemId, mod, row)
+                end
             end
         end
     end
@@ -242,6 +272,9 @@ end
 function MR:PrimeModuleData(mod)
     if not (mod and self.db and self.db.char and self.db.char.progress) then
         return false
+    end
+    if self.PrimeProfessionKnowledgeModuleLabels then
+        self:PrimeProfessionKnowledgeModuleLabels(mod)
     end
 
     local progress = self.db.char.progress
@@ -559,6 +592,9 @@ function MR:RefreshModuleScans(moduleKeys, refreshUI)
             end
 
             local moduleChanged = SafeModuleScan(mod) == true
+            if SyncLiveRows(self, self.db.char.progress, mod) then
+                moduleChanged = true
+            end
 
             self.db.char.rowVisibility = self.db.char.rowVisibility or {}
             self.db.char.rowVisibility[moduleKey] = self.db.char.rowVisibility[moduleKey] or {}
@@ -660,27 +696,7 @@ local function RunScanPass(self)
                 SafeModuleScan(mod)
             end
 
-            local mdb = progress[mod.key]
-            if mdb then
-                for _, row in ipairs(mod.rows) do
-                    if row.liveKey and row.liveKey ~= row.key and mdb[row.liveKey] ~= nil then
-                        local rowMax = row.max or mdb[row.liveKey]
-                        local capped = row.noMax and mdb[row.liveKey] or math.min(mdb[row.liveKey], rowMax)
-                        local _ov = self.db.char.manualOverrides
-                        if _ov and _ov[mod.key] then
-                            local mo = _ov[mod.key][row.key]
-                            if mo and mo > capped then capped = mo end
-                        end
-                        SetProgressValue(progress, mod.key, row.key, capped)
-                    end
-                    if row.liveTierLabelKey then
-                        row.vaultLabel = mdb[row.liveTierLabelKey]
-                    end
-                    if row.liveTierColorKey then
-                        row.vaultColor = mdb[row.liveTierColorKey]
-                    end
-                end
-            end
+            SyncLiveRows(self, progress, mod)
         end
     end
 

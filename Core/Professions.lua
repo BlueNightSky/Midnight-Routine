@@ -292,6 +292,10 @@ function MR:RefreshPlayerProfessions()
 
     local changed = not ProfessionMapsEqual(previousProfessions, self.playerProfessions)
 
+    if changed then
+        self._trackingRowIndexes = nil
+        self._trackingRowIndexesDirty = true
+    end
     if changed and self.RefreshProfessionKnowledgeSurfaces then
         self:RequestProfessionKnowledgeSurfaceRefresh()
     end

@@ -939,7 +939,8 @@ MR:RegisterModule({
         db[mod.key]["uatv_branch_name"] = activeUATVBranch and activeUATVBranch.name or nil
         db[mod.key]["uatv_branch_quest"] = activeUATVBranch and activeUATVBranch.quest or nil
         db[mod.key]["uatv_completed_branch_name"] = nil
-        db[mod.key]["unity_against_void"] = 0
+        local manualUnity = MR.GetManualOverride and tonumber(MR:GetManualOverride("s1_weekly", "unity_against_void")) or 0
+        db[mod.key]["unity_against_void"] = math.max(0, manualUnity)
 
         if uatvMetaCompleted then
             db[mod.key]["unity_against_void"] = 1

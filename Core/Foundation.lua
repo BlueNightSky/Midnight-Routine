@@ -134,6 +134,7 @@ local DEFAULTS = {
         altBoardView = "character",
         altBoardCollapsedModules = {},
         altBoardCharacterOrder = {},
+        altBoardCharacterSort = "custom",
         altBoardConcentrationOrder = {},
         concentrationTrackerAlpha = 1.0,
         concentrationTrackerCompact = false,

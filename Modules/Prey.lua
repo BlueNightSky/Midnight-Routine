@@ -2,7 +2,10 @@ local _, ns = ...
 local MR = ns.MR
 
 local L = LibStub("AceLocale-3.0"):GetLocale("MidnightRoutine")
-local PREY_WEEKLY_MAX = MR:IsPatchAvailable("12.1.0") and 5 or 4
+local IS_PATCH_12_1 = MR:IsPatchAvailable("12.1.0")
+local PREY_NORMAL_WEEKLY_MAX = 4
+local PREY_HARD_WEEKLY_MAX = IS_PATCH_12_1 and 6 or 4
+local PREY_NIGHTMARE_WEEKLY_MAX = IS_PATCH_12_1 and 5 or 4
 
 local function BuildPreyNormalQuestIds()
     local ids = {}
@@ -47,22 +50,22 @@ MR:RegisterModule({
         {
             key      = "prey_normal_hunts",
             label    = L["Prey_Normal_Label"],
-            max      = PREY_WEEKLY_MAX,
-            note     = L["Prey_Normal_Note"],
+            max      = PREY_NORMAL_WEEKLY_MAX,
+            note     = string.format(L["Prey_Normal_Note"], PREY_NORMAL_WEEKLY_MAX),
             questIds = BuildPreyNormalQuestIds(),
         },
         {
             key      = "prey_hard_hunts",
             label    = L["Prey_Hard_Label"],
-            max      = PREY_WEEKLY_MAX,
-            note     = L["Prey_Hard_Note"],
+            max      = PREY_HARD_WEEKLY_MAX,
+            note     = string.format(L["Prey_Hard_Note"], PREY_HARD_WEEKLY_MAX),
             questIds = BuildPreyHardQuestIds(),
         },
         {
             key      = "prey_nightmare_hunts",
             label    = L["Prey_Nightmare_Label"],
-            max      = PREY_WEEKLY_MAX,
-            note     = L["Prey_Nightmare_Note"],
+            max      = PREY_NIGHTMARE_WEEKLY_MAX,
+            note     = string.format(L["Prey_Nightmare_Note"], PREY_NIGHTMARE_WEEKLY_MAX),
             questIds = BuildPreyNightmareQuestIds(),
         },
         {

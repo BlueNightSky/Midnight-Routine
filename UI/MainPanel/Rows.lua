@@ -1170,7 +1170,7 @@ local function GetMainRowWidgetKind(mod, row)
 
     local kind = "normal"
     local isProfessionRow = mod and mod.profSkillLine
-    local professionCountEntry = isProfessionRow and row.professionKnowledgeEntry and row.professionKnowledgeEntry.mode == "count"
+    local professionCountEntry = isProfessionRow and row.mode == "count"
     local isCurrencyRow = mod and (mod.key == "currencies" or mod.key == "pvp_currencies") and row.currencyId
     if isProfessionRow then kind = kind .. ":profession" end
     if isCurrencyRow then kind = kind .. ":currency" end
@@ -1524,7 +1524,7 @@ UpdateMainRowWidget = function(self, section, mod, row, done, yOff, colW)
     local hasNumericMax = type(row.max) == "number" and row.max > 0
     local isCurrencyRow = row.currencyId and hasNumericMax and not row.noMax
     local isProfessionRow = mod and mod.profSkillLine
-    local professionCountEntry = isProfessionRow and row.professionKnowledgeEntry and row.professionKnowledgeEntry.mode == "count"
+    local professionCountEntry = isProfessionRow and row.mode == "count"
     local hasCoordText = hasWaypoint and not row.hideCoordText and not isProfessionRow
     local hasKnowledgeText = not professionCountEntry and type(row.kpTotal) == "number" and row.kpTotal > 0
     local availableRightWidth = math.max(colW - (PADDING + 32) - math.max(40, GetFontSize() * 4), 0)
@@ -1830,7 +1830,7 @@ function MR:IsRowComplete(mod, row, done)
     if mod and (mod.key == "currencies" or mod.key == "pvp_currencies") and not self:IsModuleHideComplete(mod.key) then
         return false
     end
-    if row and row.professionKnowledgeEntry and self.GetProfessionKnowledgeEntryProgress then
+    if row and (row.professionKnowledgeEntry or row.profKnowledgeSectionKey) and self.GetProfessionKnowledgeEntryProgress then
         local current, required = self:GetProfessionKnowledgeEntryProgress(row)
         return (current or 0) >= (required or 1)
     end

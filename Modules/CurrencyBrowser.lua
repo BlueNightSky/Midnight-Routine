@@ -344,7 +344,25 @@ end
 local function PositionBrowser(frame)
     frame:ClearAllPoints()
     if MR.frame and MR.frame:IsShown() then
-        frame:SetPoint("TOPLEFT", MR.frame, "TOPRIGHT", 8, 0)
+        local mainLeft = MR.frame:GetLeft()
+        local mainRight = MR.frame:GetRight()
+        local screenLeft = UIParent:GetLeft()
+        local screenRight = UIParent:GetRight()
+        if mainLeft and mainRight and screenLeft and screenRight then
+            local uiScale = UIParent:GetEffectiveScale()
+            local mainScale = MR.frame:GetEffectiveScale()
+            local frameScale = frame:GetEffectiveScale()
+            local leftSpace = (mainLeft * mainScale / uiScale) - screenLeft
+            local rightSpace = screenRight - (mainRight * mainScale / uiScale)
+            local requiredSpace = (frame:GetWidth() * frameScale / uiScale) + 8
+            if rightSpace >= requiredSpace or rightSpace >= leftSpace then
+                frame:SetPoint("TOPLEFT", MR.frame, "TOPRIGHT", 8, 0)
+            else
+                frame:SetPoint("TOPRIGHT", MR.frame, "TOPLEFT", -8, 0)
+            end
+        else
+            frame:SetPoint("TOPLEFT", MR.frame, "TOPRIGHT", 8, 0)
+        end
     else
         frame:SetPoint("CENTER", UIParent, "CENTER", 220, 0)
     end

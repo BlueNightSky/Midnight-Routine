@@ -61,6 +61,7 @@ local WBPopulateConcentrationOverview = Warband.WBPopulateConcentrationOverview
 local WBRefreshMainAltPicker = Warband.WBRefreshMainAltPicker
 local WBBuildMainAltPicker = Warband.WBBuildMainAltPicker
 local WBPopulateConcentrationTracker = Warband.WBPopulateConcentrationTracker
+local ResetCachedWidget = ns.ResetCachedWidget
 
 function MR:RefreshConcentrationTracker(data)
     if self.concentrationTrackerFrame and self.concentrationTrackerFrame:IsShown() then
@@ -336,6 +337,13 @@ function MR:ToggleConcentrationTracker()
         frame.cfgBtn = cfgBtn
         frame.dragger = dragger
         frame.widgets = {}
+        frame:SetScript("OnHide", function()
+            for _, card in ipairs(frame._concentrationTrackerCards or {}) do
+                for _, row in ipairs(card._rows or {}) do
+                    ResetCachedWidget(row)
+                end
+            end
+        end)
 
         self.concentrationTrackerFrame = frame
     end
@@ -471,7 +479,7 @@ function MR:PopulateConcentrationTrackerConfigFrame(f)
     Divider()
     SectionLabel(L["AltBoard_ConcentrationCharacterVisibility"] or "Show / Hide Characters")
 
-    local data = MR:GetWarbandWeeklyData()
+    local data = MR:GetWarbandWeeklyData(nil, false)
     local anyCharacters = false
     for _, charEntry in ipairs(data or {}) do
         local concentrationEntries = type(charEntry.concentration) == "table" and charEntry.concentration or nil

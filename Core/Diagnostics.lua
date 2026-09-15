@@ -488,6 +488,7 @@ SlashCmdList["MIDROUTE"] = function(msg)
         MR._warbandConcentrationCardCreatedCount = 0
         MR._warbandConcentrationRowCreatedCount = 0
         MR._warbandBoardDataBuildCount = 0
+        MR._warbandBoardDetailBuildCount = 0
         MR._warbandBoardSelectionRefreshCount = 0
         MR._idleWorkCounts = nil
         MR._trackIdleWork = nil

@@ -135,9 +135,18 @@ function MR:PrintMemoryReport(details)
         self._mainAltPickerRowCreatedCount or 0
     ))
     local board = self.altBoardFrame
-    local detailRows = 0
-    for _, card in ipairs(board and board._detailCards or {}) do
-        detailRows = detailRows + #(card._rows or {})
+    local detailRows = board and board._detailRowPool and #board._detailRowPool or 0
+    local boardSnapshots = 0
+    local boardDetailedSnapshots = 0
+    local boardSnapshotRows = 0
+    for _, snapshot in ipairs(board and board._data or {}) do
+        boardSnapshots = boardSnapshots + 1
+        if snapshot._detailsLoaded then
+            boardDetailedSnapshots = boardDetailedSnapshots + 1
+        end
+        for _, moduleEntry in ipairs(snapshot.modules or {}) do
+            boardSnapshotRows = boardSnapshotRows + #(moduleEntry.rows or {})
+        end
     end
     local concentrationCards = 0
     local concentrationRows = 0
@@ -155,6 +164,11 @@ function MR:PrintMemoryReport(details)
         detailRows,
         board and board.heroConcentrationWidgets and #board.heroConcentrationWidgets or 0
     ))
+    print(("  Warband snapshots: %d total / %d detailed / %d retained rows"):format(
+        boardSnapshots,
+        boardDetailedSnapshots,
+        boardSnapshotRows
+    ))
     print(("  Warband concentration cache: %d cards / %d rows; created since clear: %d cards / %d rows"):format(
         concentrationCards,
         concentrationRows,
@@ -167,8 +181,9 @@ function MR:PrintMemoryReport(details)
         self._warbandDetailRowCreatedCount or 0,
         self._warbandConcentrationChipCreatedCount or 0
     ))
-    print(("  Warband refreshes: %d data builds / %d selection redraws"):format(
+    print(("  Warband refreshes: %d data builds / %d detail builds / %d selection redraws"):format(
         self._warbandBoardDataBuildCount or 0,
+        self._warbandBoardDetailBuildCount or 0,
         self._warbandBoardSelectionRefreshCount or 0
     ))
     print(("  Detached windows: %d"):format(detached))
@@ -183,7 +198,9 @@ function MR:PrintMemoryReport(details)
     ))
     if self.GetProfessionKnowledgeCacheCounts then
         local counts = self:GetProfessionKnowledgeCacheCounts()
-        print(("  PK caches: items %d, quests %d, pending %d/%d, rewards %d, labels %d"):format(
+        print(("  PK catalog: %d compact records"):format(counts.catalogEntries or 0))
+        print(("  PK caches: %d primed modules, items %d, quests %d, pending %d/%d, rewards %d, labels %d"):format(
+            counts.primedModules or 0,
             counts.itemNames or 0,
             counts.questTitles or 0,
             counts.questTitlePending or 0,
@@ -192,6 +209,24 @@ function MR:PrintMemoryReport(details)
             counts.pendingLabels or 0
         ))
     end
+    if self.GetProfessionKnowledgeWatchCounts then
+        local watchedItems, watchedQuests, watchedCurrencies, watchFrame = self:GetProfessionKnowledgeWatchCounts()
+        print(("  PK watches: %d items / %d quests / %d currencies / frame %s"):format(
+            watchedItems or 0,
+            watchedQuests or 0,
+            watchedCurrencies or 0,
+            watchFrame and "active" or "dormant"
+        ))
+    end
+    local trackingIndexIDs = 0
+    local trackingIndexRows = 0
+    for _, index in pairs(self._trackingRowIndexes or {}) do
+        for _, entries in pairs(index) do
+            trackingIndexIDs = trackingIndexIDs + 1
+            trackingIndexRows = trackingIndexRows + #(entries or {})
+        end
+    end
+    print(("  Tracking indexes: %d IDs / %d row references"):format(trackingIndexIDs, trackingIndexRows))
     print(("  PK window since clear: %d builds / %d renders / %d refresh requests"):format(
         self._professionKnowledgeWindowBuildCount or 0,
         self._professionKnowledgeWindowRenderCount or 0,
@@ -328,6 +363,7 @@ local function ReadAuditCounters(self)
         sectionReused = self._mainSectionWidgetReusedCount or 0,
         sectionPooled = self._mainSectionWidgetPooledCount or 0,
         warbandBuilds = self._warbandBoardDataBuildCount or 0,
+        warbandDetailBuilds = self._warbandBoardDetailBuildCount or 0,
         warbandRedraws = self._warbandBoardSelectionRefreshCount or 0,
         pkBuilds = self._professionKnowledgeWindowBuildCount or 0,
         pkRenders = self._professionKnowledgeWindowRenderCount or 0,
@@ -426,6 +462,7 @@ local function DescribeAuditSample(sample)
     Add(sample.sectionReused, "sections reused")
     Add(sample.sectionPooled, "sections pooled")
     Add(sample.warbandBuilds, "warband builds")
+    Add(sample.warbandDetailBuilds, "warband detail builds")
     Add(sample.warbandRedraws, "warband redraws")
     Add(sample.pkBuilds, "PK builds")
     Add(sample.pkRenders, "PK renders")
