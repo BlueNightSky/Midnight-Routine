@@ -3,7 +3,8 @@ local MR = ns.MR
 
 local L = LibStub("AceLocale-3.0"):GetLocale("MidnightRoutine")
 
-local CURSE_SURGE_START_GRACE = 900
+local CURSE_SURGE_DURATION = 600
+local CURSE_SURGE_FALLBACK_INTERVAL = 120
 local CURSE_SURGE_SITES = {
     { name = L["CurseSurgeSite_MalformedLeviathan"],       zone = 2512, x = 46.7, y = 62.8 },
     { name = L["CurseSurgeSite_BroodmothersNest"],         zone = 2512, x = 45.7, y = 29.6 },
@@ -22,9 +23,16 @@ local CURSE_SURGE_POI_TO_SITE = {
 
 local scheduledCurseSurges = {}
 local activeCurseSurgeSite
+local activeCurseSurgeStartTime
+local activeCurseSurgeEndTime
 local endedCurseSurgeSite
 local endedCurseSurgeAt
-local curseSurgeDataReadAt
+
+local function GetCurseSurgeEndTime(event)
+    local endTime = event.startTime + CURSE_SURGE_DURATION
+    return event.endTime and event.endTime > event.startTime and math.min(event.endTime, endTime)
+        or endTime
+end
 
 local function ReadCurseSurgeFromMap()
     if not (C_AreaPoiInfo and C_AreaPoiInfo.GetEventsForMap) then
@@ -52,26 +60,21 @@ local function ReadCurseSurgeFromScenario()
     end
 
     local ok, info = pcall(C_ScenarioInfo.GetScenarioInfo)
-    if not ok or type(info) ~= "table" or info.isComplete or type(info.name) ~= "string" then
+    if not ok or type(info) ~= "table" or type(info.name) ~= "string" then
         return nil
     end
 
     for _, site in ipairs(CURSE_SURGE_SITES) do
         if info.name:find(site.name, 1, true) then
-            return site
+            return site, info.isComplete == true
         end
     end
 end
 
-local function RefreshCurseSurgeData(force)
+local function RefreshCurseSurgeData()
     if not C_EventScheduler then
         return
     end
-    if not force and curseSurgeDataReadAt and GetTime() - curseSurgeDataReadAt < 5 then
-        return
-    end
-    curseSurgeDataReadAt = GetTime()
-
     if C_EventScheduler.GetScheduledEvents then
         local ok, list = pcall(C_EventScheduler.GetScheduledEvents)
         if ok and type(list) == "table" then
@@ -89,6 +92,19 @@ local function RefreshCurseSurgeData(force)
                     end
                 end
             end
+            local now = GetServerTime()
+            for _, previous in ipairs(scheduledCurseSurges) do
+                if previous.startTime <= now and GetCurseSurgeEndTime(previous) > now then
+                    local found
+                    for _, event in ipairs(events) do
+                        if event.site == previous.site and event.startTime == previous.startTime then
+                            found = true
+                            break
+                        end
+                    end
+                    if not found then events[#events + 1] = previous end
+                end
+            end
             table.sort(events, function(a, b)
                 return a.startTime < b.startTime
             end)
@@ -96,8 +112,8 @@ local function RefreshCurseSurgeData(force)
         end
     end
 
-    local detectedSite, mapStateRead = ReadCurseSurgeFromMap()
-    if not mapStateRead and C_EventScheduler.GetOngoingEvents then
+    local detectedSite = ReadCurseSurgeFromMap()
+    if not detectedSite and C_EventScheduler.GetOngoingEvents then
         local ok, list = pcall(C_EventScheduler.GetOngoingEvents)
         if ok and type(list) == "table" then
             for _, ev in ipairs(list) do
@@ -112,43 +128,64 @@ local function RefreshCurseSurgeData(force)
         end
     end
 
-    detectedSite = ReadCurseSurgeFromScenario() or detectedSite
+    local scenarioSite, scenarioComplete = ReadCurseSurgeFromScenario()
+    if scenarioSite and not scenarioComplete then detectedSite = scenarioSite end
+    local now = GetServerTime()
     if activeCurseSurgeSite and not detectedSite then
         endedCurseSurgeSite = activeCurseSurgeSite
-        endedCurseSurgeAt = GetServerTime()
-    elseif detectedSite then
-        endedCurseSurgeSite = nil
-        endedCurseSurgeAt = nil
+        endedCurseSurgeAt = now
+    end
+    if scenarioSite and scenarioComplete then
+        endedCurseSurgeSite = scenarioSite
+        endedCurseSurgeAt = now
+    end
+    if detectedSite ~= activeCurseSurgeSite then
+        activeCurseSurgeStartTime = nil
+        activeCurseSurgeEndTime = detectedSite and now + CURSE_SURGE_DURATION or nil
+    end
+    if detectedSite then
+        for _, event in ipairs(scheduledCurseSurges) do
+            if event.site == detectedSite and event.startTime <= now
+                and (not activeCurseSurgeStartTime or event.startTime >= activeCurseSurgeStartTime) then
+                activeCurseSurgeStartTime = event.startTime
+                activeCurseSurgeEndTime = GetCurseSurgeEndTime(event)
+            end
+        end
     end
     activeCurseSurgeSite = detectedSite
 end
 
 local function GetCurseSurgeState()
-    if activeCurseSurgeSite then
-        return "live", nil, activeCurseSurgeSite
-    end
-
     local now = GetServerTime()
-    local startingEvent
+    local liveEvent
     local nextEvent
     for _, ev in ipairs(scheduledCurseSurges) do
         if ev.startTime > now and not nextEvent then
             nextEvent = ev
         elseif ev.startTime <= now
-            and now - ev.startTime <= CURSE_SURGE_START_GRACE
-            and (not ev.endTime or ev.endTime > now) then
-            startingEvent = ev
+            and GetCurseSurgeEndTime(ev) > now then
+            local ended = endedCurseSurgeSite == ev.site and endedCurseSurgeAt and endedCurseSurgeAt >= ev.startTime
+            if not ended then liveEvent = ev end
+            if not ended and activeCurseSurgeSite == ev.site then
+                return "live", GetCurseSurgeEndTime(ev) - now, activeCurseSurgeSite
+            end
         end
     end
 
-    local recentlyEnded = endedCurseSurgeSite == (startingEvent and startingEvent.site)
+    local activeEnded = endedCurseSurgeSite == activeCurseSurgeSite and endedCurseSurgeAt
+        and (not activeCurseSurgeStartTime or endedCurseSurgeAt >= activeCurseSurgeStartTime)
+    if activeCurseSurgeSite and not activeEnded and activeCurseSurgeEndTime and activeCurseSurgeEndTime > now then
+        return "live", activeCurseSurgeEndTime - now, activeCurseSurgeSite
+    end
+
+    local recentlyEnded = endedCurseSurgeSite == (liveEvent and liveEvent.site)
         and endedCurseSurgeAt
-        and now - endedCurseSurgeAt < CURSE_SURGE_START_GRACE
-    if startingEvent and not recentlyEnded then
-        return "starting", 0, startingEvent.site
+        and liveEvent and endedCurseSurgeAt >= liveEvent.startTime
+    if liveEvent and not recentlyEnded then
+        return "live", GetCurseSurgeEndTime(liveEvent) - now, liveEvent.site
     end
     if nextEvent then
-        return "next", nextEvent.startTime - now, nextEvent.site
+        return "next", nextEvent.startTime - now, nextEvent.site, nextEvent.startTime
     end
 
     return "unavailable"
@@ -228,33 +265,64 @@ local function AnnounceCurseSurge(toGroup)
 end
 
 local curseSurgeBoundaryTimer
+local curseSurgeBoundaryAt
+local curseSurgeRefreshTimer
+local curseSurgeRequestEvents
+local curseSurgePublishedPhase
+local curseSurgePublishedSite
+local curseSurgePublishedStart
+local CURSE_SURGE_SCAN_KEYS = { "midnight_activities" }
+local ScheduleCurseSurgeBoundaryRefresh
 
-local function ScheduleCurseSurgeBoundaryRefresh()
+local function RequestCurseSurgeRefresh(requestEvents)
+    curseSurgeRequestEvents = curseSurgeRequestEvents or requestEvents
+    if curseSurgeRefreshTimer then return end
+    curseSurgeRefreshTimer = C_Timer.NewTimer(0.2, function()
+        if curseSurgeRequestEvents and C_EventScheduler and C_EventScheduler.RequestEvents then
+            pcall(C_EventScheduler.RequestEvents)
+        end
+        curseSurgeRequestEvents = nil
+        RefreshCurseSurgeData()
+        curseSurgeRefreshTimer = nil
+        local phase, _, site, startTime = GetCurseSurgeState()
+        if phase ~= curseSurgePublishedPhase or site ~= curseSurgePublishedSite or startTime ~= curseSurgePublishedStart then
+            curseSurgePublishedPhase = phase
+            curseSurgePublishedSite = site
+            curseSurgePublishedStart = startTime
+            MR:RefreshModuleScans(CURSE_SURGE_SCAN_KEYS, true)
+        end
+        ScheduleCurseSurgeBoundaryRefresh()
+    end)
+end
+
+ScheduleCurseSurgeBoundaryRefresh = function()
+    local now = GetServerTime()
+    local nextCheck = now + CURSE_SURGE_FALLBACK_INTERVAL
+    if activeCurseSurgeEndTime and activeCurseSurgeEndTime > now then
+        nextCheck = math.min(nextCheck, activeCurseSurgeEndTime + 1)
+    end
+    for _, event in ipairs(scheduledCurseSurges) do
+        if event.startTime > now then
+            nextCheck = math.min(nextCheck, event.startTime + 1)
+        end
+        local endTime = GetCurseSurgeEndTime(event)
+        if endTime > now then
+            nextCheck = math.min(nextCheck, endTime + 1)
+        end
+    end
+    if curseSurgeBoundaryTimer and curseSurgeBoundaryAt and curseSurgeBoundaryAt <= nextCheck then
+        return
+    end
     if curseSurgeBoundaryTimer then
         curseSurgeBoundaryTimer:Cancel()
         curseSurgeBoundaryTimer = nil
     end
 
-    local phase, seconds = GetCurseSurgeState()
-    local wait = 30
-    if phase == "live" then
-        wait = 10
-    elseif phase == "starting" then
-        wait = 5
-    elseif phase == "next" and seconds and seconds > 0 then
-        wait = math.min(seconds + 1, 60)
-    elseif phase == "next" then
-        wait = 5
-    end
-
-    curseSurgeBoundaryTimer = C_Timer.NewTimer(wait, function()
+    curseSurgeBoundaryAt = nextCheck
+    curseSurgeBoundaryTimer = C_Timer.NewTimer(math.max(nextCheck - now, 0.2), function()
         curseSurgeBoundaryTimer = nil
-        if C_EventScheduler and C_EventScheduler.RequestEvents then
-            pcall(C_EventScheduler.RequestEvents)
-        end
-        RefreshCurseSurgeData(true)
-        if MR.RequestScan then MR:RequestScan() end
-        ScheduleCurseSurgeBoundaryRefresh()
+        curseSurgeBoundaryAt = nil
+        RequestCurseSurgeRefresh(true)
     end)
 end
 
@@ -268,19 +336,7 @@ if MR.IsPatchAvailable and MR:IsPatchAvailable("12.1.0") then
     curseSurgeSchedulerWatcher:RegisterEvent("SCENARIO_UPDATE")
     curseSurgeSchedulerWatcher:RegisterEvent("SCENARIO_COMPLETED")
     curseSurgeSchedulerWatcher:SetScript("OnEvent", function(_, event)
-        if event == "PLAYER_ENTERING_WORLD" then
-            if C_EventScheduler and C_EventScheduler.RequestEvents then
-                pcall(C_EventScheduler.RequestEvents)
-            end
-            RefreshCurseSurgeData(true)
-            if MR.RequestScan then MR:RequestScan() end
-            ScheduleCurseSurgeBoundaryRefresh()
-            return
-        end
-
-        RefreshCurseSurgeData(true)
-        if MR.RequestScan then MR:RequestScan() end
-        ScheduleCurseSurgeBoundaryRefresh()
+        RequestCurseSurgeRefresh(event == "PLAYER_ENTERING_WORLD")
     end)
 end
 
@@ -293,7 +349,6 @@ MR:RegisterModule({
     scanReturnsChanged = true,
 
     onScan = function(mod)
-        RefreshCurseSurgeData()
         local _, _, site = GetCurseSurgeState()
         local changed = false
         for _, row in ipairs(mod.rows) do

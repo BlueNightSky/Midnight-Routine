@@ -288,12 +288,12 @@ MR:RegisterModule({
         }
         local function HasChanges()
             for key, value in pairs(mdb) do
-                if beforeProgress[key] ~= value then
+                if beforeProgress[key] ~= value and not (beforeProgress[key] == nil and value == 0) then
                     return true
                 end
             end
             for key in pairs(beforeProgress) do
-                if mdb[key] ~= beforeProgress[key] then
+                if mdb[key] ~= beforeProgress[key] and not (mdb[key] == nil and beforeProgress[key] == 0) then
                     return true
                 end
             end
