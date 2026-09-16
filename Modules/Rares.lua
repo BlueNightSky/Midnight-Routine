@@ -254,6 +254,8 @@ local RARE_BY_NPC_ID = {}
 local RARE_BY_QUEST_ID = {}
 local RARES_BY_ZONE_AND_NPC = {}
 local RARE_CRITERIA_COMPLETION = {}
+local RARE_CRITERIA_BY_NPC = {}
+local RARE_QUEST_RESOLVE_AT = {}
 
 local function GetRareQuestCacheKey(zone, index, rare)
     if rare and rare[6] then
@@ -281,31 +283,7 @@ local function ResolveRareQuestIDs(zone)
         return
     end
 
-    local mapIDs = zone.mapIDs or { zone.rares[1] and zone.rares[1][3] }
-    local rareByNPC = RARES_BY_ZONE_AND_NPC[zone]
-    for _, rare in ipairs(zone.rares) do
-        if rare[6] then
-            rareByNPC[rare[6]] = rare
-            RARE_BY_NPC_ID[rare[6]] = rare
-        end
-    end
-
-    local criteriaCount = type(GetAchievementNumCriteria) == "function" and GetAchievementNumCriteria(zone.achievId) or 0
-    for index = 1, (criteriaCount or 0) do
-        local ok, _, _, _, _, _, _, _, assetID = pcall(GetAchievementCriteriaInfo, zone.achievId, index)
-        if ok then
-            assetID = tonumber(assetID)
-            local rare = (assetID and rareByNPC[assetID]) or zone.rares[index]
-            if rare then
-                if assetID and assetID > 0 and not rare[6] then
-                    rare[6] = assetID
-                    rareByNPC[assetID] = rare
-                    RARE_BY_NPC_ID[assetID] = rare
-                end
-            end
-        end
-    end
-
+    local changed = false
     local profile = MR.db and MR.db.profile
     if profile then
         profile.rareQuestIDs = profile.rareQuestIDs or {}
@@ -315,58 +293,67 @@ local function ResolveRareQuestIDs(zone)
                 rare[2] = profile.rareQuestIDs[cacheKey]
                 if rare[2] then
                     RARE_BY_QUEST_ID[rare[2]] = rare
+                    changed = true
                 end
             end
         end
     end
 
-    if not (C_TaskQuest and C_TaskQuest.GetQuestsForPlayerByMapID) then
-        return
+    local unresolvedMaps = {}
+    for _, rare in ipairs(zone.rares) do
+        if not rare[2] and rare[3] then unresolvedMaps[rare[3]] = true end
     end
-
-    for _, mapID in ipairs(mapIDs) do
-        if mapID then
-            for _, info in ipairs(C_TaskQuest.GetQuestsForPlayerByMapID(mapID) or {}) do
-                local questID = info.questId or info.questID
-                local rare
-                if info.x and info.y then
-                    local nearestDistance
-                    for _, candidate in ipairs(zone.rares) do
-                        if not candidate[2] and candidate[3] == mapID and candidate[4] and candidate[5] then
-                            local dx = candidate[4] - info.x * 100
-                            local dy = candidate[5] - info.y * 100
-                            local distance = dx * dx + dy * dy
-                            if distance <= 6.25 and (not nearestDistance or distance < nearestDistance) then
-                                rare = candidate
-                                nearestDistance = distance
-                            end
+    if not next(unresolvedMaps) or not (C_TaskQuest and C_TaskQuest.GetQuestsForPlayerByMapID) then
+        return changed
+    end
+    local now = GetTime()
+    if RARE_QUEST_RESOLVE_AT[zone] and now - RARE_QUEST_RESOLVE_AT[zone] < 30 then
+        return changed
+    end
+    RARE_QUEST_RESOLVE_AT[zone] = now
+    for mapID in pairs(unresolvedMaps) do
+        for _, info in ipairs(C_TaskQuest.GetQuestsForPlayerByMapID(mapID) or {}) do
+            local questID = info.questId or info.questID
+            local rare
+            if info.x and info.y then
+                local nearestDistance
+                for _, candidate in ipairs(zone.rares) do
+                    if not candidate[2] and candidate[3] == mapID and candidate[4] and candidate[5] then
+                        local dx = candidate[4] - info.x * 100
+                        local dy = candidate[5] - info.y * 100
+                        local distance = dx * dx + dy * dy
+                        if distance <= 6.25 and (not nearestDistance or distance < nearestDistance) then
+                            rare = candidate
+                            nearestDistance = distance
                         end
                     end
                 end
-                if rare then
-                    local rareIndex
-                    for index, candidate in ipairs(zone.rares) do
-                        if candidate == rare then
-                            rareIndex = index
-                            break
-                        end
+            end
+            if rare and questID then
+                local rareIndex
+                for index, candidate in ipairs(zone.rares) do
+                    if candidate == rare then
+                        rareIndex = index
+                        break
                     end
-                    if rareIndex then
-                        rare[2] = questID
-                        RARE_BY_QUEST_ID[questID] = rare
-                        if profile then
-                            profile.rareQuestIDs[GetRareQuestCacheKey(zone, rareIndex, rare)] = questID
-                        end
-                        if not rare[4] and info.x and info.y then
-                            rare[3] = mapID
-                            rare[4] = info.x * 100
-                            rare[5] = info.y * 100
-                        end
+                end
+                if rareIndex then
+                    rare[2] = questID
+                    changed = true
+                    RARE_BY_QUEST_ID[questID] = rare
+                    if profile then
+                        profile.rareQuestIDs[GetRareQuestCacheKey(zone, rareIndex, rare)] = questID
+                    end
+                    if not rare[4] and info.x and info.y then
+                        rare[3] = mapID
+                        rare[4] = info.x * 100
+                        rare[5] = info.y * 100
                     end
                 end
             end
         end
     end
+    return changed
 end
 
 local function SyncRareKillRecord(questId)
@@ -380,9 +367,12 @@ local function SyncRareKillRecord(questId)
     local rec    = char.raresKills[key]
     if not rec or rec.w ~= weekKey then
         char.raresKills[key] = { w = weekKey, d = dayKey }
+        return true
     elseif rec.d ~= dayKey then
         char.raresKills[key].d = dayKey
+        return true
     end
+    return false
 end
 
 function MR:SyncRareQuestCompletion(questId)
@@ -390,8 +380,7 @@ function MR:SyncRareQuestCompletion(questId)
     if not questId or not RARE_BY_QUEST_ID[questId] then
         return false
     end
-    SyncRareKillRecord(questId)
-    return true
+    return SyncRareKillRecord(questId) == true
 end
 
 local function GetRareKillStatus(questId)
@@ -416,6 +405,12 @@ local function SyncNewAchievementCriteriaKills(zone)
         return
     end
     local rareByNPC = RARES_BY_ZONE_AND_NPC[zone]
+    local changed = false
+    local byNPC = RARE_CRITERIA_BY_NPC[zone.achievId]
+    if not byNPC then
+        byNPC = {}
+        RARE_CRITERIA_BY_NPC[zone.achievId] = byNPC
+    end
 
     local criteriaCount = type(GetAchievementNumCriteria) == "function" and GetAchievementNumCriteria(zone.achievId) or 0
     for index = 1, (criteriaCount or 0) do
@@ -428,15 +423,19 @@ local function SyncNewAchievementCriteriaKills(zone)
                     rare[6] = assetID
                     rareByNPC[assetID] = rare
                     RARE_BY_NPC_ID[assetID] = rare
+                    changed = true
                 end
                 local key = tostring(zone.achievId) .. ":" .. tostring(index)
                 if RARE_CRITERIA_COMPLETION[key] == false and completed == true and assetID then
                     SyncRareKillRecord("npc:" .. tostring(assetID))
                 end
+                if RARE_CRITERIA_COMPLETION[key] ~= (completed == true) then changed = true end
                 RARE_CRITERIA_COMPLETION[key] = completed == true
+                if assetID then byNPC[assetID] = completed == true end
             end
         end
     end
+    return changed
 end
 
 local function GetRareNPCIDFromGUID(guid)
@@ -455,8 +454,7 @@ function MR:OnRareUnitDied(_, unitGUID)
     local npcID = GetRareNPCIDFromGUID(unitGUID)
     local rare = npcID and RARE_BY_NPC_ID[npcID]
     if not rare then return end
-    SyncRareKillRecord("npc:" .. tostring(npcID))
-    if self.RefreshRares then self:RefreshRares() end
+    if SyncRareKillRecord("npc:" .. tostring(npcID)) and self.RefreshRares then self:RefreshRares() end
 end
 
 function MR:OnRareCombatLogEvent()
@@ -615,32 +613,19 @@ local function IsAchievementCriteriaCompleted(achievementId, criteriaIndex, rare
         return false
     end
 
-    local npcID = rare and rare[6]
-    if type(GetAchievementNumCriteria) == "function" then
-        local numCriteria = GetAchievementNumCriteria(achievementId)
-        if not numCriteria or criteriaIndex > numCriteria then
-            criteriaIndex = nil
-        end
-        if npcID then
-            for index = 1, numCriteria or 0 do
-                local ok, _, _, completed, _, _, _, _, assetID = pcall(GetAchievementCriteriaInfo, achievementId, index)
-                if ok and tonumber(assetID) == npcID then
-                    return completed == true
-                end
+    local byNPC = RARE_CRITERIA_BY_NPC[achievementId]
+    if not byNPC then
+        for _, zone in ipairs(ZONES) do
+            if zone.achievId == achievementId then
+                SyncNewAchievementCriteriaKills(zone)
+                byNPC = RARE_CRITERIA_BY_NPC[achievementId]
+                break
             end
         end
     end
-
-    if not criteriaIndex then
-        return false
-    end
-
-    local ok, _, _, completed = pcall(GetAchievementCriteriaInfo, achievementId, criteriaIndex)
-    if not ok then
-        return false
-    end
-
-    return completed == true
+    local npcID = rare and rare[6]
+    if npcID and byNPC and byNPC[npcID] ~= nil then return byNPC[npcID] end
+    return RARE_CRITERIA_COMPLETION[tostring(achievementId) .. ":" .. tostring(criteriaIndex)] == true
 end
 
 local function GetZoneStatus(zone)
@@ -1861,31 +1846,37 @@ function MR:SyncAllRareKills(resolveQuestIDs)
         if not self._rareKillSyncTimer then
             self._rareKillSyncTimer = self:ScheduleTimer(function()
                 self._rareKillSyncTimer = nil
-                self:SyncAllRareKills()
+                if self:SyncAllRareKills() and self.RefreshRares then self:RefreshRares() end
             end, remaining)
         end
-        return
+        return false
     end
     if self._rareKillSyncTimer then
         self:CancelTimer(self._rareKillSyncTimer)
         self._rareKillSyncTimer = nil
     end
     self._lastRareKillSyncAt = now
+    local dayKey = GetCurrentDayKey()
+    local weekKey = self:GetCurrentWeekKey()
+    local changed = self._lastRareSyncDay ~= dayKey or self._lastRareSyncWeek ~= weekKey
+    self._lastRareSyncDay = dayKey
+    self._lastRareSyncWeek = weekKey
     if resolveQuestIDs == nil then
         resolveQuestIDs = raresFrame and raresFrame:IsShown() or false
     end
     for _, zone in ipairs(ZONES) do
+        if SyncNewAchievementCriteriaKills(zone) then changed = true end
         if resolveQuestIDs then
-            ResolveRareQuestIDs(zone)
+            if ResolveRareQuestIDs(zone) then changed = true end
         end
-        SyncNewAchievementCriteriaKills(zone)
         for _, rare in ipairs(zone.rares) do
             local questId = rare[2]
             if questId and C_QuestLog.IsQuestFlaggedCompleted(questId) then
-                SyncRareKillRecord(questId)
+                if SyncRareKillRecord(questId) then changed = true end
             end
         end
     end
+    return changed
 end
 
 
@@ -1902,9 +1893,6 @@ function MR:RefreshRares()
         return
     end
 
-    for _, zone in ipairs(ZONES) do
-        ResolveRareQuestIDs(zone)
-    end
     RefreshRaresFrame()
 end
 

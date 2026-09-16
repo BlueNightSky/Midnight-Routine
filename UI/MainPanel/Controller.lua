@@ -1172,7 +1172,7 @@ function MR:RefreshUI()
         return
     end
 
-    local profiling = self._scrollProfileArmed and debugprofilestop
+    local profiling = (self._scrollProfileArmed or self._memoryAuditTrace) and debugprofilestop
     local profileStarted = profiling and debugprofilestop() or nil
     local statsElapsed = 0
     local mainElapsed = 0
@@ -1408,7 +1408,12 @@ function MR:RefreshUI()
     end
     if mainStarted then mainElapsed = debugprofilestop() - mainStarted end
 
+    local detachedStarted = profiling and debugprofilestop() or nil
     self:RefreshVisibleDetachedFrames()
+    if detachedStarted and self._memoryAuditTrace and self.NoteIdleWork and self.NoteIdleWorkTime then
+        self:NoteIdleWork("MainRefresh:DetachedWindows")
+        self:NoteIdleWorkTime("MainRefresh:DetachedWindows", debugprofilestop() - detachedStarted)
+    end
 
     if self.UpdateTimerRowTicker then
         self:UpdateTimerRowTicker()
@@ -1429,8 +1434,11 @@ function MR:RefreshUI()
         end, minRefreshInterval)
     end
 
-    if collectgarbage then
-        collectgarbage("step", 160)
+    if self._memoryAuditTrace and self.NoteIdleWork and self.NoteIdleWorkTime then
+        self:NoteIdleWork("MainRefresh:Statistics")
+        self:NoteIdleWorkTime("MainRefresh:Statistics", statsElapsed)
+        self:NoteIdleWork("MainRefresh:LayoutAndRows")
+        self:NoteIdleWorkTime("MainRefresh:LayoutAndRows", mainElapsed)
     end
     if profileStarted and self.CaptureScrollProfile then
         local elapsed = debugprofilestop() - profileStarted
@@ -1540,9 +1548,6 @@ function MR:ApplySharedMediaSettings()
     if self.RepopulateRenownConfig then self:RepopulateRenownConfig() end
     if self.altBoardFrame and self.RefreshWarbandBoard then
         self:RefreshWarbandBoard()
-    end
-    if collectgarbage then
-        collectgarbage("step", 200)
     end
 end
 

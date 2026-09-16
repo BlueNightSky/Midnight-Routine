@@ -358,7 +358,7 @@ function MR:RefreshVisibleDetachedFrames()
         local modVisible = not mod.isVisible or mod:isVisible()
         local detached = MR:IsModuleDetached(mod.key)
         local frame = self.detachedFrames[mod.key]
-        local stats = GetModuleStats(self, mod)
+        local stats = detached and MR:IsModuleEnabled(mod.key) and modVisible and GetModuleStats(self, mod) or nil
         local shownRows = stats and stats.shownRows or 0
 
         if detached and MR:IsModuleEnabled(mod.key) and modVisible and shownRows > 0 then

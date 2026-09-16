@@ -1868,54 +1868,56 @@ function MR:IsRowComplete(mod, row, done)
     return row.max and not row.noMax and done >= row.max
 end
 
-BuildModuleStatsCache = function(self)
+BuildModuleStatsCache = function(self, requestedMod)
     local cache = self._moduleStatsCache or {}
     local seen = self._moduleStatsSeen or {}
     self._moduleStatsSeen = seen
 
-    for _, mod in ipairs(MR:GetOrderedModules("all")) do
-        local hideComplete = MR:IsModuleHideComplete(mod.key)
-        local isOpen = MR:IsModuleOpen(mod.key)
-        local totalRows, doneRows, shownRows = 0, 0, 0
-        local height = HEADER_HEIGHT + 1 + SECTION_GAP + (mod.key == "currencies" and CURRENCY_BROWSER_HEIGHT or 0)
+    for _, mod in ipairs(requestedMod and { requestedMod } or MR:GetOrderedModules("all")) do
+        if requestedMod or MR:IsModuleEnabled(mod.key) then
+            local hideComplete = MR:IsModuleHideComplete(mod.key)
+            local isOpen = MR:IsModuleOpen(mod.key)
+            local totalRows, doneRows, shownRows = 0, 0, 0
+            local height = HEADER_HEIGHT + 1 + SECTION_GAP + (mod.key == "currencies" and CURRENCY_BROWSER_HEIGHT or 0)
 
-        local rows = MR.GetOrderedRows and MR:GetOrderedRows(mod) or mod.rows
-        for _, row in ipairs(rows) do
-            local rowVisible = IsMainRowVisible(mod, row)
-            if rowVisible and MR:IsRowEnabled(mod.key, row.key) then
-                local done = MR:GetProgress(GetRowProgressModuleKey(mod, row), row.key)
-                local countsForTotals = not row.control
-                local isComplete = countsForTotals and self:IsRowComplete(mod, row, done) or false
-                if countsForTotals then
-                    totalRows = totalRows + 1
-                    if isComplete then
-                        doneRows = doneRows + 1
+            local rows = MR.GetOrderedRows and MR:GetOrderedRows(mod) or mod.rows
+            for _, row in ipairs(rows) do
+                local rowVisible = IsMainRowVisible(mod, row)
+                if rowVisible and MR:IsRowEnabled(mod.key, row.key) then
+                    local done = MR:GetProgress(GetRowProgressModuleKey(mod, row), row.key)
+                    local countsForTotals = not row.control
+                    local isComplete = countsForTotals and self:IsRowComplete(mod, row, done) or false
+                    if countsForTotals then
+                        totalRows = totalRows + 1
+                        if isComplete then
+                            doneRows = doneRows + 1
+                        end
                     end
                 end
             end
+
+            local countedShownRows, extraHeight = CountMainGroupedRows(self, mod, rows, hideComplete, isOpen)
+            shownRows = countedShownRows
+            height = height + extraHeight
+
+            if shownRows == 0 then
+                height = 0
+            end
+
+            local entry = cache[mod.key] or {}
+            entry.doneRows = doneRows
+            entry.height = height
+            entry.hideComplete = hideComplete
+            entry.isOpen = isOpen
+            entry.shownRows = shownRows
+            entry.totalRows = totalRows
+            cache[mod.key] = entry
+            seen[mod.key] = true
         end
-
-        local countedShownRows, extraHeight = CountMainGroupedRows(self, mod, rows, hideComplete, isOpen)
-        shownRows = countedShownRows
-        height = height + extraHeight
-
-        if shownRows == 0 then
-            height = 0
-        end
-
-        local entry = cache[mod.key] or {}
-        entry.doneRows = doneRows
-        entry.height = height
-        entry.hideComplete = hideComplete
-        entry.isOpen = isOpen
-        entry.shownRows = shownRows
-        entry.totalRows = totalRows
-        cache[mod.key] = entry
-        seen[mod.key] = true
     end
 
     for key in pairs(cache) do
-        if not seen[key] then
+        if not requestedMod and not seen[key] then
             cache[key] = nil
         end
         seen[key] = nil
@@ -1930,7 +1932,7 @@ GetModuleStats = function(self, mod)
         return cache[mod.key]
     end
 
-    local fallback = BuildModuleStatsCache(self)
+    local fallback = BuildModuleStatsCache(self, mod)
     return fallback[mod.key]
 end
 
