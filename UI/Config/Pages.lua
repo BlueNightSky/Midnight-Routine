@@ -29,7 +29,6 @@ local GetFontFlags = Config.GetFontFlags
 local RefreshFonts = Config.RefreshFonts
 local SetWindowLayoutValue = Config.SetWindowLayoutValue
 local RefreshVisualSettings = Config.RefreshVisualSettings
-local ScheduleSettingsGarbageCollect = Config.ScheduleSettingsGarbageCollect
 local RestoreFramePos = Config.RestoreFramePos
 
 function MR:PopulateConfigFrame(f)
@@ -549,7 +548,6 @@ function MR:PopulateConfigFrame(f)
             function(v)
                 MR.db.profile.keepIconsVisibleInTextMode = v
                 RefreshVisualSettings()
-                ScheduleSettingsGarbageCollect()
             end,
             0.40, 0.40, 0.40, 8, nil, cfgFs)
 
@@ -644,7 +642,6 @@ function MR:PopulateConfigFrame(f)
             function(v)
                 MR.db.profile.keepHeadersVisibleInTextMode = v
                 RefreshVisualSettings()
-                ScheduleSettingsGarbageCollect()
             end,
             0.16, 0.78, 0.75, 8, nil, cfgFs)
 

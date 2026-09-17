@@ -36,12 +36,6 @@ local gatheringRebuildPending
 local configExpandedProfessions = {} 
 local configCollapsedExpansions = {}
 
-local function StepMemoryCleanup()
-    if collectgarbage then
-        collectgarbage("step", 240)
-    end
-end
-
 local function RefreshFonts()
     if ns.EnsureFonts then
         FONT_HEADERS, FONT_ROWS = ns.EnsureFonts()
@@ -2547,7 +2541,6 @@ RebuildGatheringLocationsFrame = function(resetScroll)
         gatheringLocationsFrame:RefreshContent(resetScroll)
     end
 
-    StepMemoryCleanup()
 end
 
 function MR.RequestGatheringLocationsRefresh()
@@ -3150,7 +3143,6 @@ PopulateGatheringConfig = function(frame)
         MR:RestoreFrameScreenPosition(frame, keepLeft, keepTop)
     end
 
-    StepMemoryCleanup()
 end
 
 function MR:ToggleGatheringLocationsConfig()

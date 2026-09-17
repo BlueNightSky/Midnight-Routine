@@ -179,18 +179,23 @@ end
 
 local function UpdateQuestProgressForRow(self, progress, mod, row)
     local progressModuleKey = row.progressModuleKey or mod.key
+    local completions = self.db.char.questTurnInCompletions
+    local confirmed = completions and completions[mod.key]
+    local function IsCompleted(questId)
+        return (confirmed and confirmed[questId] == true) or C_QuestLog.IsQuestFlaggedCompleted(questId)
+    end
     local done = 0
     if row.questIds then
         if row.orderedQuestSequence then
             for _, qid in ipairs(row.questIds) do
-                if not C_QuestLog.IsQuestFlaggedCompleted(qid) then
+                if not IsCompleted(qid) then
                     break
                 end
                 done = done + 1
             end
         else
             for _, qid in ipairs(row.questIds) do
-                if C_QuestLog.IsQuestFlaggedCompleted(qid) then
+                if IsCompleted(qid) then
                     done = done + 1
                 end
             end
@@ -467,6 +472,26 @@ function MR:RefreshCurrencyProgress(currencyId, refreshUI)
         end
     end
 
+    return dirty
+end
+
+function MR:RecordQuestTurnInProgress(questId)
+    if not (questId and self.db and self.db.char and self.db.char.progress) then return false end
+    local dirty = false
+    for _, entry in ipairs(GetIndexedRows(self, "quests", questId) or {}) do
+        local mod, row = entry.mod, entry.row
+        if not row.turnInTracked and (self:IsModuleEnabled(mod.key) or mod.customTaskCategoryModule) then
+            local completions = self.db.char.questTurnInCompletions
+            if not completions then
+                completions = {}
+                self.db.char.questTurnInCompletions = completions
+            end
+            completions[mod.key] = completions[mod.key] or {}
+            completions[mod.key][questId] = true
+            if UpdateQuestProgressForRow(self, self.db.char.progress, mod, row) then dirty = true end
+        end
+    end
+    if dirty then self._moduleStatsCache = nil end
     return dirty
 end
 

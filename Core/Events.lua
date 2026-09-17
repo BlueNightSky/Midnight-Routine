@@ -309,13 +309,14 @@ function MR:OnRareProgressChanged()
 end
 
 function MR:OnQuestTurnedIn(_, questID)
+    local dirty = self:RecordQuestTurnInProgress(questID)
     local rareChanged = self.SyncRareQuestCompletion and self:SyncRareQuestCompletion(questID)
     if self.ShouldSuspendBackgroundWorkInCurrentInstance and self:ShouldSuspendBackgroundWorkInCurrentInstance() then
         self:ScanAutoUpdateInstanceRows(questID, nil)
+        if dirty then self:MarkBackgroundDataDirty() end
         if rareChanged and self.RefreshRares then self:RefreshRares() end
         return
     end
-    local dirty = false
     if self:RefreshQuestProgress(questID, false) then
         dirty = true
     end

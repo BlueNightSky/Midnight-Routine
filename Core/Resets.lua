@@ -36,6 +36,11 @@ local function ResetSavedCharacters(self, resetType, resetAt, forceReset)
                 charData.manualOverrides[moduleKey] = nil
             end
         end
+        if type(charData.questTurnInCompletions) == "table" then
+            for _, moduleKey in ipairs(moduleKeys) do
+                charData.questTurnInCompletions[moduleKey] = nil
+            end
+        end
         if resetType == "daily" then
             if resetAt then charData.lastDailyAt = resetAt end
         else

@@ -113,21 +113,6 @@ local function RefreshVisualSettings()
     elseif MR and MR.RefreshUI then
         MR:RefreshUI()
     end
-    if collectgarbage then collectgarbage("step", 80) end
-end
-
-local function ScheduleSettingsGarbageCollect()
-    if not (MR and MR.ScheduleTimer and collectgarbage) then
-        return
-    end
-
-    MR._settingsGCToken = (MR._settingsGCToken or 0) + 1
-    local token = MR._settingsGCToken
-    MR:ScheduleTimer(function()
-        if MR._settingsGCToken == token then
-            collectgarbage("collect")
-        end
-    end, 0.75)
 end
 
 function MR:GetConfigFrame()
@@ -432,7 +417,6 @@ ns.ConfigInternal = {
     RefreshFonts = RefreshFonts,
     SetWindowLayoutValue = SetWindowLayoutValue,
     RefreshVisualSettings = RefreshVisualSettings,
-    ScheduleSettingsGarbageCollect = ScheduleSettingsGarbageCollect,
     RestoreFramePos = RestoreFramePos,
 }
 
