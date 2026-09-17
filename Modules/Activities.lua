@@ -22,6 +22,7 @@ local CURSE_SURGE_POI_TO_SITE = {
 
 local scheduledCurseSurges = {}
 local curseSurgeScheduleInitialized
+local curseSurgeScheduleRequested
 local activeCurseSurgeSite
 local activeCurseSurgeStartTime
 local activeCurseSurgeEndTime
@@ -76,6 +77,10 @@ local function ReadCurseSurgeFromScenario()
 end
 
 local function RefreshCurseSurgeData(refreshSchedule, refreshMap, refreshScenario)
+    if refreshSchedule and C_EventScheduler and C_EventScheduler.HasData then
+        local ok, hasData = pcall(C_EventScheduler.HasData)
+        if not ok or not hasData then refreshSchedule = false end
+    end
     if refreshSchedule and C_EventScheduler and C_EventScheduler.GetScheduledEvents then
         local ok, list = pcall(C_EventScheduler.GetScheduledEvents)
         if ok and type(list) == "table" then
@@ -298,6 +303,10 @@ end
 
 local function RequestCurseSurgeRefresh(event)
     local enteringWorld = event == "PLAYER_ENTERING_WORLD"
+    if enteringWorld and not curseSurgeScheduleRequested and C_EventScheduler and C_EventScheduler.RequestEvents then
+        curseSurgeScheduleRequested = true
+        pcall(C_EventScheduler.RequestEvents)
+    end
     local localEvent = event == "AREA_POIS_UPDATED" or event == "SCENARIO_UPDATE" or event == "SCENARIO_COMPLETED" or event == "ZONE_CHANGED_NEW_AREA"
     local onMap = (enteringWorld or localEvent) and IsOnCurseSurgeMap()
     if (enteringWorld or event == "ZONE_CHANGED_NEW_AREA") and not onMap then
