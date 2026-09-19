@@ -848,7 +848,8 @@ BuildRaresFrame = function()
     RestoreManagedFramePos(f, "raresPos", 580, 0)
 
     f.leftAccent = nil
-    f.topAccent  = TopAccent(f, 0.25, 0.78, 0.68)
+    f.topAccent  = TopAccent(f, ns.ResolveThemeColor(0.25, 0.78, 0.68))
+    if ns.RegisterThemedTexture then ns.RegisterThemedTexture(f.topAccent, 0.25, 0.78, 0.68) end
     if f.leftAccent then f.leftAccent:SetAlpha(alpha) end
     if f.topAccent  then f.topAccent:SetAlpha(alpha)  end
 
@@ -1372,7 +1373,11 @@ local function BuildRaresConfigFrame()
     f:SetBackdropBorderColor(0.13, 0.28, 0.34, 1)
     f:Hide()
 
-    TopAccent(f, 0.25, 0.78, 0.68)
+    if ns.RegisterThemedTexture then
+        ns.RegisterThemedTexture(TopAccent(f, ns.ResolveThemeColor(0.25, 0.78, 0.68)), 0.25, 0.78, 0.68)
+    else
+        TopAccent(f, ns.ResolveThemeColor(0.25, 0.78, 0.68))
+    end
 
     local tbar = TitleBar(f, 22)
     tbar:SetBackdropColor(0.026, 0.040, 0.052, 1)

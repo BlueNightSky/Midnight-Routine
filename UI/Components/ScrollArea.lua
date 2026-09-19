@@ -171,6 +171,6 @@ function ns.CreateScrollArea(parent, topLeftAnchor, bottomRightAnchor, opts)
     track:SetPoint("BOTTOMLEFT", scroll, "BOTTOMRIGHT", opts.trackOffset or 3, 0)
     track:SetWidth(opts.trackWidth or 5)
 
-    local update = ns.AttachScrollList(scroll, content, track, opts)
-    return scroll, content, update, track
+    local update, thumb, trackBg, thumbTex = ns.AttachScrollList(scroll, content, track, opts)
+    return scroll, content, update, track, thumbTex
 end

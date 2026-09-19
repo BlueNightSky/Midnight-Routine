@@ -114,6 +114,7 @@ local DEFAULTS = {
         },
         headerColors    = {},
         headerBackgroundColors = {},
+        themeColor      = nil,
         rowColors       = {},
         customTaskCategoryModules = {},
         customTaskCategoryModuleNextId = 1,

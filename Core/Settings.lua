@@ -117,11 +117,7 @@ end
 local HIDDEN_SURFACE_TIMER_FIELDS = {
     "_refreshRequestTimer",
     "_dataRefreshTimer",
-    "_requestedScanTimer",
-    "_scanThrottleTimer",
     "_refreshUITimer",
-    "_delvesLiveProgressTimer",
-    "_areaWeeklyScanTimer",
 }
 
 function MR:SuspendHiddenSurfaceWork()
@@ -129,7 +125,6 @@ function MR:SuspendHiddenSurfaceWork()
         return false
     end
 
-    local dataCanceled = self._backgroundDataDirty == true or self._scanPending == true
     local uiCanceled = self._refreshRequestPending == true
         or self._dataRefreshPending == true
         or self._refreshUIPending == true
@@ -137,29 +132,20 @@ function MR:SuspendHiddenSurfaceWork()
     for _, field in ipairs(HIDDEN_SURFACE_TIMER_FIELDS) do
         local timer = self[field]
         if timer then
-            if field == "_requestedScanTimer" or field == "_scanThrottleTimer" or field == "_delvesLiveProgressTimer"
-                or field == "_areaWeeklyScanTimer" then
-                dataCanceled = true
-            else
-                uiCanceled = true
-            end
+            uiCanceled = true
             if self.CancelTimer then self:CancelTimer(timer) end
         end
         self[field] = nil
     end
     self._refreshRequestAt = nil
-    self._requestedScanAt = nil
     self._refreshRequestPending = nil
     self._dataRefreshPending = nil
     self._refreshUIPending = nil
-    self._scanPending = nil
-    if dataCanceled then
-        self:MarkBackgroundDataDirty()
-    elseif uiCanceled then
+    if uiCanceled then
         self._refreshUIDirty = true
         self._mainPanelNeedsRefresh = true
     end
-    return dataCanceled or uiCanceled
+    return uiCanceled
 end
 
 function MR:ActivateVisibleTrackingSurface()
@@ -631,8 +617,53 @@ function MR:GetHeaderColor(modKey)
     if self.db.profile.headerColors and self.db.profile.headerColors[modKey] then
         return self.db.profile.headerColors[modKey]
     end
+    if self.db.profile.themeColor then
+        return self.db.profile.themeColor
+    end
     local mod = self.moduleByKey[modKey]
     return mod and mod.labelColor or "#ffffff"
+end
+
+function MR:GetClassColorHex()
+    local classFile = select(2, UnitClass("player"))
+    local classColor = classFile and RAID_CLASS_COLORS and RAID_CLASS_COLORS[classFile]
+    if not classColor then
+        return nil
+    end
+    return string.format("#%02x%02x%02x", classColor.r * 255, classColor.g * 255, classColor.b * 255)
+end
+
+function MR:GetThemeColor()
+    return self.db.profile.themeColor
+end
+
+function MR:SetThemeColor(hexColor)
+    self.db.profile.themeColor = hexColor or nil
+    if ns.ApplyThemeAccentColor then
+        ns.ApplyThemeAccentColor(self.db.profile.themeColor)
+    end
+    if ns.ApplyTitleBarTheme then
+        ns.ApplyTitleBarTheme(self.db.profile.themeColor)
+    end
+    self:RequestVisualRefresh()
+end
+
+function MR:SetThemeColorToClassColor()
+    local hexColor = self:GetClassColorHex()
+    if not hexColor then
+        return
+    end
+    self:SetThemeColor(hexColor)
+end
+
+function MR:ResetThemeColor()
+    self:SetThemeColor(nil)
+end
+
+function MR:IsThemeColorClassColor()
+    local themeColor = self.db.profile.themeColor
+    local classHex = themeColor and self:GetClassColorHex()
+    return classHex ~= nil and themeColor:lower() == classHex:lower()
 end
 
 function MR:SetHeaderColor(modKey, hexColor)

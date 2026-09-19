@@ -582,7 +582,7 @@ function MR:BuildUI()
     title:SetPoint("LEFT", titleBar, "LEFT", 12, 0)
     title:SetPoint("RIGHT", titleBar, "RIGHT", -110, 0)
     title:SetJustifyH("LEFT")
-    title:SetText(L["Title"])
+    title:SetText(ns.StripColorCodes(L["Title"]))
     self.titleText = title
 
     local titleCount = titleBar:CreateFontString(nil, "OVERLAY")
@@ -918,7 +918,7 @@ function MR:BuildUI()
     track:SetPoint("BOTTOMLEFT", scroll, "BOTTOMRIGHT", 1, 0)
     track:SetWidth(5)
     self._scrollTrack = track
-    self.UpdateScrollBar = ns.AttachScrollList(scroll, content, track, {
+    local updateScrollBar, _, _, scrollThumbTex = ns.AttachScrollList(scroll, content, track, {
         thumbColor = { 0.25, 0.65, 0.65, 0.75 },
         onScroll = function()
             if MR.RefreshMainPanelViewport then
@@ -926,6 +926,11 @@ function MR:BuildUI()
             end
         end,
     })
+    self.UpdateScrollBar = updateScrollBar
+    self._scrollThumbTex = scrollThumbTex
+    if ns.ApplyTitleBarTheme then
+        ns.ApplyTitleBarTheme(MR.db.profile.themeColor)
+    end
 
     local combatDisabledFrame = CreateFrame("Frame", nil, f)
     combatDisabledFrame:SetAllPoints(scroll)
@@ -1200,7 +1205,7 @@ function MR:RefreshUI()
         self._mainMaterializedBottom = nil
 
         if self.titleText then
-            self.titleText:SetText(L["Title"] or "Routine")
+            self.titleText:SetText(ns.StripColorCodes(L["Title"] or "Routine"))
         end
         if self.UpdateMainCharacterBar then
             self:UpdateMainCharacterBar()

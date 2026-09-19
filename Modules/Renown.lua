@@ -471,6 +471,7 @@ local function BuildRenownFrame()
 
     RestoreManagedFramePos(f, "renownPos", 300, 0)
     f.topAccent = TopAccent(f)
+    if ns.RegisterThemedTexture then ns.RegisterThemedTexture(f.topAccent, 0.85, 0.65, 0.10) end
     f.leftAccent = nil
     f:EnableMouse(true)
     f:RegisterForDrag("LeftButton")
@@ -1062,7 +1063,11 @@ local function BuildRenownConfigFrame()
     f:SetBackdropBorderColor(0.55, 0.42, 0.08, 1)
     f:Hide()
 
-    TopAccent(f)
+    if ns.RegisterThemedTexture then
+        ns.RegisterThemedTexture(TopAccent(f), 0.85, 0.65, 0.10)
+    else
+        TopAccent(f)
+    end
 
     local tbar = TitleBar(f, 22)
     tbar:SetBackdropColor(0.06, 0.05, 0.02, 1)

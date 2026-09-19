@@ -425,6 +425,81 @@ ns.COLORS = {
 }
 
 local COLORS = ns.COLORS
+local DEFAULT_ACCENT = { COLORS.accent[1], COLORS.accent[2], COLORS.accent[3] }
+
+function ns.ApplyThemeAccentColor(hexColor)
+    local r, g, b
+    if type(hexColor) == "string" then
+        r, g, b = ns.Hex(hexColor)
+    end
+    COLORS.accent[1] = r or DEFAULT_ACCENT[1]
+    COLORS.accent[2] = g or DEFAULT_ACCENT[2]
+    COLORS.accent[3] = b or DEFAULT_ACCENT[3]
+end
+
+local DEFAULT_TITLE_COLOR = { 0.1647, 0.9059, 0.7765 }
+
+function ns.ResolveThemeColor(defaultR, defaultG, defaultB)
+    local addon = ns.MR
+    local hexColor = addon and addon.db and addon.db.profile and addon.db.profile.themeColor
+    if hexColor then
+        local r, g, b = ns.Hex(hexColor)
+        if r then
+            return r, g, b
+        end
+    end
+    return defaultR, defaultG, defaultB
+end
+
+local themedTextures = setmetatable({}, { __mode = "k" })
+
+function ns.RegisterThemedTexture(texture, defaultR, defaultG, defaultB, alpha)
+    if not texture then
+        return texture
+    end
+    alpha = alpha or 1
+    themedTextures[texture] = { defaultR, defaultG, defaultB, alpha }
+    local r, g, b = ns.ResolveThemeColor(defaultR, defaultG, defaultB)
+    texture:SetColorTexture(r, g, b, alpha)
+    return texture
+end
+
+function ns.RefreshThemedTextures()
+    for texture, def in pairs(themedTextures) do
+        local r, g, b = ns.ResolveThemeColor(def[1], def[2], def[3])
+        texture:SetColorTexture(r, g, b, def[4])
+    end
+end
+
+function ns.StripColorCodes(text)
+    if type(text) ~= "string" then
+        return text
+    end
+    text = text:gsub("|c%x%x%x%x%x%x%x%x", "")
+    text = text:gsub("|r", "")
+    return text
+end
+
+function ns.ApplyTitleBarTheme(hexColor)
+    local r, g, b
+    if type(hexColor) == "string" then
+        r, g, b = ns.Hex(hexColor)
+    end
+    r = r or DEFAULT_TITLE_COLOR[1]
+    g = g or DEFAULT_TITLE_COLOR[2]
+    b = b or DEFAULT_TITLE_COLOR[3]
+
+    local addon = ns.MR
+    if addon and addon.titleText then
+        addon.titleText:SetTextColor(r, g, b)
+    end
+    if addon and addon._scrollThumbTex then
+        addon._scrollThumbTex:SetColorTexture(r, g, b, 0.75)
+    end
+    if ns.RefreshThemedTextures then
+        ns.RefreshThemedTextures()
+    end
+end
 
 function ns.Hex(h)
     h = h:gsub("#", "")

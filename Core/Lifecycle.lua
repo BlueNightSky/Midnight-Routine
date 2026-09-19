@@ -745,6 +745,12 @@ function MR:OnInitialize()
     if ns.ApplySharedMedia then
         ns.ApplySharedMedia(self.GetActiveMediaSettings and self:GetActiveMediaSettings() or self.db.profile)
     end
+    if ns.ApplyThemeAccentColor then
+        ns.ApplyThemeAccentColor(self.db.profile.themeColor)
+    end
+    if ns.ApplyTitleBarTheme then
+        ns.ApplyTitleBarTheme(self.db.profile.themeColor)
+    end
 end
 
 function MR:ResetAllSettings()
@@ -776,6 +782,12 @@ function MR:ResetAllSettings()
 
     if ns.ApplySharedMedia then
         ns.ApplySharedMedia(self.GetActiveMediaSettings and self:GetActiveMediaSettings() or self.db.profile)
+    end
+    if ns.ApplyThemeAccentColor then
+        ns.ApplyThemeAccentColor(self.db.profile.themeColor)
+    end
+    if ns.ApplyTitleBarTheme then
+        ns.ApplyTitleBarTheme(self.db.profile.themeColor)
     end
     if self.ApplySharedMediaSettings then
         self:ApplySharedMediaSettings()

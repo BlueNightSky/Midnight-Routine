@@ -913,7 +913,7 @@ function MR:GetWarbandWeeklyData(showHiddenOverride, detailCharKey, onlyCharKey)
                         local moduleEntry = includeModuleDetails and {
                             key = mod.key,
                             label = CleanAccountLabel(mod.key == "custom_tasks" and charData.customTasksTitle or mod.label),
-                            color = mod.labelColor or "#ffffff",
+                            color = (self.GetHeaderColor and self:GetHeaderColor(mod.key)) or mod.labelColor or "#ffffff",
                             rows = {},
                             totalRows = 0,
                             doneRows = 0,

@@ -597,11 +597,15 @@ local function WBShouldHideCompletedCharacters()
 end
 
 local function WBCreateScrollArea(parent, topLeftAnchor, bottomRightAnchor)
-    return ns.CreateScrollArea(parent, topLeftAnchor, bottomRightAnchor, {
+    local scroll, content, update, track, thumbTex = ns.CreateScrollArea(parent, topLeftAnchor, bottomRightAnchor, {
         hideTrack = true,
         minThumbHeight = 18,
         thumbColor = { 0.24, 0.72, 0.72, 0.80 },
     })
+    if ns.RegisterThemedTexture then
+        ns.RegisterThemedTexture(thumbTex, 0.24, 0.72, 0.72, 0.80)
+    end
+    return scroll, content, update, track
 end
 
 local function WBRefreshAltBoardTabs(frame)

@@ -987,6 +987,9 @@ local function ApplyGatheringFrameTheme(frame, opts)
     local bg = opts.bg or { 0.03, 0.05, 0.09, 0.97 * alpha }
     local border = opts.border or { 0.24, 0.31, 0.42, alpha }
     local accent = opts.accent or { 0.18, 0.78, 0.72 }
+    if ns.ResolveThemeColor then
+        accent[1], accent[2], accent[3] = ns.ResolveThemeColor(accent[1], accent[2], accent[3])
+    end
 
     frame:SetBackdropColor(bg[1], bg[2], bg[3], bg[4])
     frame:SetBackdropBorderColor(border[1], border[2], border[3], border[4] or 1)

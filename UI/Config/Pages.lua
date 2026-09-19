@@ -645,6 +645,7 @@ function MR:PopulateConfigFrame(f)
             end,
             0.16, 0.78, 0.75, 8, nil, cfgFs)
 
+
         Gap(4); Divider()
 
         Gap(6)
@@ -712,6 +713,105 @@ function MR:PopulateConfigFrame(f)
                 MR:PopulateConfigFrame(f)
             end,
             0.55, 0.22, 0.82, 8, nil, cfgFs)
+
+        Gap(4); Divider()
+        SectionLabel(L["Config_ThemeColor"] or "Theme Color")
+
+        do
+            local caption = ns.AcquireFontString(body, "themeColorCaption", "OVERLAY")
+            caption:SetFont(ns.FONT_ROWS, cfgFs, GetFontFlags())
+            caption:SetPoint("TOPLEFT", body, "TOPLEFT", 8, yOff)
+            caption:SetPoint("TOPRIGHT", body, "TOPRIGHT", -8, yOff)
+            caption:SetJustifyH("LEFT")
+            caption:SetWordWrap(true)
+            caption:SetText(L["Config_ThemeColorDesc"] or "Recolor headers and accents across the tracker.")
+            caption:SetTextColor(0.55, 0.65, 0.66)
+
+            yOff = yOff - (2 * (cfgFs + 4)) - 4
+
+            local rowY = yOff
+            local DEFAULT_THEME_HEX = "#d9a61a"
+            local themeColor = MR:GetThemeColor()
+            local tr, tg, tb = hex(themeColor or DEFAULT_THEME_HEX)
+
+            local swatch = OptionsColorSwatch(body, tr, tg, tb, function(r, g, b)
+                MR:SetThemeColor(string.format("#%02x%02x%02x", r * 255, g * 255, b * 255))
+            end, function()
+                MR:ResetThemeColor()
+                if MR.RequestConfigRepopulate then
+                    MR:RequestConfigRepopulate(f, 0.05)
+                else
+                    MR:PopulateConfigFrame(f)
+                end
+                return hex(DEFAULT_THEME_HEX)
+            end, L["Config_ThemeColor"] or "Theme Color")
+            swatch:SetSize(20, 20)
+            swatch:SetPoint("TOPLEFT", body, "TOPLEFT", 8, rowY)
+
+            local btnAreaW = contentW - 20 - 6
+            local classBtnW = math.floor((btnAreaW - 4) / 2)
+            local resetBtnW = btnAreaW - classBtnW - 4
+
+            local classBtn = ns.AcquireFrame(body, "themeColorClassBtn", "Button", "BackdropTemplate")
+            classBtn:SetSize(classBtnW, 20)
+            classBtn:SetPoint("LEFT", swatch, "RIGHT", 6, 0)
+            classBtn:SetBackdrop(MakeBackdrop())
+            local isClassColor = MR:IsThemeColorClassColor()
+            classBtn:SetBackdropColor(isClassColor and 0.12 or 0.05, isClassColor and 0.30 or 0.09, isClassColor and 0.24 or 0.16, 1)
+            classBtn:SetBackdropBorderColor(isClassColor and 0.24 or 0.16, isClassColor and 0.82 or 0.28, isClassColor and 0.70 or 0.36, 1)
+            local classLbl = ns.AcquireFontString(classBtn, "themeColorClassLabel", "OVERLAY")
+            classLbl:SetFont(ns.FONT_ROWS, cfgFs, GetFontFlags())
+            classLbl:SetPoint("CENTER")
+            classLbl:SetText(L["Config_UseClassColor"] or "Use Class Color")
+            classLbl:SetTextColor(isClassColor and 0.92 or 0.70, isClassColor and 1.0 or 0.78, isClassColor and 0.94 or 0.74)
+            classBtn:SetScript("OnClick", function()
+                MR:SetThemeColorToClassColor()
+                if MR.RequestConfigRepopulate then
+                    MR:RequestConfigRepopulate(f, 0.05)
+                else
+                    MR:PopulateConfigFrame(f)
+                end
+            end)
+            classBtn:SetScript("OnEnter", function()
+                classBtn:SetBackdropBorderColor(0.42, 0.82, 0.70, 1)
+                classLbl:SetTextColor(0.94, 1.0, 0.96)
+            end)
+            classBtn:SetScript("OnLeave", function()
+                classBtn:SetBackdropColor(isClassColor and 0.12 or 0.05, isClassColor and 0.30 or 0.09, isClassColor and 0.24 or 0.16, 1)
+                classBtn:SetBackdropBorderColor(isClassColor and 0.24 or 0.16, isClassColor and 0.82 or 0.28, isClassColor and 0.70 or 0.36, 1)
+                classLbl:SetTextColor(isClassColor and 0.92 or 0.70, isClassColor and 1.0 or 0.78, isClassColor and 0.94 or 0.74)
+            end)
+
+            local resetBtn = ns.AcquireFrame(body, "themeColorResetBtn", "Button", "BackdropTemplate")
+            resetBtn:SetSize(resetBtnW, 20)
+            resetBtn:SetPoint("LEFT", classBtn, "RIGHT", 4, 0)
+            resetBtn:SetBackdrop(MakeBackdrop())
+            resetBtn:SetBackdropColor(0.05, 0.09, 0.16, 1)
+            resetBtn:SetBackdropBorderColor(0.16, 0.28, 0.36, 1)
+            local resetLbl = ns.AcquireFontString(resetBtn, "themeColorResetLabel", "OVERLAY")
+            resetLbl:SetFont(ns.FONT_ROWS, cfgFs, GetFontFlags())
+            resetLbl:SetPoint("CENTER")
+            resetLbl:SetText(L["Config_Default"] or "Default")
+            resetLbl:SetTextColor(0.70, 0.78, 0.74)
+            resetBtn:SetScript("OnClick", function()
+                MR:ResetThemeColor()
+                if MR.RequestConfigRepopulate then
+                    MR:RequestConfigRepopulate(f, 0.05)
+                else
+                    MR:PopulateConfigFrame(f)
+                end
+            end)
+            resetBtn:SetScript("OnEnter", function()
+                resetBtn:SetBackdropBorderColor(0.82, 0.42, 0.42, 1)
+                resetLbl:SetTextColor(1.0, 0.90, 0.90)
+            end)
+            resetBtn:SetScript("OnLeave", function()
+                resetBtn:SetBackdropBorderColor(0.16, 0.28, 0.36, 1)
+                resetLbl:SetTextColor(0.70, 0.78, 0.74)
+            end)
+
+            yOff = yOff - 28
+        end
 
         Gap(4); Divider()
         SectionLabel(L["Config_SharedMedia"] or "Shared Media")

@@ -164,14 +164,6 @@ end
 
 local function ProcessCurrencyDisplayUpdates(self)
     self._currencyDisplayUpdateTimer = nil
-    if not self:HasVisibleMainTrackingSurface() then
-        if self._pendingCurrencyDisplayIDs then
-            wipe(self._pendingCurrencyDisplayIDs)
-        end
-        self._pendingAllCurrencyDisplays = nil
-        self:MarkBackgroundDataDirty()
-        return
-    end
 
     local dirty = false
     if self._pendingAllCurrencyDisplays then
@@ -263,10 +255,6 @@ function MR:OnDelveLootReady()
 end
 
 function MR:OnQuestDataChanged()
-    if not self:HasVisibleMainTrackingSurface() then
-        self:MarkBackgroundDataDirty()
-        return
-    end
     if self.ShouldSuspendBackgroundWorkInCurrentInstance and self:ShouldSuspendBackgroundWorkInCurrentInstance() then
         self:ScanAutoUpdateInstanceRows(nil, nil)
         return
@@ -287,10 +275,6 @@ function MR:OnQuestDataChanged()
 end
 
 function MR:OnAreaPoisUpdated()
-    if not self:HasVisibleMainTrackingSurface() then
-        self:MarkBackgroundDataDirty()
-        return
-    end
     self:RefreshModuleScans(SCAN_DELVES, true)
     if self._areaWeeklyScanTimer then
         return
@@ -333,11 +317,6 @@ function MR:OnQuestTurnedIn(_, questID)
 end
 
 function MR:OnQuestAccepted(_, questID)
-    if not self:HasVisibleMainTrackingSurface() then
-        self:MarkBackgroundDataDirty()
-        return
-    end
-
     if self.ShouldSuspendBackgroundWorkInCurrentInstance and self:ShouldSuspendBackgroundWorkInCurrentInstance() then
         self:ScanAutoUpdateInstanceRows(questID, nil)
         return
@@ -358,11 +337,6 @@ function MR:OnQuestAccepted(_, questID)
 end
 
 function MR:OnQuestRemoved(_, questID)
-    if not self:HasVisibleMainTrackingSurface() then
-        self:MarkBackgroundDataDirty()
-        return
-    end
-
     if self.ShouldSuspendBackgroundWorkInCurrentInstance and self:ShouldSuspendBackgroundWorkInCurrentInstance() then
         self:ScanAutoUpdateInstanceRows(questID, nil)
         return
@@ -383,10 +357,6 @@ function MR:OnQuestRemoved(_, questID)
 end
 
 function MR:OnBagUpdateDelayed()
-    if not self:HasVisibleMainTrackingSurface() then
-        self:MarkBackgroundDataDirty()
-        return
-    end
     local dirty = self:RefreshItemProgress(nil, false)
 
     if self:RefreshModuleScans(SCAN_S1, false) then
@@ -405,11 +375,6 @@ function MR:OnBagUpdateDelayed()
 end
 
 function MR:OnProfessionChange()
-    if not self:HasVisibleMainTrackingSurface()
-        and not (self.gatheringLocationsFrame and self.gatheringLocationsFrame:IsShown()) then
-        self:MarkBackgroundDataDirty()
-        return
-    end
     self:RefreshPlayerProfessions()
     local concentrationChanged = self:RefreshProfessionConcentration() == true
     if concentrationChanged then

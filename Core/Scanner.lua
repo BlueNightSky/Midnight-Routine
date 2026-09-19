@@ -312,11 +312,6 @@ function MR:PrimeModuleData(mod)
 end
 
 function MR:RequestScan(delay)
-    if not self:HasVisibleMainTrackingSurface() then
-        self:MarkBackgroundDataDirty()
-        return
-    end
-
     delay = tonumber(delay) or 0
 
     if self._scanSuppressedUntil then
@@ -592,10 +587,6 @@ function MR:RefreshModuleScans(moduleKeys, refreshUI)
     if not (self and self.db and self.db.char and self.db.char.progress and moduleKeys) then
         return false
     end
-    if not self:HasVisibleMainTrackingSurface() then
-        self:MarkBackgroundDataDirty()
-        return false
-    end
 
     self._moduleScanPassCount = (self._moduleScanPassCount or 0) + 1
     local dirty = false
@@ -753,11 +744,6 @@ end
 
 function MR:Scan()
     if self:ShouldDeferForCombat("scan") then
-        return
-    end
-
-    if not self:HasVisibleMainTrackingSurface() then
-        self:MarkBackgroundDataDirty()
         return
     end
 
