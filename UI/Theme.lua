@@ -441,7 +441,7 @@ local DEFAULT_TITLE_COLOR = { 0.1647, 0.9059, 0.7765 }
 
 function ns.ResolveThemeColor(defaultR, defaultG, defaultB)
     local addon = ns.MR
-    local hexColor = addon and addon.db and addon.db.profile and addon.db.profile.themeColor
+    local hexColor = addon and addon.GetThemeColor and addon:GetThemeColor()
     if hexColor then
         local r, g, b = ns.Hex(hexColor)
         if r then
@@ -452,6 +452,52 @@ function ns.ResolveThemeColor(defaultR, defaultG, defaultB)
 end
 
 local themedTextures = setmetatable({}, { __mode = "k" })
+local themedFontStrings = setmetatable({}, { __mode = "k" })
+local themedVertexTextures = setmetatable({}, { __mode = "k" })
+local themedBackdropColors = setmetatable({}, { __mode = "k" })
+local themedBackdropBorders = setmetatable({}, { __mode = "k" })
+local themedStateRefreshers = setmetatable({}, { __mode = "k" })
+
+local function ApplyThemedColor(target, method, defaultR, defaultG, defaultB, alpha)
+    local r, g, b = ns.ResolveThemeColor(defaultR, defaultG, defaultB)
+    target[method](target, r, g, b, alpha or 1)
+end
+
+function ns.RegisterThemedFontString(fontString, defaultR, defaultG, defaultB, alpha)
+    if not fontString then
+        return fontString
+    end
+    themedFontStrings[fontString] = { defaultR, defaultG, defaultB, alpha or 1 }
+    ApplyThemedColor(fontString, "SetTextColor", defaultR, defaultG, defaultB, alpha)
+    return fontString
+end
+
+function ns.RegisterThemedVertexTexture(texture, defaultR, defaultG, defaultB, alpha)
+    if not texture then
+        return texture
+    end
+    themedVertexTextures[texture] = { defaultR, defaultG, defaultB, alpha or 1 }
+    ApplyThemedColor(texture, "SetVertexColor", defaultR, defaultG, defaultB, alpha)
+    return texture
+end
+
+function ns.RegisterThemedBackdropColor(frame, defaultR, defaultG, defaultB, alpha)
+    if not frame then
+        return frame
+    end
+    themedBackdropColors[frame] = { defaultR, defaultG, defaultB, alpha or 1 }
+    ApplyThemedColor(frame, "SetBackdropColor", defaultR, defaultG, defaultB, alpha)
+    return frame
+end
+
+function ns.RegisterThemedBackdropBorder(frame, defaultR, defaultG, defaultB, alpha)
+    if not frame then
+        return frame
+    end
+    themedBackdropBorders[frame] = { defaultR, defaultG, defaultB, alpha or 1 }
+    ApplyThemedColor(frame, "SetBackdropBorderColor", defaultR, defaultG, defaultB, alpha)
+    return frame
+end
 
 function ns.RegisterThemedTexture(texture, defaultR, defaultG, defaultB, alpha)
     if not texture then
@@ -464,10 +510,45 @@ function ns.RegisterThemedTexture(texture, defaultR, defaultG, defaultB, alpha)
     return texture
 end
 
+function ns.RegisterThemedState(target, refresher)
+    if not target or type(refresher) ~= "function" then
+        return target
+    end
+    themedStateRefreshers[target] = refresher
+    refresher(target)
+    return target
+end
+
+function ns.ThemeCheckButton(button)
+    if not button or not button.GetCheckedTexture then
+        return button
+    end
+    local texture = button:GetCheckedTexture()
+    if texture then
+        ns.RegisterThemedVertexTexture(texture, 0.85, 0.65, 0.10, 1)
+    end
+    return button
+end
+
 function ns.RefreshThemedTextures()
     for texture, def in pairs(themedTextures) do
         local r, g, b = ns.ResolveThemeColor(def[1], def[2], def[3])
         texture:SetColorTexture(r, g, b, def[4])
+    end
+    for fontString, def in pairs(themedFontStrings) do
+        ApplyThemedColor(fontString, "SetTextColor", def[1], def[2], def[3], def[4])
+    end
+    for texture, def in pairs(themedVertexTextures) do
+        ApplyThemedColor(texture, "SetVertexColor", def[1], def[2], def[3], def[4])
+    end
+    for frame, def in pairs(themedBackdropColors) do
+        ApplyThemedColor(frame, "SetBackdropColor", def[1], def[2], def[3], def[4])
+    end
+    for frame, def in pairs(themedBackdropBorders) do
+        ApplyThemedColor(frame, "SetBackdropBorderColor", def[1], def[2], def[3], def[4])
+    end
+    for target, refresher in pairs(themedStateRefreshers) do
+        refresher(target)
     end
 end
 
@@ -603,17 +684,17 @@ function ns.StyledFrame(parent, name, strata, level)
 end
 
 function ns.TopAccent(parent, r, g, b)
-    r, g, b = r or COLORS.accent[1], g or COLORS.accent[2], b or COLORS.accent[3]
+    r, g, b = r or DEFAULT_ACCENT[1], g or DEFAULT_ACCENT[2], b or DEFAULT_ACCENT[3]
     local tex = parent:CreateTexture(nil, "BORDER")
     tex:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, 0)
     tex:SetPoint("TOPRIGHT", parent, "TOPRIGHT", 0, 0)
     tex:SetHeight(2)
-    tex:SetColorTexture(r, g, b, 1)
+    ns.RegisterThemedTexture(tex, r, g, b, 1)
     return tex
 end
 
 function ns.LeftAccent(parent, r, g, b)
-    r, g, b = r or COLORS.accent[1], g or COLORS.accent[2], b or COLORS.accent[3]
+    r, g, b = r or DEFAULT_ACCENT[1], g or DEFAULT_ACCENT[2], b or DEFAULT_ACCENT[3]
 
     local group = CreateFrame("Frame", nil, parent)
     group:SetAllPoints(parent)
@@ -622,21 +703,21 @@ function ns.LeftAccent(parent, r, g, b)
     topRule:SetPoint("TOPLEFT", parent, "TOPLEFT", 12, 0)
     topRule:SetWidth(44)
     topRule:SetHeight(2)
-    topRule:SetColorTexture(r, g, b, 0.95)
+    ns.RegisterThemedTexture(topRule, r, g, b, 0.95)
     group.topRule = topRule
 
     local notch = group:CreateTexture(nil, "BORDER")
     notch:SetPoint("TOPLEFT", topRule, "BOTTOMRIGHT", 4, 0)
     notch:SetWidth(10)
     notch:SetHeight(2)
-    notch:SetColorTexture(r, g, b, 0.65)
+    ns.RegisterThemedTexture(notch, r, g, b, 0.65)
     group.notch = notch
 
     local glow = group:CreateTexture(nil, "ARTWORK")
     glow:SetPoint("TOPLEFT", topRule, "BOTTOMLEFT", 0, -2)
     glow:SetWidth(58)
     glow:SetHeight(8)
-    glow:SetColorTexture(r, g, b, 0.14)
+    ns.RegisterThemedTexture(glow, r, g, b, 0.14)
     group.glow = glow
 
     return group
@@ -818,7 +899,7 @@ function ns.OptionsDivider(body, yOff, pad)
     frame:SetPoint("TOPRIGHT", body, "TOPRIGHT", -pad, yOff)
     frame:SetHeight(1)
     frame:SetBackdrop(ns.MakeBackdrop(false))
-    frame:SetBackdropColor(0.18, 0.78, 0.72, 0.24)
+    ns.RegisterThemedBackdropColor(frame, 0.18, 0.78, 0.72, 0.24)
     return yOff - 5
 end
 
@@ -830,12 +911,12 @@ function ns.OptionsSectionLabel(body, yOff, text, pad, fontSize)
     frame:SetHeight(17)
     frame:SetBackdrop(ns.MakeBackdrop())
     frame:SetBackdropColor(0.025, 0.12, 0.15, 0.92)
-    frame:SetBackdropBorderColor(0.12, 0.42, 0.44, 0.58)
+    ns.RegisterThemedBackdropBorder(frame, 0.12, 0.42, 0.44, 0.58)
 
     local fs = ns.AcquireFontString(frame, "text", "OVERLAY")
     fs:SetFont(ns.FONT_HEADERS or ns.FONT_ROWS, math.max(fontSize or 9, 10), ns.GetFontFlags())
     fs:SetText(text)
-    fs:SetTextColor(0.46, 0.92, 0.84)
+    ns.RegisterThemedFontString(fs, 0.46, 0.92, 0.84)
     fs:SetPoint("LEFT", frame, "LEFT", 6, 0)
     fs:SetPoint("RIGHT", frame, "RIGHT", -6, 0)
     fs:SetJustifyH("LEFT")
@@ -843,9 +924,10 @@ function ns.OptionsSectionLabel(body, yOff, text, pad, fontSize)
     return yOff - 20
 end
 
-function ns.OptionsCheckbox(body, yOff, label, getVal, setVal, r, g, b, pad, onRefresh, fontSize)
+function ns.OptionsCheckbox(body, yOff, label, getVal, setVal, r, g, b, pad, onRefresh, fontSize, themed)
     pad = pad or 8
     local frame = ns.AcquireFrame(body, "optCheckbox", "CheckButton", "UICheckButtonTemplate")
+    ns.ThemeCheckButton(frame)
     frame:SetSize(20, 20)
     frame:SetPoint("TOPLEFT", body, "TOPLEFT", pad - 2, yOff)
     frame:SetChecked(getVal())
@@ -860,7 +942,11 @@ function ns.OptionsCheckbox(body, yOff, label, getVal, setVal, r, g, b, pad, onR
     local lbl = ns.AcquireFontString(frame, "label", "OVERLAY")
     lbl:SetFont(ns.FONT_ROWS, fontSize or 10, ns.GetFontFlags())
     lbl:SetText(label)
-    lbl:SetTextColor(r or 0.88, g or 0.88, b or 0.88)
+    if themed then
+        lbl:SetTextColor(0.94, 0.96, 0.98)
+    else
+        lbl:SetTextColor(r or 0.88, g or 0.88, b or 0.88)
+    end
     lbl:SetPoint("LEFT", frame, "RIGHT", 2, 0)
     lbl:SetPoint("RIGHT", body, "RIGHT", -pad, 0)
     lbl:SetJustifyH("LEFT")
@@ -879,7 +965,10 @@ function ns.OptionsBtn(body, yOff, label, onClick, width, pad, fontSize, style)
     btn:SetPoint("TOPLEFT", body, "TOPLEFT", pad, yOff)
     btn:SetBackdrop(ns.MakeBackdrop())
     btn:SetBackdropColor(primary and 0.04 or 0.05, primary and 0.25 or 0.10, primary and 0.28 or 0.18, 1)
-    btn:SetBackdropBorderColor(primary and 0.20 or 0.18, primary and 0.82 or 0.40, primary and 0.72 or 0.45, 1)
+    local borderR = primary and 0.20 or 0.18
+    local borderG = primary and 0.82 or 0.40
+    local borderB = primary and 0.72 or 0.45
+    ns.RegisterThemedBackdropBorder(btn, borderR, borderG, borderB, 1)
 
     local fs = ns.AcquireFontString(btn, "label", "OVERLAY")
     fs:SetFont(primary and (ns.FONT_HEADERS or ns.FONT_ROWS) or ns.FONT_ROWS, fontSize or 10, ns.GetFontFlags())
@@ -888,18 +977,36 @@ function ns.OptionsBtn(body, yOff, label, onClick, width, pad, fontSize, style)
     fs:SetJustifyH(primary and "CENTER" or "LEFT")
     fs:SetWordWrap(false)
     fs:SetText(label)
-    fs:SetTextColor(primary and 0.92 or 0.70, primary and 1 or 0.88, primary and 0.98 or 0.85)
+    local normalR = primary and 0.92 or 0.70
+    local normalG = primary and 1 or 0.88
+    local normalB = primary and 0.98 or 0.85
+    fs:SetTextColor(primary and 1 or 0.92, primary and 1 or 0.94, primary and 1 or 0.96)
 
     btn:SetScript("OnClick", onClick)
     btn:SetScript("OnEnter", function()
         btn:SetBackdropColor(0.08, 0.22, 0.32, 1)
-        btn:SetBackdropBorderColor(0.25, 0.85, 0.72, 1)
+        local r, g, b = ns.ResolveThemeColor(0.25, 0.85, 0.72)
+        btn:SetBackdropBorderColor(r, g, b, 1)
         fs:SetTextColor(1, 1, 1)
     end)
     btn:SetScript("OnLeave", function()
         btn:SetBackdropColor(primary and 0.04 or 0.05, primary and 0.25 or 0.10, primary and 0.28 or 0.18, 1)
-        btn:SetBackdropBorderColor(primary and 0.20 or 0.18, primary and 0.82 or 0.40, primary and 0.72 or 0.45, 1)
-        fs:SetTextColor(primary and 0.92 or 0.70, primary and 1 or 0.88, primary and 0.98 or 0.85)
+        local r, g, b = ns.ResolveThemeColor(borderR, borderG, borderB)
+        btn:SetBackdropBorderColor(r, g, b, 1)
+        fs:SetTextColor(primary and 1 or 0.92, primary and 1 or 0.94, primary and 1 or 0.96)
+    end)
+    ns.RegisterThemedState(btn, function()
+        if btn:IsMouseOver() then
+            btn:SetBackdropColor(0.08, 0.22, 0.32, 1)
+            local r, g, b = ns.ResolveThemeColor(0.25, 0.85, 0.72)
+            btn:SetBackdropBorderColor(r, g, b, 1)
+            fs:SetTextColor(1, 1, 1)
+        else
+            btn:SetBackdropColor(primary and 0.04 or 0.05, primary and 0.25 or 0.10, primary and 0.28 or 0.18, 1)
+            local r, g, b = ns.ResolveThemeColor(borderR, borderG, borderB)
+            btn:SetBackdropBorderColor(r, g, b, 1)
+            fs:SetTextColor(primary and 1 or 0.92, primary and 1 or 0.94, primary and 1 or 0.96)
+        end
     end)
 
     return yOff - height - 2
@@ -945,7 +1052,11 @@ function ns.OptionsSlider(body, yOff, label, min, max, step, getVal, setVal, fil
     local fill = ns.AcquireTexture(bg, "fill", "ARTWORK")
     fill:SetPoint("LEFT", bg, "LEFT", 2, 0)
     fill:SetHeight(10)
-    fill:SetColorTexture(fillR, fillG, fillB, disabled and 0.4 or 0.85)
+    if disabled then
+        fill:SetColorTexture(fillR, fillG, fillB, 0.4)
+    else
+        ns.RegisterThemedTexture(fill, fillR, fillG, fillB, 0.85)
+    end
 
     local valBox = ns.AcquireFrame(body, "optSliderValueBox", "Frame", "BackdropTemplate")
     valBox:SetPoint("LEFT", bg, "RIGHT", 4, 0)
@@ -996,7 +1107,7 @@ function ns.OptionsSlider(body, yOff, label, min, max, step, getVal, setVal, fil
     return yOff - 16
 end
 
-function ns.OptionsColorSwatch(parent, r, g, b, onPick, onReset, tooltip)
+function ns.OptionsColorSwatch(parent, r, g, b, onPick, onReset, tooltip, onBegin, onCancel)
     local swatch = ns.AcquireFrame(parent, "colorSwatch", "Button", "BackdropTemplate")
     swatch:SetSize(16, 16)
     swatch:SetBackdrop({
@@ -1021,6 +1132,9 @@ function ns.OptionsColorSwatch(parent, r, g, b, onPick, onReset, tooltip)
 
     swatch:SetScript("OnClick", function(_, button)
         if button == "LeftButton" then
+            if onBegin then
+                onBegin()
+            end
             ColorPickerFrame:SetupColorPickerAndShow({
                 r = r, g = g, b = b,
                 hasOpacity = false,
@@ -1035,7 +1149,9 @@ function ns.OptionsColorSwatch(parent, r, g, b, onPick, onReset, tooltip)
                 cancelFunc = function(prev)
                     r, g, b = prev.r, prev.g, prev.b
                     UpdateFill()
-                    if onPick then
+                    if onCancel then
+                        onCancel(r, g, b)
+                    elseif onPick then
                         onPick(r, g, b)
                     end
                 end,

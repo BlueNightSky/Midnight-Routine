@@ -32,7 +32,12 @@ function ns.AttachScrollList(scroll, content, track, opts)
 
     local thumbTex = thumb:CreateTexture(nil, "OVERLAY")
     thumbTex:SetAllPoints()
-    SetColor(thumbTex, opts.thumbColor or { 0.20, 0.66, 0.63, 0.7 })
+    local thumbColor = opts.thumbColor or { 0.20, 0.66, 0.63, 0.7 }
+    if opts.themed ~= false and ns.RegisterThemedTexture then
+        ns.RegisterThemedTexture(thumbTex, thumbColor[1], thumbColor[2], thumbColor[3], thumbColor[4] or 1)
+    else
+        SetColor(thumbTex, thumbColor)
+    end
 
     local function GetContentHeight()
         return content:GetHeight() or 0

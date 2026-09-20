@@ -602,6 +602,7 @@ function MR:BuildUI()
             iconSize = icon.tex and (BTN_SIZE - 6) or nil,
             fontSize = 11,
             color = normalColor,
+            themed = true,
             hoverColor = { 1, 1, 1 },
             hoverBackground = { hoverBg[1], hoverBg[2], hoverBg[3], 1 },
             hoverBorder = { hoverBorder[1], hoverBorder[2], hoverBorder[3], 1 },
@@ -610,18 +611,14 @@ function MR:BuildUI()
         })
     end
 
-    local closeBtn = MakeHeaderBtn(
-        { text = "x" },
-        {0.88, 0.56, 0.56},
-        {0.28, 0.10, 0.10},
-        {0.90, 0.25, 0.25},
-        L["Close"],
-        L["UI_HideAddon"]
-    )
-    closeBtn:SetPoint("RIGHT", titleBar, "RIGHT", -BTN_MARGIN, 0)
-    closeBtn:SetScript("OnClick", function()
+    local closeBtn = ns.CloseButton(titleBar, function()
         MR:HideMainPanel(true)
-    end)
+    end, {
+        size = BTN_SIZE,
+        margin = BTN_MARGIN,
+        tooltip = L["Close"],
+        tooltipSub = L["UI_HideAddon"],
+    })
     self.closeBtn = closeBtn
 
     local minBtn = MakeHeaderBtn(
@@ -749,7 +746,7 @@ function MR:BuildUI()
     warbandText:SetFont(ns.FONT_HEADERS, 9, GetFontFlags())
     warbandText:SetPoint("CENTER", warbandBtn, "CENTER", 0, 1)
     warbandText:SetText(L["AltBoard_ButtonLabel"] or "ALTS")
-    warbandText:SetTextColor(0.84, 0.92, 0.96)
+    ns.RegisterThemedFontString(warbandText, 0.84, 0.92, 0.96)
     self.warbandBtnText = warbandText
     warbandBtn:SetScript("OnEnter", function(selfBtn)
         selfBtn:SetBackdropColor(0.11, 0.17, 0.24, 1)
@@ -766,7 +763,8 @@ function MR:BuildUI()
     warbandBtn:SetScript("OnLeave", function(selfBtn)
         selfBtn:SetBackdropColor(0.07, 0.09, 0.13, 0.96)
         selfBtn:SetBackdropBorderColor(0.24, 0.31, 0.38, 0.95)
-        warbandText:SetTextColor(0.84, 0.92, 0.96)
+        local r, g, b = ns.ResolveThemeColor(0.84, 0.92, 0.96)
+        warbandText:SetTextColor(r, g, b)
         ns.HideOwnedTooltip(selfBtn)
     end)
     warbandBtn:SetScript("OnClick", function()
@@ -819,7 +817,7 @@ function MR:BuildUI()
     characterCaret:SetFont(ns.FONT_HEADERS, 9, GetFontFlags())
     characterCaret:SetPoint("RIGHT", characterBar, "RIGHT", -9, 1)
     characterCaret:SetText("v")
-    characterCaret:SetTextColor(0.48, 0.72, 0.74)
+    ns.RegisterThemedFontString(characterCaret, 0.48, 0.72, 0.74)
 
     local function UpdateCharacterBar()
         local altInfo = MR.GetMainAltViewCharacterInfo and MR:GetMainAltViewCharacterInfo() or nil
@@ -854,7 +852,8 @@ function MR:BuildUI()
     end)
     characterBar:SetScript("OnEnter", function(selfBtn)
         selfBtn:SetBackdropColor(0.030, 0.060, 0.082, 1)
-        selfBtn:SetBackdropBorderColor(0.14, 0.34, 0.40, 0.82)
+        local r, g, b = ns.ResolveThemeColor(0.14, 0.34, 0.40)
+        selfBtn:SetBackdropBorderColor(r, g, b, 0.82)
         characterCaret:SetTextColor(1, 1, 1)
         ns.ShowTooltip(selfBtn, {
             build = function(tooltip)
@@ -866,7 +865,8 @@ function MR:BuildUI()
     characterBar:SetScript("OnLeave", function(selfBtn)
         selfBtn:SetBackdropColor(0.020, 0.040, 0.060, 0.96)
         selfBtn:SetBackdropBorderColor(0.08, 0.16, 0.22, 0.45)
-        characterCaret:SetTextColor(0.48, 0.72, 0.74)
+        local r, g, b = ns.ResolveThemeColor(0.48, 0.72, 0.74)
+        characterCaret:SetTextColor(r, g, b)
         ns.HideOwnedTooltip(selfBtn)
     end)
     self.characterBar = characterBar
@@ -929,7 +929,7 @@ function MR:BuildUI()
     self.UpdateScrollBar = updateScrollBar
     self._scrollThumbTex = scrollThumbTex
     if ns.ApplyTitleBarTheme then
-        ns.ApplyTitleBarTheme(MR.db.profile.themeColor)
+        ns.ApplyTitleBarTheme(MR:GetThemeColor())
     end
 
     local combatDisabledFrame = CreateFrame("Frame", nil, f)
@@ -1582,4 +1582,3 @@ UI.mainFrameAnimator = mainFrameAnimator
 UI.StopMainFrameAnimation = StopMainFrameAnimation
 UI.AnimateMainFrameHeight = AnimateMainFrameHeight
 UI.HasVisibleUISurface = HasVisibleUISurface
-

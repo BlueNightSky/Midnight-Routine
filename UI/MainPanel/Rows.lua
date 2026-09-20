@@ -755,13 +755,15 @@ local function UpdateMainExpansionHeaderWidget(self, expansionKey, yOff, xOff, c
     frame:SetSize(math.max(colW - 6, 1), 18)
     frame:SetFrameLevel((self.content:GetFrameLevel() or 0) + 8)
     frame:SetBackdropColor(0.035, 0.055, 0.070, 0.86 * frameAlpha)
-    frame:SetBackdropBorderColor(0.14, 0.30, 0.34, 0.80 * frameAlpha)
+    local er, eg, eb = ns.ResolveThemeColor(0.14, 0.30, 0.34)
+    frame:SetBackdropBorderColor(er, eg, eb, 0.80 * frameAlpha)
     frame._label:SetFont(ns.FONT_HEADERS, math.max(8, GetFontSize() - 1), GetFontFlags())
     frame._label:ClearAllPoints()
     frame._label:SetPoint("LEFT", frame, "LEFT", 7, 0)
     frame._label:SetPoint("RIGHT", frame, "RIGHT", -24, 0)
     frame._label:SetText(label)
-    frame._label:SetTextColor(0.72, 0.86, 0.88, 0.95)
+    er, eg, eb = ns.ResolveThemeColor(0.72, 0.86, 0.88)
+    frame._label:SetTextColor(er, eg, eb, 0.95)
     StyleSectionCollapseIndicator(frame._arrow, not collapsed)
     return frame
 end
@@ -905,6 +907,7 @@ local function UpdateDetachedSectionWidget(self, hostFrame, mod, contentWidth)
 
     local allDone = (secTotal > 0) and (secDone == secTotal)
     local card = EnsureDetachedSectionWidget(hostFrame, mod.key)
+    card._mrAllDone = allDone
     local sectionHeight = math.max((stats and stats.height or 0) - SECTION_GAP, HEADER_HEIGHT + 1)
     card:ClearAllPoints()
     card:SetPoint("TOPLEFT", hostFrame.content, "TOPLEFT", 0, 0)
@@ -974,7 +977,7 @@ local function UpdateDetachedSectionWidget(self, hostFrame, mod, contentWidth)
     card._hdrFrame._count:SetFont(ns.FONT_ROWS, math.max(7, GetFontSize() - 2), GetFontFlags())
     card._hdrFrame._count:ClearAllPoints()
     local currencyBrowserButton = card._hdrFrame._currencyBrowserButton
-    local showCurrencyBrowserButton = mod.key == "currencies" and MR.ToggleCurrencyBrowserFrame
+    local showCurrencyBrowserButton = mod.key == "currencies" and MR.ToggleCurrencyBrowserFrame and MR:IsRowEnabled("currencies", "currency_browser_button")
     if showCurrencyBrowserButton then
         currencyBrowserButton:ClearAllPoints()
         currencyBrowserButton:SetPoint("TOPLEFT", card, "TOPLEFT", 4, -(HEADER_HEIGHT + 3))
@@ -1878,7 +1881,8 @@ BuildModuleStatsCache = function(self, requestedMod)
             local hideComplete = MR:IsModuleHideComplete(mod.key)
             local isOpen = MR:IsModuleOpen(mod.key)
             local totalRows, doneRows, shownRows = 0, 0, 0
-            local height = HEADER_HEIGHT + 1 + SECTION_GAP + (mod.key == "currencies" and CURRENCY_BROWSER_HEIGHT or 0)
+            local showCurrencyBrowserButton = mod.key == "currencies" and MR.ToggleCurrencyBrowserFrame and MR:IsRowEnabled("currencies", "currency_browser_button")
+            local height = HEADER_HEIGHT + 1 + SECTION_GAP + (showCurrencyBrowserButton and CURRENCY_BROWSER_HEIGHT or 0)
 
             local rows = MR.GetOrderedRows and MR:GetOrderedRows(mod) or mod.rows
             for _, row in ipairs(rows) do

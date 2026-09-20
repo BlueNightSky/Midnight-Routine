@@ -617,8 +617,9 @@ function MR:GetHeaderColor(modKey)
     if self.db.profile.headerColors and self.db.profile.headerColors[modKey] then
         return self.db.profile.headerColors[modKey]
     end
-    if self.db.profile.themeColor then
-        return self.db.profile.themeColor
+    local themeColor = self:GetThemeColor()
+    if themeColor then
+        return themeColor
     end
     local mod = self.moduleByKey[modKey]
     return mod and mod.labelColor or "#ffffff"
@@ -634,36 +635,131 @@ function MR:GetClassColorHex()
 end
 
 function MR:GetThemeColor()
-    return self.db.profile.themeColor
+    local profile = self.db and self.db.profile
+    if not profile then return nil end
+    if profile.themeColorMode == "class" then
+        return self:GetClassColorHex()
+    end
+    return profile.themeColor
+end
+
+function MR:RefreshImmediateThemeSurfaces()
+    local profile = self.db and self.db.profile
+    if not profile then return end
+
+    local function RefreshCard(card)
+        local header = card and card._hdrFrame
+        local mod = header and header._mrMod
+        if not (mod and header._label) then return end
+
+        local explicit = profile.headerColors and profile.headerColors[mod.key]
+        local color = explicit or self:GetThemeColor() or mod.labelColor or "#ffffff"
+        if mod.profSkillLine and not explicit then
+            color = "#f5f7fa"
+        elseif card._mrAllDone and not explicit then
+            color = "#00ff96"
+        end
+        local r, g, b = ns.Hex(color)
+        header._label:SetText(ns.StripColorCodes(mod.label))
+        header._label:SetTextColor(r, g, b)
+
+        if mod.key == "currencies" and header._currencyBrowserButton and ns.UIInternal and ns.UIInternal.StyleCurrencyBrowserButton then
+            ns.UIInternal.StyleCurrencyBrowserButton(header._currencyBrowserButton, header._currencyBrowserButton._mrTransparent, header._currencyBrowserButton._mrFrameAlpha or 1)
+        end
+    end
+
+    if self._mainSectionFrames then
+        for _, card in pairs(self._mainSectionFrames) do
+            RefreshCard(card)
+        end
+    end
+    if self.detachedFrames then
+        for _, frame in pairs(self.detachedFrames) do
+            if frame._sectionFrames then
+                for _, card in pairs(frame._sectionFrames) do
+                    RefreshCard(card)
+                end
+            end
+        end
+    end
+end
+
+function MR:RequestThemeSurfaceRefresh()
+    if self._themeSurfaceRefreshTimer and self.CancelTimer then
+        self:CancelTimer(self._themeSurfaceRefreshTimer)
+        self._themeSurfaceRefreshTimer = nil
+    end
+
+    local function RefreshSurfaces()
+        self._themeSurfaceRefreshTimer = nil
+        if self.altBoardFrame and self.altBoardFrame:IsShown() and self.RefreshWarbandBoard then
+            self:RefreshWarbandBoard(true)
+        end
+        if self.RefreshMainAltPicker then
+            self:RefreshMainAltPicker()
+        end
+        self:RequestVisualRefresh({ mainDelay = 0, professionDelay = 0, config = false })
+    end
+
+    if self.ScheduleTimer then
+        self._themeSurfaceRefreshTimer = self:ScheduleTimer(RefreshSurfaces, 0.06)
+    else
+        RefreshSurfaces()
+    end
+end
+
+function MR:ApplyThemeColorSelection()
+    local themeColor = self:GetThemeColor()
+    self._appliedThemeColor = themeColor
+    if ns.ApplyThemeAccentColor then
+        ns.ApplyThemeAccentColor(themeColor)
+    end
+    if ns.ApplyTitleBarTheme then
+        ns.ApplyTitleBarTheme(themeColor)
+    end
+    if self.RefreshImmediateThemeSurfaces then
+        self:RefreshImmediateThemeSurfaces()
+    end
+    self:RequestThemeSurfaceRefresh()
 end
 
 function MR:SetThemeColor(hexColor)
     self.db.profile.themeColor = hexColor or nil
-    if ns.ApplyThemeAccentColor then
-        ns.ApplyThemeAccentColor(self.db.profile.themeColor)
+    self.db.profile.themeColorMode = hexColor and "custom" or "default"
+    self:ApplyThemeColorSelection()
+end
+
+function MR:ClearHeaderColorOverrides()
+    local profile = self.db and self.db.profile
+    if not profile then return end
+
+    profile.headerColors = profile.headerColors or {}
+    profile.headerBackgroundColors = profile.headerBackgroundColors or {}
+    for _, mod in ipairs(self.modules or {}) do
+        if mod.key then
+            profile.headerColors[mod.key] = nil
+            profile.headerBackgroundColors[mod.key] = nil
+        end
     end
-    if ns.ApplyTitleBarTheme then
-        ns.ApplyTitleBarTheme(self.db.profile.themeColor)
-    end
-    self:RequestVisualRefresh()
 end
 
 function MR:SetThemeColorToClassColor()
-    local hexColor = self:GetClassColorHex()
-    if not hexColor then
+    if not self:GetClassColorHex() then
         return
     end
-    self:SetThemeColor(hexColor)
+    self:ClearHeaderColorOverrides()
+    self.db.profile.themeColor = nil
+    self.db.profile.themeColorMode = "class"
+    self:ApplyThemeColorSelection()
 end
 
 function MR:ResetThemeColor()
+    self:ClearHeaderColorOverrides()
     self:SetThemeColor(nil)
 end
 
 function MR:IsThemeColorClassColor()
-    local themeColor = self.db.profile.themeColor
-    local classHex = themeColor and self:GetClassColorHex()
-    return classHex ~= nil and themeColor:lower() == classHex:lower()
+    return self.db and self.db.profile and self.db.profile.themeColorMode == "class"
 end
 
 function MR:SetHeaderColor(modKey, hexColor)
@@ -850,4 +946,3 @@ local TURN_IN_COMPLETIONS = {}
 
 Core.staticTurnInCompletions = STATIC_TURN_IN_COMPLETIONS
 Core.turnInCompletions = TURN_IN_COMPLETIONS
-

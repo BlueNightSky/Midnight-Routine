@@ -31,6 +31,39 @@ local SetWindowLayoutValue = Config.SetWindowLayoutValue
 local RefreshVisualSettings = Config.RefreshVisualSettings
 local RestoreFramePos = Config.RestoreFramePos
 
+local function ApplyThemeChoiceStyle(button, label, active)
+    local themeColor = MR.GetThemeColor and MR:GetThemeColor()
+    if themeColor then
+        local r, g, b = ns.ResolveThemeColor(0.22, 0.82, 0.70)
+        local strength = active and 0.20 or 0.065
+        button:SetBackdropColor(r * strength, g * strength, b * strength, 1)
+        button:SetBackdropBorderColor(r, g, b, active and 1 or 0.48)
+        label:SetTextColor(active and 1 or 0.90, active and 1 or 0.93, active and 1 or 0.96, 1)
+    else
+        button:SetBackdropColor(active and 0.11 or 0.05, active and 0.24 or 0.09, active and 0.23 or 0.15, 1)
+        button:SetBackdropBorderColor(active and 0.22 or 0.16, active and 0.82 or 0.28, active and 0.70 or 0.36, 1)
+        label:SetTextColor(active and 1 or 0.90, active and 1 or 0.93, active and 1 or 0.96)
+    end
+end
+
+local function ApplyThemeChoiceHover(button, label)
+    local r, g, b = ns.ResolveThemeColor(0.24, 0.74, 0.68)
+    button:SetBackdropColor(r * 0.16, g * 0.16, b * 0.16, 1)
+    button:SetBackdropBorderColor(r, g, b, 1)
+    label:SetTextColor(1, 1, 1)
+end
+
+local function RegisterThemeChoice(button, label, isActive)
+    ns.RegisterThemedState(button, function()
+        local active = isActive()
+        if button:IsMouseOver() and not active then
+            ApplyThemeChoiceHover(button, label)
+        else
+            ApplyThemeChoiceStyle(button, label, active)
+        end
+    end)
+end
+
 function MR:PopulateConfigFrame(f)
     local activePage = MR._cfgPage or "windows"
     if activePage ~= "windows" and activePage ~= "layout" and activePage ~= "modules" and activePage ~= "reset" and activePage ~= "support" then
@@ -67,10 +100,10 @@ function MR:PopulateConfigFrame(f)
     local function Gap(h)          yOff = OptionsGap(body, yOff, h) end
     local function Divider()       yOff = OptionsDivider(body, yOff, 4) end
     local function SectionLabel(t) yOff = OptionsSectionLabel(body, yOff, t, 8, cfgFs) end
-    local function Checkbox(label, getVal, setVal, color)
+    local function Checkbox(label, getVal, setVal, color, themed)
         local r, g, b
         if color then r, g, b = hex(color) end
-        yOff = OptionsCheckbox(body, yOff, label, getVal, setVal, r, g, b, 4, nil, cfgFs)
+        yOff = OptionsCheckbox(body, yOff, label, getVal, setVal, r, g, b, 4, nil, cfgFs, themed)
     end
     local function Btn(label, onClick, style) yOff = OptionsBtn(body, yOff, label, onClick, math.max(192, contentW), 8, cfgFs, style) end
     local function ChoiceDropdown(label, choices, getVal, setVal, getResetValue)
@@ -81,7 +114,7 @@ function MR:PopulateConfigFrame(f)
         caption:SetJustifyH("LEFT")
         caption:SetWordWrap(false)
         caption:SetText(label)
-        caption:SetTextColor(0.62, 0.82, 0.80)
+        caption:SetTextColor(0.92, 0.94, 0.96)
 
         yOff = yOff - 14
 
@@ -118,7 +151,10 @@ function MR:PopulateConfigFrame(f)
         dropdown:SetPoint("LEFT", row, "LEFT", 0, 0)
         dropdown:Update()
 
-        local resetBtn = ns.CloseButton(row, function()
+        local resetBtn = ns.AcquireWidget(row, "choiceReset", function()
+            return ns.CloseButton(row, nil)
+        end)
+        resetBtn:SetScript("OnClick", function()
             local resetValue = getResetValue and getResetValue() or choices[1].value
             for _, choice in ipairs(choices) do
                 if choice.value == resetValue then
@@ -232,8 +268,6 @@ function MR:PopulateConfigFrame(f)
             btn:SetBackdrop(MakeBackdrop())
             if btn.SetClipsChildren then btn:SetClipsChildren(true) end
             local isActive = activePage == tab.key
-            btn:SetBackdropColor(isActive and 0.11 or 0.05, isActive and 0.24 or 0.09, isActive and 0.23 or 0.15, 1)
-            btn:SetBackdropBorderColor(isActive and 0.22 or 0.16, isActive and 0.82 or 0.28, isActive and 0.70 or 0.36, 1)
 
             local lbl = ns.AcquireFontString(btn, "pagesText11", "OVERLAY")
             lbl:SetFont(ns.FONT_ROWS, tabFs, GetFontFlags())
@@ -242,7 +276,7 @@ function MR:PopulateConfigFrame(f)
             lbl:SetJustifyH("CENTER")
             lbl:SetWordWrap(false)
             lbl:SetText(tab.label)
-            lbl:SetTextColor(isActive and 0.85 or 0.62, isActive and 1.0 or 0.75, isActive and 0.92 or 0.70)
+            ApplyThemeChoiceStyle(btn, lbl, isActive)
 
             btn:SetScript("OnClick", function()
                 MR._cfgPage = tab.key
@@ -250,16 +284,15 @@ function MR:PopulateConfigFrame(f)
             end)
             btn:SetScript("OnEnter", function()
                 if activePage ~= tab.key then
-                    btn:SetBackdropColor(0.08, 0.18, 0.24, 1)
-                    btn:SetBackdropBorderColor(0.24, 0.74, 0.68, 1)
-                    lbl:SetTextColor(0.90, 0.98, 0.96)
+                    ApplyThemeChoiceHover(btn, lbl)
                 end
             end)
             btn:SetScript("OnLeave", function()
                 local selected = (MR._cfgPage or "windows") == tab.key
-                btn:SetBackdropColor(selected and 0.11 or 0.05, selected and 0.24 or 0.09, selected and 0.23 or 0.15, 1)
-                btn:SetBackdropBorderColor(selected and 0.22 or 0.16, selected and 0.82 or 0.28, selected and 0.70 or 0.36, 1)
-                lbl:SetTextColor(selected and 0.85 or 0.62, selected and 1.0 or 0.75, selected and 0.92 or 0.70)
+                ApplyThemeChoiceStyle(btn, lbl, selected)
+            end)
+            RegisterThemeChoice(btn, lbl, function()
+                return (MR._cfgPage or "windows") == tab.key
             end)
         end
         yOff = yOff - 26
@@ -277,7 +310,7 @@ function MR:PopulateConfigFrame(f)
                 else
                     MR:HideMainPanel(true)
                 end
-            end, "#2ae7c6")
+            end, "#2ae7c6", true)
 
         Checkbox(L["Config_OpenRenown"],
             function() return MR.GetManagedWindowOpen and MR:GetManagedWindowOpen("renownOpen") end,
@@ -321,7 +354,7 @@ function MR:PopulateConfigFrame(f)
             function(v)
                 MR:SetAutoEnableNewModules(v)
                 MR:PopulateConfigFrame(f)
-            end, "#2ae7c6")
+            end, "#2ae7c6", true)
         Checkbox(L["Config_HideWhenCompleted"],
             function() return MR.db.char.hideComplete end,
             function(v)
@@ -451,28 +484,25 @@ function MR:PopulateConfigFrame(f)
             btn:SetPoint("TOPLEFT", body, "TOPLEFT", x, modeY)
             btn:SetBackdrop(MakeBackdrop())
             local active = MR.db.profile.characterWindowLayout == enabled
-            btn:SetBackdropColor(active and 0.12 or 0.05, active and 0.30 or 0.09, active and 0.24 or 0.16, 1)
-            btn:SetBackdropBorderColor(active and 0.24 or 0.16, active and 0.82 or 0.28, active and 0.70 or 0.36, 1)
 
             local lbl = ns.AcquireFontString(btn, "pagesText12", "OVERLAY")
             lbl:SetFont(ns.FONT_ROWS, cfgFs, GetFontFlags())
             lbl:SetPoint("CENTER")
             lbl:SetText(label)
-            lbl:SetTextColor(active and 0.92 or 0.70, active and 1.0 or 0.78, active and 0.94 or 0.74)
+            ApplyThemeChoiceStyle(btn, lbl, active)
 
             btn:SetScript("OnClick", function() SetLayoutMode(enabled) end)
             btn:SetScript("OnEnter", function()
                 if MR.db.profile.characterWindowLayout ~= enabled then
-                    btn:SetBackdropColor(0.08, 0.20, 0.25, 1)
-                    btn:SetBackdropBorderColor(0.24, 0.74, 0.68, 1)
-                    lbl:SetTextColor(0.92, 0.98, 0.96)
+                    ApplyThemeChoiceHover(btn, lbl)
                 end
             end)
             btn:SetScript("OnLeave", function()
                 local selected = MR.db.profile.characterWindowLayout == enabled
-                btn:SetBackdropColor(selected and 0.12 or 0.05, selected and 0.30 or 0.09, selected and 0.24 or 0.16, 1)
-                btn:SetBackdropBorderColor(selected and 0.24 or 0.16, selected and 0.82 or 0.28, selected and 0.70 or 0.36, 1)
-                lbl:SetTextColor(selected and 0.92 or 0.70, selected and 1.0 or 0.78, selected and 0.94 or 0.74)
+                ApplyThemeChoiceStyle(btn, lbl, selected)
+            end)
+            RegisterThemeChoice(btn, lbl, function()
+                return MR.db.profile.characterWindowLayout == enabled
             end)
         end
 
@@ -562,14 +592,12 @@ function MR:PopulateConfigFrame(f)
             btn:SetPoint("TOPLEFT", body, "TOPLEFT", x, headerModeY)
             btn:SetBackdrop(MakeBackdrop())
             local active = GetMainHeaderPosition() == value
-            btn:SetBackdropColor(active and 0.12 or 0.05, active and 0.30 or 0.09, active and 0.24 or 0.16, 1)
-            btn:SetBackdropBorderColor(active and 0.24 or 0.16, active and 0.82 or 0.28, active and 0.70 or 0.36, 1)
 
             local lbl = ns.AcquireFontString(btn, "pagesText13", "OVERLAY")
             lbl:SetFont(ns.FONT_ROWS, cfgFs, GetFontFlags())
             lbl:SetPoint("CENTER")
             lbl:SetText(label)
-            lbl:SetTextColor(active and 0.92 or 0.70, active and 1.0 or 0.78, active and 0.94 or 0.74)
+            ApplyThemeChoiceStyle(btn, lbl, active)
 
             btn:SetScript("OnClick", function()
                 if GetMainHeaderPosition() == value then
@@ -591,16 +619,15 @@ function MR:PopulateConfigFrame(f)
             end)
             btn:SetScript("OnEnter", function()
                 if GetMainHeaderPosition() ~= value then
-                    btn:SetBackdropColor(0.08, 0.20, 0.25, 1)
-                    btn:SetBackdropBorderColor(0.24, 0.74, 0.68, 1)
-                    lbl:SetTextColor(0.92, 0.98, 0.96)
+                    ApplyThemeChoiceHover(btn, lbl)
                 end
             end)
             btn:SetScript("OnLeave", function()
                 local selected = GetMainHeaderPosition() == value
-                btn:SetBackdropColor(selected and 0.12 or 0.05, selected and 0.30 or 0.09, selected and 0.24 or 0.16, 1)
-                btn:SetBackdropBorderColor(selected and 0.24 or 0.16, selected and 0.82 or 0.28, selected and 0.70 or 0.36, 1)
-                lbl:SetTextColor(selected and 0.92 or 0.70, selected and 1.0 or 0.78, selected and 0.94 or 0.74)
+                ApplyThemeChoiceStyle(btn, lbl, selected)
+            end)
+            RegisterThemeChoice(btn, lbl, function()
+                return GetMainHeaderPosition() == value
             end)
         end
 
@@ -633,7 +660,7 @@ function MR:PopulateConfigFrame(f)
             function(v)
                 SetWindowLayoutValue("animatedMinimize", v and true or false)
             end,
-            0.16, 0.78, 0.75, 8, nil, cfgFs)
+            0.16, 0.78, 0.75, 8, nil, cfgFs, true)
 
         Gap(2)
         yOff = OptionsCheckbox(body, yOff,
@@ -673,13 +700,11 @@ function MR:PopulateConfigFrame(f)
             pb:SetPoint("TOPLEFT", body, "TOPLEFT", 8 + (i - 1) * (btnW + 2), yOff - 18)
             pb:SetBackdrop(MakeBackdrop())
             local isActive = (GetFontSize() == p[2])
-            pb:SetBackdropColor(isActive and 0.12 or 0.05, isActive and 0.35 or 0.10, isActive and 0.32 or 0.18, 1)
-            pb:SetBackdropBorderColor(isActive and 0.25 or 0.18, isActive and 0.85 or 0.40, isActive and 0.70 or 0.45, 1)
             local pfs = ns.AcquireFontString(pb, "pagesText14", "OVERLAY")
             pfs:SetFont(ns.FONT_ROWS, cfgFs, GetFontFlags())
             pfs:SetPoint("CENTER")
             pfs:SetText(p[1])
-            pfs:SetTextColor(isActive and 0.2 or 0.6, isActive and 0.95 or 0.75, isActive and 0.75 or 0.65)
+            ApplyThemeChoiceStyle(pb, pfs, isActive)
             pb:SetScript("OnClick", function()
                 if MR.db.profile.syncWindowFontSize then
                     MR:ApplyFontSizeToAll(p[2])
@@ -693,12 +718,13 @@ function MR:PopulateConfigFrame(f)
                 end
             end)
             pb:SetScript("OnEnter", function()
-                pb:SetBackdropColor(0.10, 0.28, 0.28, 1)
-                pb:SetBackdropBorderColor(0.25, 0.90, 0.75, 1)
+                ApplyThemeChoiceHover(pb, pfs)
             end)
             pb:SetScript("OnLeave", function()
-                pb:SetBackdropColor(isActive and 0.12 or 0.05, isActive and 0.35 or 0.10, isActive and 0.32 or 0.18, 1)
-                pb:SetBackdropBorderColor(isActive and 0.25 or 0.18, isActive and 0.85 or 0.40, isActive and 0.70 or 0.45, 1)
+                ApplyThemeChoiceStyle(pb, pfs, GetFontSize() == p[2])
+            end)
+            RegisterThemeChoice(pb, pfs, function()
+                return GetFontSize() == p[2]
             end)
         end
 
@@ -718,6 +744,16 @@ function MR:PopulateConfigFrame(f)
         SectionLabel(L["Config_ThemeColor"] or "Theme Color")
 
         do
+            local classBtn, classLbl, resetBtn, resetLbl
+            local function RefreshThemeChoiceButtons()
+                if classBtn and classLbl then
+                    ApplyThemeChoiceStyle(classBtn, classLbl, MR:IsThemeColorClassColor())
+                end
+                if resetBtn and resetLbl then
+                    ApplyThemeChoiceStyle(resetBtn, resetLbl, MR:GetThemeColor() == nil)
+                end
+            end
+
             local caption = ns.AcquireFontString(body, "themeColorCaption", "OVERLAY")
             caption:SetFont(ns.FONT_ROWS, cfgFs, GetFontFlags())
             caption:SetPoint("TOPLEFT", body, "TOPLEFT", 8, yOff)
@@ -733,18 +769,27 @@ function MR:PopulateConfigFrame(f)
             local DEFAULT_THEME_HEX = "#d9a61a"
             local themeColor = MR:GetThemeColor()
             local tr, tg, tb = hex(themeColor or DEFAULT_THEME_HEX)
+            local pickerOriginalMode
+            local pickerOriginalColor
 
             local swatch = OptionsColorSwatch(body, tr, tg, tb, function(r, g, b)
                 MR:SetThemeColor(string.format("#%02x%02x%02x", r * 255, g * 255, b * 255))
+                RefreshThemeChoiceButtons()
             end, function()
                 MR:ResetThemeColor()
-                if MR.RequestConfigRepopulate then
-                    MR:RequestConfigRepopulate(f, 0.05)
-                else
-                    MR:PopulateConfigFrame(f)
-                end
+                RefreshThemeChoiceButtons()
                 return hex(DEFAULT_THEME_HEX)
-            end, L["Config_ThemeColor"] or "Theme Color")
+            end, L["Config_ThemeColor"] or "Theme Color", function()
+                pickerOriginalMode = MR.db.profile.themeColorMode
+                pickerOriginalColor = MR.db.profile.themeColor
+            end, function()
+                MR.db.profile.themeColorMode = pickerOriginalMode or "default"
+                MR.db.profile.themeColor = pickerOriginalColor
+                MR:ApplyThemeColorSelection()
+                pickerOriginalMode = nil
+                pickerOriginalColor = nil
+                RefreshThemeChoiceButtons()
+            end)
             swatch:SetSize(20, 20)
             swatch:SetPoint("TOPLEFT", body, "TOPLEFT", 8, rowY)
 
@@ -752,63 +797,60 @@ function MR:PopulateConfigFrame(f)
             local classBtnW = math.floor((btnAreaW - 4) / 2)
             local resetBtnW = btnAreaW - classBtnW - 4
 
-            local classBtn = ns.AcquireFrame(body, "themeColorClassBtn", "Button", "BackdropTemplate")
+            classBtn = ns.AcquireFrame(body, "themeColorClassBtn", "Button", "BackdropTemplate")
             classBtn:SetSize(classBtnW, 20)
             classBtn:SetPoint("LEFT", swatch, "RIGHT", 6, 0)
             classBtn:SetBackdrop(MakeBackdrop())
             local isClassColor = MR:IsThemeColorClassColor()
-            classBtn:SetBackdropColor(isClassColor and 0.12 or 0.05, isClassColor and 0.30 or 0.09, isClassColor and 0.24 or 0.16, 1)
-            classBtn:SetBackdropBorderColor(isClassColor and 0.24 or 0.16, isClassColor and 0.82 or 0.28, isClassColor and 0.70 or 0.36, 1)
-            local classLbl = ns.AcquireFontString(classBtn, "themeColorClassLabel", "OVERLAY")
+            classLbl = ns.AcquireFontString(classBtn, "themeColorClassLabel", "OVERLAY")
             classLbl:SetFont(ns.FONT_ROWS, cfgFs, GetFontFlags())
             classLbl:SetPoint("CENTER")
             classLbl:SetText(L["Config_UseClassColor"] or "Use Class Color")
-            classLbl:SetTextColor(isClassColor and 0.92 or 0.70, isClassColor and 1.0 or 0.78, isClassColor and 0.94 or 0.74)
+            ApplyThemeChoiceStyle(classBtn, classLbl, isClassColor)
             classBtn:SetScript("OnClick", function()
                 MR:SetThemeColorToClassColor()
-                if MR.RequestConfigRepopulate then
-                    MR:RequestConfigRepopulate(f, 0.05)
-                else
-                    MR:PopulateConfigFrame(f)
-                end
+                RefreshThemeChoiceButtons()
             end)
             classBtn:SetScript("OnEnter", function()
-                classBtn:SetBackdropBorderColor(0.42, 0.82, 0.70, 1)
-                classLbl:SetTextColor(0.94, 1.0, 0.96)
+                ApplyThemeChoiceHover(classBtn, classLbl)
             end)
             classBtn:SetScript("OnLeave", function()
-                classBtn:SetBackdropColor(isClassColor and 0.12 or 0.05, isClassColor and 0.30 or 0.09, isClassColor and 0.24 or 0.16, 1)
-                classBtn:SetBackdropBorderColor(isClassColor and 0.24 or 0.16, isClassColor and 0.82 or 0.28, isClassColor and 0.70 or 0.36, 1)
-                classLbl:SetTextColor(isClassColor and 0.92 or 0.70, isClassColor and 1.0 or 0.78, isClassColor and 0.94 or 0.74)
+                ApplyThemeChoiceStyle(classBtn, classLbl, MR:IsThemeColorClassColor())
+            end)
+            RegisterThemeChoice(classBtn, classLbl, function()
+                return MR:IsThemeColorClassColor()
             end)
 
-            local resetBtn = ns.AcquireFrame(body, "themeColorResetBtn", "Button", "BackdropTemplate")
+            resetBtn = ns.AcquireFrame(body, "themeColorResetBtn", "Button", "BackdropTemplate")
             resetBtn:SetSize(resetBtnW, 20)
             resetBtn:SetPoint("LEFT", classBtn, "RIGHT", 4, 0)
             resetBtn:SetBackdrop(MakeBackdrop())
             resetBtn:SetBackdropColor(0.05, 0.09, 0.16, 1)
-            resetBtn:SetBackdropBorderColor(0.16, 0.28, 0.36, 1)
-            local resetLbl = ns.AcquireFontString(resetBtn, "themeColorResetLabel", "OVERLAY")
+            ns.RegisterThemedBackdropBorder(resetBtn, 0.16, 0.28, 0.36, 0.72)
+            resetLbl = ns.AcquireFontString(resetBtn, "themeColorResetLabel", "OVERLAY")
             resetLbl:SetFont(ns.FONT_ROWS, cfgFs, GetFontFlags())
             resetLbl:SetPoint("CENTER")
             resetLbl:SetText(L["Config_Default"] or "Default")
-            resetLbl:SetTextColor(0.70, 0.78, 0.74)
             resetBtn:SetScript("OnClick", function()
                 MR:ResetThemeColor()
-                if MR.RequestConfigRepopulate then
-                    MR:RequestConfigRepopulate(f, 0.05)
-                else
-                    MR:PopulateConfigFrame(f)
-                end
+                RefreshThemeChoiceButtons()
             end)
             resetBtn:SetScript("OnEnter", function()
                 resetBtn:SetBackdropBorderColor(0.82, 0.42, 0.42, 1)
                 resetLbl:SetTextColor(1.0, 0.90, 0.90)
             end)
             resetBtn:SetScript("OnLeave", function()
-                resetBtn:SetBackdropBorderColor(0.16, 0.28, 0.36, 1)
-                resetLbl:SetTextColor(0.70, 0.78, 0.74)
+                ApplyThemeChoiceStyle(resetBtn, resetLbl, MR:GetThemeColor() == nil)
             end)
+            ns.RegisterThemedState(resetBtn, function()
+                if resetBtn:IsMouseOver() then
+                    resetBtn:SetBackdropBorderColor(0.82, 0.42, 0.42, 1)
+                    resetLbl:SetTextColor(1.0, 0.90, 0.90)
+                else
+                    ApplyThemeChoiceStyle(resetBtn, resetLbl, MR:GetThemeColor() == nil)
+                end
+            end)
+            RefreshThemeChoiceButtons()
 
             yOff = yOff - 28
         end
@@ -894,8 +936,6 @@ function MR:PopulateConfigFrame(f)
             btn:SetBackdrop(MakeBackdrop())
             local current = MR.GetWindowLayoutValue and MR:GetWindowLayoutValue("tooltipPosition") or MR.db.profile.tooltipPosition
             local active = (current or "right") == choice.value
-            btn:SetBackdropColor(active and 0.12 or 0.05, active and 0.30 or 0.09, active and 0.24 or 0.16, 1)
-            btn:SetBackdropBorderColor(active and 0.24 or 0.16, active and 0.82 or 0.28, active and 0.70 or 0.36, 1)
 
             local lbl = ns.AcquireFontString(btn, "pagesText15", "OVERLAY")
             lbl:SetFont(ns.FONT_ROWS, math.min(cfgFs, 10), GetFontFlags())
@@ -904,7 +944,7 @@ function MR:PopulateConfigFrame(f)
             lbl:SetJustifyH("CENTER")
             lbl:SetWordWrap(false)
             lbl:SetText(choice.label)
-            lbl:SetTextColor(active and 0.92 or 0.70, active and 1.0 or 0.78, active and 0.94 or 0.74)
+            ApplyThemeChoiceStyle(btn, lbl, active)
 
             btn:SetScript("OnClick", function()
                 SetWindowLayoutValue("tooltipPosition", choice.value)
@@ -913,16 +953,15 @@ function MR:PopulateConfigFrame(f)
             btn:SetScript("OnEnter", function()
                 local selected = ((MR.GetWindowLayoutValue and MR:GetWindowLayoutValue("tooltipPosition")) or "right") == choice.value
                 if not selected then
-                    btn:SetBackdropColor(0.08, 0.20, 0.25, 1)
-                    btn:SetBackdropBorderColor(0.24, 0.74, 0.68, 1)
-                    lbl:SetTextColor(0.92, 0.98, 0.96)
+                    ApplyThemeChoiceHover(btn, lbl)
                 end
             end)
             btn:SetScript("OnLeave", function()
                 local selected = ((MR.GetWindowLayoutValue and MR:GetWindowLayoutValue("tooltipPosition")) or "right") == choice.value
-                btn:SetBackdropColor(selected and 0.12 or 0.05, selected and 0.30 or 0.09, selected and 0.24 or 0.16, 1)
-                btn:SetBackdropBorderColor(selected and 0.24 or 0.16, selected and 0.82 or 0.28, selected and 0.70 or 0.36, 1)
-                lbl:SetTextColor(selected and 0.92 or 0.70, selected and 1.0 or 0.78, selected and 0.94 or 0.74)
+                ApplyThemeChoiceStyle(btn, lbl, selected)
+            end)
+            RegisterThemeChoice(btn, lbl, function()
+                return ((MR.GetWindowLayoutValue and MR:GetWindowLayoutValue("tooltipPosition")) or "right") == choice.value
             end)
         end
 
@@ -936,7 +975,7 @@ function MR:PopulateConfigFrame(f)
             L["Config_ShowWarbandTooltips"] or "Show Warband Info in Tooltips",
             function() return MR.db.profile.showWarbandTooltips ~= false end,
             function(v) MR.db.profile.showWarbandTooltips = v end,
-            0.24, 0.82, 0.70, 8, nil, cfgFs)
+            0.24, 0.82, 0.70, 8, nil, cfgFs, true)
     end
 
     if activePage == "modules" then

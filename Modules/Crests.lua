@@ -308,6 +308,14 @@ end
 
 defaultCrestRows = {
     {
+        key = "currency_browser_button",
+        hideInMain = true,
+        configHeader = true,
+        noMax = true,
+        defaultColor = "#6bebd6",
+        label = L["CurrencyBrowser_All"] or "Browse all currencies",
+    },
+    {
         key = "mistcrest_adventurer",
         currencyId = 3442,
         noMax = true,

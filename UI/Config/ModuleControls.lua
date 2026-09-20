@@ -22,18 +22,15 @@ end
 
 local function ApplyVisibilityState(button, label, active)
     button:SetBackdropColor(0.05, 0.10, 0.18, 1)
-    button:SetBackdropBorderColor(
-        active and 0.15 or 0.35,
-        active and 0.32 or 0.12,
-        active and 0.38 or 0.12,
-        1
-    )
     label:SetText(active and "o" or "-")
-    label:SetTextColor(
-        active and 0.25 or 0.55,
-        active and 0.85 or 0.25,
-        active and 0.70 or 0.25
-    )
+    if active then
+        local r, g, b = ns.ResolveThemeColor(0.25, 0.85, 0.70)
+        button:SetBackdropBorderColor(r, g, b, 0.88)
+        label:SetTextColor(r, g, b)
+    else
+        button:SetBackdropBorderColor(0.35, 0.12, 0.12, 1)
+        label:SetTextColor(0.55, 0.25, 0.25)
+    end
 end
 
 local function CreateGrip(parent, height, enabled, onStart, onCommit)
@@ -50,7 +47,7 @@ local function CreateGrip(parent, height, enabled, onStart, onCommit)
             local dot = ns.AcquireTexture(grip, "controlTexture14", "ARTWORK")
             dot:SetSize(3, 3)
             dot:SetPoint("CENTER", grip, "CENTER", (column * 6) - 3, (row * 6) - 6)
-            dot:SetColorTexture(0.38, 0.62, 0.60, 0.85)
+            ns.RegisterThemedTexture(dot, 0.38, 0.62, 0.60, 0.85)
             dots[#dots + 1] = dot
         end
     end
@@ -67,7 +64,8 @@ local function CreateGrip(parent, height, enabled, onStart, onCommit)
         end
     end)
     grip:SetScript("OnLeave", function()
-        SetDotColor(0.38, 0.62, 0.60, 0.85)
+        local r, g, b = ns.ResolveThemeColor(0.38, 0.62, 0.60)
+        SetDotColor(r, g, b, 0.85)
     end)
     grip:SetScript("OnMouseDown", function(selfGrip)
         if enabled and onStart then
@@ -90,9 +88,10 @@ function Config.CreateProfessionGroupControl(spec)
     frame:SetSize(spec.width, spec.height)
     frame:SetBackdrop(MakeBackdrop())
     frame:SetBackdropColor(0.020, 0.085, 0.100, 0.98)
-    frame:SetBackdropBorderColor(0.24, 0.76, 0.70, 1)
+    ns.RegisterThemedBackdropBorder(frame, 0.24, 0.76, 0.70, 1)
 
     local groupToggle = ns.AcquireFrame(frame, "controlFrame10", "CheckButton", "UICheckButtonTemplate")
+    ns.ThemeCheckButton(groupToggle)
     groupToggle:SetSize(18, 18)
     groupToggle:SetPoint("LEFT", frame, "LEFT", 1, 0)
     groupToggle:SetChecked(spec.allEnabled == true)
@@ -109,13 +108,13 @@ function Config.CreateProfessionGroupControl(spec)
     badge:SetPoint("LEFT", groupToggle, "RIGHT", 2, 0)
     badge:SetBackdrop(MakeBackdrop())
     badge:SetBackdropColor(0.06, 0.17, 0.18, 0.95)
-    badge:SetBackdropBorderColor(0.28, 0.82, 0.74, 0.95)
+    ns.RegisterThemedBackdropBorder(badge, 0.28, 0.82, 0.74, 0.95)
 
     local badgeText = ns.AcquireFontString(badge, "controlText17", "OVERLAY")
     badgeText:SetFont(ns.FONT_HEADERS, spec.headerFontSize, GetFontFlags())
     badgeText:SetPoint("CENTER")
     badgeText:SetText("PK")
-    badgeText:SetTextColor(0.60, 1.00, 0.90)
+    ns.RegisterThemedFontString(badgeText, 0.60, 1.00, 0.90)
 
     local arrowBtn = ns.AcquireFrame(frame, "controlFrame12", "Button")
     arrowBtn:SetSize(24, 24)
@@ -125,7 +124,7 @@ function Config.CreateProfessionGroupControl(spec)
     arrowLbl:SetFont(ns.FONT_HEADERS, 14, GetFontFlags())
     arrowLbl:SetPoint("CENTER", arrowBtn, "CENTER", 0, 1)
     arrowLbl:SetText(spec.expanded and "v" or ">")
-    arrowLbl:SetTextColor(0.45, 0.75, 0.70)
+    ns.RegisterThemedFontString(arrowLbl, 0.45, 0.75, 0.70)
 
     local label = ns.AcquireFontString(frame, "controlText19", "OVERLAY")
     label:SetFont(ns.FONT_HEADERS, spec.headerFontSize, GetFontFlags())
@@ -133,7 +132,7 @@ function Config.CreateProfessionGroupControl(spec)
     label:SetPoint("RIGHT", arrowBtn, "LEFT", -6, 0)
     label:SetJustifyH("LEFT")
     label:SetText(spec.title)
-    label:SetTextColor(0.88, 1.00, 0.94)
+    label:SetTextColor(0.94, 0.96, 0.98)
 
     local sub = ns.AcquireFontString(frame, "controlText20", "OVERLAY")
     sub:SetFont(ns.FONT_ROWS, spec.subFontSize, GetFontFlags())
@@ -156,7 +155,8 @@ function Config.CreateProfessionGroupControl(spec)
         arrowLbl:SetTextColor(1, 1, 1)
     end)
     arrowBtn:SetScript("OnLeave", function()
-        arrowLbl:SetTextColor(0.45, 0.75, 0.70)
+        local r, g, b = ns.ResolveThemeColor(0.45, 0.75, 0.70)
+        arrowLbl:SetTextColor(r, g, b)
     end)
     return frame
 end
@@ -177,7 +177,12 @@ local function CreateExpandButton(parent, expanded, onToggle, anchor)
     label:SetText(isExpanded and "v" or ">")
 
     local function ApplyState(hovered)
-        label:SetTextColor(hovered and 1 or 0.46, hovered and 1 or 0.82, hovered and 1 or 0.76)
+        if hovered then
+            label:SetTextColor(1, 1, 1)
+        else
+            local r, g, b = ns.ResolveThemeColor(0.46, 0.82, 0.76)
+            label:SetTextColor(r, g, b)
+        end
     end
 
     ApplyState(false)
@@ -204,23 +209,26 @@ local function CreateManageButton(parent, onManage)
     button:SetPoint("RIGHT", parent, "RIGHT", -3, 0)
     button:SetBackdrop(MakeBackdrop())
     button:SetBackdropColor(0.03, 0.06, 0.08, 0.92)
-    button:SetBackdropBorderColor(0.18, 0.36, 0.40, 0.85)
+    ns.RegisterThemedBackdropBorder(button, 0.18, 0.36, 0.40, 0.85)
 
     local label = ns.AcquireFontString(button, "controlText12", "OVERLAY")
     label:SetFont(ns.FONT_HEADERS, 9, GetFontFlags())
     label:SetPoint("CENTER", button, "CENTER", 0, 2)
     label:SetText("...")
-    label:SetTextColor(0.70, 0.88, 0.84)
+    ns.RegisterThemedFontString(label, 0.70, 0.88, 0.84)
 
     button:SetScript("OnClick", onManage)
     button:SetScript("OnEnter", function()
-        button:SetBackdropBorderColor(0.30, 0.82, 0.72, 1)
+        local r, g, b = ns.ResolveThemeColor(0.30, 0.82, 0.72)
+        button:SetBackdropBorderColor(r, g, b, 1)
         label:SetTextColor(1, 1, 1)
         ns.ShowTooltip(button, { text = L["CustomTasks_ManageCategoryShort"] or "Rename or remove category" })
     end)
     button:SetScript("OnLeave", function()
-        button:SetBackdropBorderColor(0.18, 0.36, 0.40, 0.85)
-        label:SetTextColor(0.70, 0.88, 0.84)
+        local r, g, b = ns.ResolveThemeColor(0.18, 0.36, 0.40)
+        button:SetBackdropBorderColor(r, g, b, 0.85)
+        r, g, b = ns.ResolveThemeColor(0.70, 0.88, 0.84)
+        label:SetTextColor(r, g, b)
         ns.HideOwnedTooltip(button)
     end)
     return button
@@ -240,14 +248,19 @@ local function CreateHideCompleteButton(parent, moduleKey, anchor)
     local function ApplyState(hovered)
         local active = MR:IsModuleHideComplete(moduleKey)
         button:SetBackdropColor(hovered and 0.08 or 0.05, hovered and 0.22 or 0.10, hovered and 0.32 or 0.18, 1)
-        button:SetBackdropBorderColor(
-            hovered and 0.25 or (active and 0.15 or 0.35),
-            hovered and 0.85 or (active and 0.32 or 0.12),
-            hovered and 0.72 or (active and 0.38 or 0.12),
-            1
-        )
         label:SetText(active and "H" or "S")
-        label:SetTextColor(hovered and 1 or (active and 0.45 or 0.55), hovered and 1 or (active and 0.75 or 0.25), hovered and 1 or (active and 0.70 or 0.25))
+        if hovered then
+            local r, g, b = ns.ResolveThemeColor(0.25, 0.85, 0.72)
+            button:SetBackdropBorderColor(r, g, b, 1)
+            label:SetTextColor(1, 1, 1)
+        elseif active then
+            local r, g, b = ns.ResolveThemeColor(0.15, 0.32, 0.38)
+            button:SetBackdropBorderColor(r, g, b, 1)
+            label:SetTextColor(ns.ResolveThemeColor(0.45, 0.75, 0.70))
+        else
+            button:SetBackdropBorderColor(0.35, 0.12, 0.12, 1)
+            label:SetTextColor(0.55, 0.25, 0.25)
+        end
     end
 
     ApplyState(false)
@@ -334,6 +347,7 @@ function Config.CreateModuleControl(spec)
         grip = CreateGrip(frame, spec.height, spec.available, spec.onDragStart, spec.onDragCommit)
     end
     local checkbox = ns.AcquireFrame(frame, "controlFrame5", "CheckButton", "UICheckButtonTemplate")
+    ns.ThemeCheckButton(checkbox)
     checkbox:SetSize(20, 20)
     if grip then
         checkbox:SetPoint("LEFT", grip, "RIGHT", 2, 0)
@@ -400,23 +414,26 @@ function Config.CreateTaskControl(spec)
     local rowKey = row.key
     local enabled = MR:IsRowEnabled(moduleKey, rowKey)
 
-    local frame = ns.AcquireFrame(spec.parent, "controlFrame6", "Frame")
+    local frame = ns.AcquireFrame(spec.parent, "controlFrame6", "Frame", "BackdropTemplate")
     frame:SetPoint("TOPLEFT", spec.parent, "TOPLEFT", spec.x or 18, spec.y)
     frame:SetSize(spec.width, spec.height)
+    frame:SetBackdrop(row.configHeader and MakeBackdrop() or nil)
     frame:EnableMouse(true)
     frame:SetAlpha(spec.available and 1 or 0.55)
     frame:SetScript("OnMouseDown", function(selfFrame, button)
-        if spec.available and button == "LeftButton" and spec.onDragStart then
+        if not row.configHeader and spec.available and button == "LeftButton" and spec.onDragStart then
             spec.onDragStart(selfFrame)
         end
     end)
     frame:SetScript("OnMouseUp", function(_, button)
-        if button == "LeftButton" and spec.onDragCommit then
+        if not row.configHeader and button == "LeftButton" and spec.onDragCommit then
             spec.onDragCommit()
         end
     end)
     frame:SetScript("OnEnter", function()
-        ns.ShowTooltip(frame, { text = L["Config_DragRowTooltip"] })
+        if not row.configHeader then
+            ns.ShowTooltip(frame, { text = L["Config_DragRowTooltip"] })
+        end
     end)
     frame:SetScript("OnLeave", function()
         ns.HideOwnedTooltip(frame)
@@ -425,10 +442,23 @@ function Config.CreateTaskControl(spec)
     local dot = ns.AcquireTexture(frame, "controlTexture15", "ARTWORK")
     dot:SetSize(5, 5)
     dot:SetPoint("LEFT", frame, "LEFT", 0, 0)
+    dot:SetShown(not row.configHeader)
+
+    local checkbox
+    if row.configHeader then
+        checkbox = ns.AcquireFrame(frame, "controlFrame11", "CheckButton", "UICheckButtonTemplate")
+        ns.ThemeCheckButton(checkbox)
+        frame._mrConfigHeaderCheckbox = checkbox
+        checkbox:SetSize(20, 20)
+        checkbox:SetPoint("LEFT", frame, "LEFT", 1, 0)
+        checkbox:SetEnabled(spec.available)
+    elseif frame._mrConfigHeaderCheckbox then
+        frame._mrConfigHeaderCheckbox:Hide()
+    end
 
     local label = ns.AcquireFontString(frame, "controlText12", "OVERLAY")
-    label:SetFont(ns.FONT_ROWS, spec.fontSize, GetFontFlags())
-    label:SetPoint("LEFT", frame, "LEFT", 10, 0)
+    label:SetFont(row.configHeader and ns.FONT_HEADERS or ns.FONT_ROWS, spec.fontSize, GetFontFlags())
+    label:SetPoint("LEFT", checkbox or frame, checkbox and "RIGHT" or "LEFT", checkbox and 2 or 10, 0)
     label:SetPoint("RIGHT", frame, "RIGHT", -48, 0)
     label:SetJustifyH("LEFT")
     label:SetText(spec.label)
@@ -438,16 +468,22 @@ function Config.CreateTaskControl(spec)
     visibility:SetPoint("RIGHT", frame, "RIGHT", 0, 0)
     visibility:SetBackdrop(MakeBackdrop())
     visibility:SetEnabled(spec.available)
+    visibility:SetShown(not row.configHeader)
     local visibilityLabel = ns.AcquireFontString(visibility, "controlText13", "OVERLAY")
     visibilityLabel:SetFont(ns.FONT_ROWS, spec.fontSize, GetFontFlags())
     visibilityLabel:SetPoint("CENTER")
 
     local function ApplyState(hovered)
         enabled = MR:IsRowEnabled(moduleKey, rowKey)
+        local fallbackColor = row.defaultColor or MR:GetHeaderColor(moduleKey)
         local effectiveColor = MR:GetRowColor(moduleKey, rowKey)
+            or row.defaultColor
             or (MR.db.profile.headerColors and MR.db.profile.headerColors[moduleKey])
-        dot:SetColorTexture(hex(MR:GetRowColor(moduleKey, rowKey) or MR:GetHeaderColor(moduleKey)))
+        dot:SetColorTexture(hex(MR:GetRowColor(moduleKey, rowKey) or fallbackColor))
         dot:SetAlpha(enabled and 0.8 or 0.25)
+        if checkbox then
+            checkbox:SetChecked(enabled)
+        end
         if not enabled then
             label:SetTextColor(0.35, 0.35, 0.35)
         elseif effectiveColor then
@@ -455,10 +491,17 @@ function Config.CreateTaskControl(spec)
         else
             label:SetTextColor(0.80, 0.80, 0.80)
         end
-        ApplyVisibilityState(visibility, visibilityLabel, enabled)
-        if hovered then
+        if row.configHeader then
+            local cr, cg, cb = hex(MR:GetRowColor(moduleKey, rowKey) or fallbackColor)
+            frame:SetBackdropColor(cr * 0.07, cg * 0.07, cb * 0.07, enabled and 0.94 or 0.52)
+            frame:SetBackdropBorderColor(cr * 0.45, cg * 0.45, cb * 0.45, enabled and 0.90 or 0.48)
+        else
+            ApplyVisibilityState(visibility, visibilityLabel, enabled)
+        end
+        if hovered and not row.configHeader then
             visibility:SetBackdropColor(0.08, 0.22, 0.32, 1)
-            visibility:SetBackdropBorderColor(0.25, 0.85, 0.72, 1)
+            local r, g, b = ns.ResolveThemeColor(0.25, 0.85, 0.72)
+            visibility:SetBackdropBorderColor(r, g, b, 1)
             visibilityLabel:SetTextColor(1, 1, 1)
         end
     end
@@ -477,17 +520,36 @@ function Config.CreateTaskControl(spec)
         ns.HideOwnedTooltip(visibility)
     end)
 
-    local r, g, b = hex(MR:GetRowColor(moduleKey, rowKey) or MR:GetHeaderColor(moduleKey))
+    if checkbox then
+        checkbox:SetScript("OnClick", function(control)
+            MR:SetRowEnabled(moduleKey, rowKey, control:GetChecked() and true or false, true)
+            RequestConfigRefresh(spec.configFrame, false)
+            ApplyState(false)
+        end)
+        checkbox:SetScript("OnEnter", function()
+            ns.ShowTooltip(checkbox, { text = enabled and L["Config_HideRow"] or L["Config_ShowRow"] })
+        end)
+        checkbox:SetScript("OnLeave", function()
+            ns.HideOwnedTooltip(checkbox)
+        end)
+    end
+
+    local fallbackColor = row.defaultColor or MR:GetHeaderColor(moduleKey)
+    local r, g, b = hex(MR:GetRowColor(moduleKey, rowKey) or fallbackColor)
     local swatch = OptionsColorSwatch(frame, r, g, b, function(nr, ng, nb)
         MR:SetRowColor(moduleKey, rowKey, string.format("#%02x%02x%02x", nr * 255, ng * 255, nb * 255))
         ApplyState(false)
     end, function()
         MR:ResetRowColor(moduleKey, rowKey)
         ApplyState(false)
-        return hex(MR:GetHeaderColor(moduleKey))
+        return hex(fallbackColor)
     end, L["Config_RowColor"])
     swatch:SetSize(14, 14)
-    swatch:SetPoint("RIGHT", visibility, "LEFT", -2, 0)
+    if row.configHeader then
+        swatch:SetPoint("RIGHT", frame, "RIGHT", -4, 0)
+    else
+        swatch:SetPoint("RIGHT", visibility, "LEFT", -2, 0)
+    end
 
     local canHaveCompletionSound = type(row.max) == "number" and row.max > 0 and not row.noMax and not row.currencyId
     if canHaveCompletionSound then

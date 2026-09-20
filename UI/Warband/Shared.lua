@@ -95,10 +95,19 @@ local function WBStylePillButton(btn, active)
         return
     end
 
-    btn:SetBackdropColor(active and 0.045 or 0.024, active and 0.095 or 0.050, active and 0.130 or 0.080, active and 0.96 or 0.88)
-    btn:SetBackdropBorderColor(active and 0.20 or 0.10, active and 0.62 or 0.24, active and 0.56 or 0.30, active and 0.95 or 0.70)
+    local themeColor = MR.GetThemeColor and MR:GetThemeColor()
+    if themeColor then
+        local r, g, b = ns.ResolveThemeColor(0.20, 0.62, 0.56)
+        local strength = active and 0.16 or 0.08
+        btn:SetBackdropColor(r * strength, g * strength, b * strength, active and 0.96 or 0.88)
+        btn:SetBackdropBorderColor(r, g, b, active and 0.95 or 0.58)
+    else
+        btn:SetBackdropColor(active and 0.045 or 0.024, active and 0.095 or 0.050, active and 0.130 or 0.080, active and 0.96 or 0.88)
+        btn:SetBackdropBorderColor(active and 0.20 or 0.10, active and 0.62 or 0.24, active and 0.56 or 0.30, active and 0.95 or 0.70)
+    end
     if btn._label then
-        btn._label:SetTextColor(active and 0.88 or 0.62, active and 0.96 or 0.76, active and 0.92 or 0.78)
+        local r, g, b = ns.ResolveThemeColor(active and 0.88 or 0.62, active and 0.96 or 0.76, active and 0.92 or 0.78)
+        btn._label:SetTextColor(r, g, b, active and 1 or 0.78)
     end
 end
 
@@ -1167,7 +1176,7 @@ local function WBBuildMainAltPicker()
     title:SetFont(ns.FONT_HEADERS, math.max(10, GetFontSize()), GetFontFlags())
     title:SetPoint("LEFT", titleBar, "LEFT", 8, 1)
     title:SetText(L["AltPicker_Title"] or "All Characters")
-    title:SetTextColor(0.78, 0.96, 0.98)
+    ns.RegisterThemedFontString(title, 0.78, 0.96, 0.98)
     frame.titleText = title
 
     CloseButton(titleBar, function()

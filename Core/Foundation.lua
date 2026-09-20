@@ -115,6 +115,7 @@ local DEFAULTS = {
         headerColors    = {},
         headerBackgroundColors = {},
         themeColor      = nil,
+        themeColorMode  = "default",
         rowColors       = {},
         customTaskCategoryModules = {},
         customTaskCategoryModuleNextId = 1,
@@ -359,4 +360,3 @@ ns.CoreInternals = {
     IsInRestrictedCombat = IsInRestrictedCombat,
     optionalCurrencyModules = MODULES_WITH_OPTIONAL_CURRENCY_COMPLETION,
 }
-

@@ -78,6 +78,7 @@ local function WBCreateHeaderButton(parent, icon, normalColor, hoverBg, hoverBor
         iconSize = icon.tex and (size - 4) or nil,
         fontSize = math.max(8, size - 7),
         color = normalColor,
+        themed = true,
         hoverColor = { 1, 1, 1 },
         hoverBackground = { hoverBg[1], hoverBg[2], hoverBg[3], 1 },
         hoverBorder = { hoverBorder[1], hoverBorder[2], hoverBorder[3], 1 },
@@ -182,20 +183,14 @@ function MR:ToggleConcentrationTracker()
         title:SetPoint("RIGHT", titleBar, "RIGHT", -100, 0)
         title:SetJustifyH("LEFT")
         title:SetText(L["AltBoard_ConcentrationTrackerTitle"] or "Alt Concentration")
-        title:SetTextColor(0.92, 0.97, 1.0)
+        ns.RegisterThemedFontString(title, 0.92, 0.97, 1.0)
 
-        local closeBtn = WBCreateHeaderButton(
-            titleBar,
-            { text = "x", size = 18 },
-            {0.88, 0.56, 0.56},
-            {0.28, 0.10, 0.10},
-            {0.90, 0.25, 0.25},
-            L["Close"],
-            function()
-                MR:HideConcentrationTracker()
-            end
-        )
-        closeBtn:SetPoint("RIGHT", titleBar, "RIGHT", -8, 0)
+        local closeBtn = CloseButton(titleBar, function()
+            MR:HideConcentrationTracker()
+        end, {
+            size = 18,
+            tooltip = L["Close"],
+        })
 
         local minBtn = WBCreateHeaderButton(
             titleBar,
@@ -419,7 +414,7 @@ function MR:BuildConcentrationTrackerConfigFrame()
     title:SetPoint("RIGHT", tbar, "RIGHT", -28, 0)
     title:SetJustifyH("LEFT")
     title:SetText(L["Options"] or "Options")
-    title:SetTextColor(0.92, 0.97, 1.0)
+    ns.RegisterThemedFontString(title, 0.92, 0.97, 1.0)
 
     CloseButton(tbar, function() f:Hide() end)
     return f

@@ -909,14 +909,11 @@ BuildRaresFrame = function()
     titleTxt:SetJustifyH("LEFT")
     titleTxt:SetWordWrap(false)
     if singleZone then
-        local cr, cg, cb = GetZoneColor(visible[1])
-        local hex = string.format("%02x%02x%02x",
-            math.floor(cr*255), math.floor(cg*255), math.floor(cb*255))
-        titleTxt:SetText(string.format(
-            "|cffd8e6e2Rares|r  |cff56636a-|r  |cff%s%s|r", hex, visible[1].label))
+        titleTxt:SetText("Rares  -  " .. visible[1].label)
     else
-        titleTxt:SetText("|cffd8e6e2Rares|r  |cff56636a-|r  |cff9da8adMidnight|r")
+        titleTxt:SetText("Rares  -  Midnight")
     end
+    ns.RegisterThemedFontString(titleTxt, 0.85, 0.90, 0.89)
 
     ApplyMinimized = function(isMin)
         if MR.db then MR.db.profile.raresMinimized = isMin end
@@ -1386,8 +1383,9 @@ local function BuildRaresConfigFrame()
 
     local ttitle = tbar:CreateFontString(nil, "OVERLAY")
     ttitle:SetFont(ns.FONT_HEADERS, 10, GetFontFlags())
-    ttitle:SetText("|cffd8e6e2Rares Options|r")
+    ttitle:SetText("Rares Options")
     ttitle:SetPoint("LEFT", tbar, "LEFT", 8, 0)
+    ns.RegisterThemedFontString(ttitle, 0.85, 0.90, 0.89)
 
     CloseButton(tbar, function() f:Hide() end)
     f.body = nil
@@ -1617,6 +1615,7 @@ PopulateRaresConfig = function(f)
             local zoneEnabled = not (db.raresHiddenZones and db.raresHiddenZones[zone.key])
 
             local enableBtn = CreateFrame("CheckButton", nil, rowFr, "UICheckButtonTemplate")
+            ns.ThemeCheckButton(enableBtn)
             enableBtn:SetSize(20, 20)
             enableBtn:SetPoint("LEFT", rowFr, "LEFT", 0, 0)
             enableBtn:SetChecked(zoneEnabled)

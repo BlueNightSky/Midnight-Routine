@@ -682,12 +682,6 @@ function MR:ApplyCurrencyBrowserTheme()
         frame.titleBar:SetBackdropBorderColor(0.17, 0.24, 0.32, 1)
     end
 
-    if frame.closeButton then
-        frame.closeButton:SetBackdrop(MakeBackdrop())
-        HookBackdrop(frame.closeButton)
-        frame.closeButton:SetBackdropColor(0.07, 0.09, 0.12, 1)
-        frame.closeButton:SetBackdropBorderColor(0.28, 0.34, 0.42, 1)
-    end
     if frame.refreshButton then
         frame.refreshButton:SetBackdrop(MakeBackdrop())
         HookBackdrop(frame.refreshButton)
@@ -770,24 +764,18 @@ function MR:ShowCurrencyBrowserFrame()
         frame.title:SetPoint("LEFT", titleBar, "LEFT", 12, 0)
         frame.title:SetJustifyH("LEFT")
         frame.title:SetText(GetBrowserTitle())
-        frame.title:SetTextColor(0.30, 0.90, 0.75)
+        ns.RegisterThemedFontString(frame.title, 0.30, 0.90, 0.75)
 
         frame.count = titleBar:CreateFontString(nil, "OVERLAY")
         frame.count:SetFont(GetRowFont(), math.max(8, GetFontSize() - 2), GetFontFlags())
         frame.count:SetTextColor(0.62, 0.68, 0.76)
         frame.count:Hide()
 
-        local close = ns.HeaderButton(titleBar, {
+        local close = ns.CloseButton(titleBar, function() frame:Hide() end, {
             size = 20,
-            text = "x",
             font = GetHeaderFont(),
             fontSize = math.max(9, GetFontSize()),
-            color = { 0.90, 0.58, 0.58, 1 },
-            background = { 0.07, 0.09, 0.12, 1 },
-            border = { 0.28, 0.34, 0.42, 1 },
-            hoverBackground = { 0.24, 0.07, 0.07, 1 },
-            hoverBorder = { 0.80, 0.24, 0.24, 1 },
-            onClick = function() frame:Hide() end,
+            tooltip = L["Close"],
         })
         frame.closeButton = close
         close.text = close._lbl

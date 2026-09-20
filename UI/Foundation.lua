@@ -469,11 +469,19 @@ local function CurrencyBrowserButtonOnClick()
     end
 end
 
+local function GetCurrencyBrowserButtonColor()
+    return hex(MR:GetRowColor("currencies", "currency_browser_button") or MR:GetHeaderColor("currencies") or "#6bebd6")
+end
+
 local function CurrencyBrowserButtonOnEnter(selfBtn)
-    selfBtn:SetBackdropColor(0.04, 0.24, 0.27, 1)
-    selfBtn:SetBackdropBorderColor(0.20, 0.95, 0.82, 1)
+    local r, g, b = GetCurrencyBrowserButtonColor()
+    selfBtn:SetBackdropColor(r * 0.22, g * 0.22, b * 0.22, 1)
+    selfBtn:SetBackdropBorderColor(r, g, b, 1)
     if selfBtn._label then
-        selfBtn._label:SetTextColor(0.76, 1.00, 0.94, 1)
+        selfBtn._label:SetTextColor(r + (1 - r) * 0.25, g + (1 - g) * 0.25, b + (1 - b) * 0.25, 1)
+    end
+    if selfBtn._icon then
+        selfBtn._icon:SetVertexColor(r + (1 - r) * 0.25, g + (1 - g) * 0.25, b + (1 - b) * 0.25, 1)
     end
     ns.ShowTooltip(selfBtn, {
         text = L["CurrencyBrowser_BrowseTooltipTitle"] or "Browse all currencies",
@@ -485,12 +493,16 @@ local function CurrencyBrowserButtonOnEnter(selfBtn)
 end
 
 local function CurrencyBrowserButtonOnLeave(selfBtn)
+    local r, g, b = GetCurrencyBrowserButtonColor()
     local alpha = selfBtn._mrTransparent and 0 or (0.94 * (selfBtn._mrFrameAlpha or 1))
     local borderAlpha = selfBtn._mrTransparent and 0 or (0.88 * (selfBtn._mrFrameAlpha or 1))
-    selfBtn:SetBackdropColor(0.025, 0.12, 0.15, alpha)
-    selfBtn:SetBackdropBorderColor(0.10, 0.72, 0.66, borderAlpha)
+    selfBtn:SetBackdropColor(r * 0.12, g * 0.12, b * 0.12, alpha)
+    selfBtn:SetBackdropBorderColor(r * 0.78, g * 0.78, b * 0.78, borderAlpha)
     if selfBtn._label then
-        selfBtn._label:SetTextColor(0.42, 0.92, 0.84, selfBtn._mrTransparent and 0.75 or 1)
+        selfBtn._label:SetTextColor(r, g, b, selfBtn._mrTransparent and 0.75 or 1)
+    end
+    if selfBtn._icon then
+        selfBtn._icon:SetVertexColor(r, g, b, selfBtn._mrTransparent and 0.75 or 1)
     end
     HideOwnedTooltip(selfBtn)
 end
@@ -512,9 +524,8 @@ local function StyleSectionCollapseIndicator(indicator, isOpen)
         indicator._lineB:SetTexture("Interface\\Buttons\\WHITE8X8")
     end
 
-    local r, g, b, a = 0.50, 0.95, 0.80, 1
-    indicator._lineA:SetColorTexture(r, g, b, a)
-    indicator._lineB:SetColorTexture(r, g, b, a)
+    ns.RegisterThemedTexture(indicator._lineA, 0.50, 0.95, 0.80, 1)
+    ns.RegisterThemedTexture(indicator._lineB, 0.50, 0.95, 0.80, 1)
     if indicator._mrLayoutOpen ~= isOpen then
         indicator._lineA:ClearAllPoints()
         indicator._lineB:ClearAllPoints()
@@ -551,15 +562,16 @@ local function StyleCurrencyBrowserButton(button, transparent, frameAlpha)
         button:SetHeight(20)
         button._mrBaseLayoutApplied = true
     end
-    button:SetBackdropColor(0.025, 0.12, 0.15, transparent and 0 or (0.94 * frameAlpha))
-    button:SetBackdropBorderColor(0.10, 0.72, 0.66, transparent and 0 or (0.88 * frameAlpha))
+    local r, g, b = GetCurrencyBrowserButtonColor()
+    button:SetBackdropColor(r * 0.12, g * 0.12, b * 0.12, transparent and 0 or (0.94 * frameAlpha))
+    button:SetBackdropBorderColor(r * 0.78, g * 0.78, b * 0.78, transparent and 0 or (0.88 * frameAlpha))
     if button._label then
         SetFontIfChanged(button._label, FONT_ROWS, math.max(8, GetFontSize() - 1), GetFontFlags())
         button._label:SetText(L["CurrencyBrowser_All"] or "Browse all currencies")
-        button._label:SetTextColor(0.42, 0.92, 0.84, transparent and 0.75 or 1)
+        button._label:SetTextColor(r, g, b, transparent and 0.75 or 1)
     end
     if button._icon then
-        button._icon:SetVertexColor(0.34, 0.94, 0.84, transparent and 0.75 or 1)
+        button._icon:SetVertexColor(r, g, b, transparent and 0.75 or 1)
     end
 end
 

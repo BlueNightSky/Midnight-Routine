@@ -205,7 +205,7 @@ local function EnsureCustomTaskDialog()
     title:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -PAD, -PAD)
     title:SetJustifyH("LEFT")
     title:SetText(L["CustomTasks_Title"] or "Custom Tasks")
-    title:SetTextColor(0.92, 0.97, 1)
+    ns.RegisterThemedFontString(title, 0.92, 0.97, 1)
     frame.title = title
 
 
@@ -213,7 +213,7 @@ local function EnsureCustomTaskDialog()
     sep:SetHeight(1)
     sep:SetPoint("TOPLEFT",  title, "BOTTOMLEFT",  0, -8)
     sep:SetPoint("TOPRIGHT", title, "BOTTOMRIGHT", 0, -8)
-    sep:SetColorTexture(0.20, 0.44, 0.48, 0.5)
+    ns.RegisterThemedTexture(sep, 0.20, 0.44, 0.48, 0.5)
 
 
     local function MakeLabel(anchorFrame, anchorPoint, xOff, yOff, text)
@@ -231,13 +231,13 @@ local function EnsureCustomTaskDialog()
         line:SetHeight(1)
         line:SetWidth(392)
         line:SetPoint("TOPLEFT", anchorFrame, "BOTTOMLEFT", 0, yOff)
-        line:SetColorTexture(0.20, 0.44, 0.48, 0.34)
+        ns.RegisterThemedTexture(line, 0.20, 0.44, 0.48, 0.34)
         local header = frame:CreateFontString(nil, "OVERLAY")
         header:SetFont(ns.FONT_ROWS, math.max(8, GetFontSize() - 1), GetFontFlags())
         header:SetPoint("TOPLEFT", line, "BOTTOMLEFT", 0, -6)
         header:SetJustifyH("LEFT")
         header:SetText(text)
-        header:SetTextColor(0.38, 0.78, 0.86)
+        ns.RegisterThemedFontString(header, 0.38, 0.78, 0.86)
         return header
     end
 
@@ -278,7 +278,7 @@ local function EnsureCustomTaskDialog()
 
 
     local trackingHeader = MakeLabel(sep, "BOTTOMLEFT", 0, -8, Text("CustomTasks_TrackingHeader", "Tracking"))
-    trackingHeader:SetTextColor(0.38, 0.78, 0.86)
+    ns.RegisterThemedFontString(trackingHeader, 0.38, 0.78, 0.86)
     frame.trackingHeader = trackingHeader
 
     local nameLabel = MakeLabel(trackingHeader, "BOTTOMLEFT", 0, -8, L["CustomTasks_NameLabel"] or "Task name")
@@ -337,6 +337,7 @@ local function EnsureCustomTaskDialog()
     frame.categoryDropdown = categoryDropdown
 
     local categorySeparateModuleCheck = CreateFrame("CheckButton", nil, frame, "UICheckButtonTemplate")
+    ns.ThemeCheckButton(categorySeparateModuleCheck)
     categorySeparateModuleCheck:SetSize(20, 20)
     categorySeparateModuleCheck:SetPoint("TOPLEFT", categoryBg, "BOTTOMLEFT", 0, -3)
     local categorySeparateModuleText = frame:CreateFontString(nil, "OVERLAY")
@@ -430,6 +431,7 @@ local function EnsureCustomTaskDialog()
     local prevDiffCheck = nil
     for i, opt in ipairs(DIFF_OPTIONS) do
         local cb = CreateFrame("CheckButton", nil, frame, "UICheckButtonTemplate")
+        ns.ThemeCheckButton(cb)
         cb:SetSize(20, 20)
         if i == 1 then
             cb:SetPoint("TOPLEFT", difficultyLabel, "BOTTOMLEFT", 0, -4)
@@ -487,6 +489,7 @@ local function EnsureCustomTaskDialog()
     BindHelp(targetInput, "CustomTasks_TargetTooltip", "The number of listed quests required to complete this task. Use 1 for any quest, or the total number of IDs to require them all.")
 
     local orderedQuestCheck = CreateFrame("CheckButton", nil, frame, "UICheckButtonTemplate")
+    ns.ThemeCheckButton(orderedQuestCheck)
     orderedQuestCheck:SetSize(20, 20)
     orderedQuestCheck:SetPoint("TOPLEFT", targetBg, "BOTTOMLEFT", 0, -4)
     local orderedQuestText = frame:CreateFontString(nil, "OVERLAY")
@@ -507,6 +510,7 @@ local function EnsureCustomTaskDialog()
 
     local function CreateResetCheckbox(anchorTo, anchorPt, xOff, yOff, labelText, value)
         local cb = CreateFrame("CheckButton", nil, frame, "UICheckButtonTemplate")
+        ns.ThemeCheckButton(cb)
         cb:SetSize(20, 20)
         cb:SetPoint("TOPLEFT", anchorTo, anchorPt, xOff, yOff)
         local text = frame:CreateFontString(nil, "OVERLAY")
@@ -546,6 +550,7 @@ local function EnsureCustomTaskDialog()
     frame.behaviorHeader = behaviorHeader
 
     local manualQuestCheck = CreateFrame("CheckButton", nil, frame, "UICheckButtonTemplate")
+    ns.ThemeCheckButton(manualQuestCheck)
     manualQuestCheck:SetSize(20, 20)
     manualQuestCheck:SetPoint("TOPLEFT", behaviorHeader, "BOTTOMLEFT", 0, -6)
     local manualQuestText = frame:CreateFontString(nil, "OVERLAY")
@@ -563,6 +568,7 @@ local function EnsureCustomTaskDialog()
     BindHelp(manualQuestCheck, "CustomTasks_ManualQuestClicksTooltip", "Allows a single-target quest task to be checked or unchecked manually when automatic quest detection is not enough.")
 
     local autoUpdateCheck = CreateFrame("CheckButton", nil, frame, "UICheckButtonTemplate")
+    ns.ThemeCheckButton(autoUpdateCheck)
     autoUpdateCheck:SetSize(20, 20)
     autoUpdateCheck:SetPoint("TOPLEFT", manualQuestCheck, "BOTTOMLEFT", 0, -4)
     local autoUpdateText = frame:CreateFontString(nil, "OVERLAY")
@@ -579,6 +585,7 @@ local function EnsureCustomTaskDialog()
     BindHelp(autoUpdateCheck, "CustomTasks_AutoUpdateInstancesTooltip", "Updates this task while inside dungeons, raids, scenarios, and other instances.")
 
     local sharedTaskCheck = CreateFrame("CheckButton", nil, frame, "UICheckButtonTemplate")
+    ns.ThemeCheckButton(sharedTaskCheck)
     sharedTaskCheck:SetSize(20, 20)
     sharedTaskCheck:SetPoint("TOPLEFT", autoUpdateCheck, "BOTTOMLEFT", 0, -4)
     local sharedTaskText = frame:CreateFontString(nil, "OVERLAY")
@@ -611,6 +618,7 @@ local function EnsureCustomTaskDialog()
     BindHelp(sharedTaskCheck, "CustomTasks_SharedTaskTooltip", "Shows this task on every character. Completion remains separate for each character unless Complete on all alts is enabled.")
 
     local accountCompleteCheck = CreateFrame("CheckButton", nil, frame, "UICheckButtonTemplate")
+    ns.ThemeCheckButton(accountCompleteCheck)
     accountCompleteCheck:SetSize(20, 20)
     accountCompleteCheck:SetPoint("TOPLEFT", sharedTaskCheck, "BOTTOMLEFT", 0, -4)
     local accountCompleteText = frame:CreateFontString(nil, "OVERLAY")
@@ -935,7 +943,7 @@ local function EnsureCustomTasksTitleDialog()
     title:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -12, -12)
     title:SetJustifyH("LEFT")
     title:SetText(L["CustomTasks_EditModuleTitle"] or "Rename custom task title")
-    title:SetTextColor(0.92, 0.97, 1)
+    ns.RegisterThemedFontString(title, 0.92, 0.97, 1)
 
     local subtitle = frame:CreateFontString(nil, "OVERLAY")
     subtitle:SetFont(ns.FONT_ROWS, math.max(8, GetFontSize() - 1), GetFontFlags())
@@ -1075,14 +1083,14 @@ local function EnsureCustomTaskCategoryDialog()
     title:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -14, -14)
     title:SetJustifyH("LEFT")
     title:SetText(Text("CustomTasks_ManageCategoryTitle", "Manage Category"))
-    title:SetTextColor(0.92, 0.97, 1)
+    ns.RegisterThemedFontString(title, 0.92, 0.97, 1)
     frame.titleText = title
 
     local separator = frame:CreateTexture(nil, "ARTWORK")
     separator:SetHeight(1)
     separator:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -8)
     separator:SetPoint("TOPRIGHT", title, "BOTTOMRIGHT", 0, -8)
-    separator:SetColorTexture(0.20, 0.44, 0.48, 0.5)
+    ns.RegisterThemedTexture(separator, 0.20, 0.44, 0.48, 0.5)
 
     local subtitle = frame:CreateFontString(nil, "OVERLAY")
     subtitle:SetFont(FONT_ROWS, math.max(8, GetFontSize() - 1), GetFontFlags())
@@ -1133,6 +1141,7 @@ local function EnsureCustomTaskCategoryDialog()
     frame.hint = hint
 
     local separateModuleCheck = CreateFrame("CheckButton", nil, frame, "UICheckButtonTemplate")
+    ns.ThemeCheckButton(separateModuleCheck)
     separateModuleCheck:SetSize(20, 20)
     separateModuleCheck:SetPoint("TOPLEFT", hint, "BOTTOMLEFT", -4, -9)
     local separateModuleText = separateModuleCheck:CreateFontString(nil, "OVERLAY")

@@ -246,6 +246,7 @@ local function UpdateMainSectionWidget(self, mod, yOff, xOff, colW, col, recordR
 
     local allDone = (secTotal > 0) and (secDone == secTotal)
     local card = EnsureMainSectionWidget(self, mod.key)
+    card._mrAllDone = allDone
     local cardWidth = math.max(colW - 6, 1)
     if card._mrLayoutParent ~= self.content
         or card._mrLayoutX ~= xOff
@@ -279,13 +280,15 @@ local function UpdateMainSectionWidget(self, mod, yOff, xOff, colW, col, recordR
                 "TOPRIGHT", card, "TOPRIGHT", 0, 0)
             card._expHeader:SetHeight(expansionHeaderH - 3)
             card._expHeader:SetBackdropColor(0.035, 0.055, 0.070, transparent and 0 or (0.86 * frameAlpha))
-            card._expHeader:SetBackdropBorderColor(0.14, 0.30, 0.34, transparent and 0 or (0.80 * frameAlpha))
+            local er, eg, eb = ns.ResolveThemeColor(0.14, 0.30, 0.34)
+            card._expHeader:SetBackdropBorderColor(er, eg, eb, transparent and 0 or (0.80 * frameAlpha))
             SetTwoAnchors(card._expHeader._label,
                 "LEFT", card._expHeader, "LEFT", 7, 0,
                 "RIGHT", card._expHeader, "RIGHT", -7, 0)
             SetFontIfChanged(card._expHeader._label, FONT_HEADERS, math.max(8, GetFontSize() - 1), GetFontFlags())
             card._expHeader._label:SetText(label)
-            card._expHeader._label:SetTextColor(0.72, 0.86, 0.88, transparent and 0.85 or 0.95)
+            er, eg, eb = ns.ResolveThemeColor(0.72, 0.86, 0.88)
+            card._expHeader._label:SetTextColor(er, eg, eb, transparent and 0.85 or 0.95)
             card._expHeader:Show()
         else
             card._expHeader:Hide()
@@ -340,7 +343,7 @@ local function UpdateMainSectionWidget(self, mod, yOff, xOff, colW, col, recordR
 
     SetFontIfChanged(card._hdrFrame._count, FONT_ROWS, math.max(7, GetFontSize() - 2), GetFontFlags())
     local currencyBrowserButton = card._hdrFrame._currencyBrowserButton
-    local showCurrencyBrowserButton = mod.key == "currencies" and MR.ToggleCurrencyBrowserFrame
+    local showCurrencyBrowserButton = mod.key == "currencies" and MR.ToggleCurrencyBrowserFrame and MR:IsRowEnabled("currencies", "currency_browser_button")
     if showCurrencyBrowserButton then
         SetTwoAnchors(currencyBrowserButton,
             "TOPLEFT", card, "TOPLEFT", 4, -(expansionHeaderH + HEADER_HEIGHT + 3),
@@ -795,7 +798,8 @@ function MR:FastToggleMainSection(modKey)
     local newOpen = not MR:IsModuleOpen(modKey)
     MR:SetModuleOpen(modKey, newOpen)
     stats.isOpen = newOpen
-    stats.height = stats.shownRows == 0 and 0 or (HEADER_HEIGHT + 1 + SECTION_GAP + (mod.key == "currencies" and CURRENCY_BROWSER_HEIGHT or 0) + (newOpen and (stats.shownRows * ROW_HEIGHT) or 0))
+    local showCurrencyBrowserButton = mod.key == "currencies" and MR.ToggleCurrencyBrowserFrame and MR:IsRowEnabled("currencies", "currency_browser_button")
+    stats.height = stats.shownRows == 0 and 0 or (HEADER_HEIGHT + 1 + SECTION_GAP + (showCurrencyBrowserButton and CURRENCY_BROWSER_HEIGHT or 0) + (newOpen and (stats.shownRows * ROW_HEIGHT) or 0))
 
     local colW = math.floor(usableW / numCols)
     local xOff = ((registryEntry.col or 1) - 1) * colW

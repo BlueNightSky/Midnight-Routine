@@ -225,14 +225,14 @@ local function EnsureKeybindCaptureFrame()
     panel:SetPoint("CENTER")
     panel:SetBackdrop(MakeBackdrop())
     panel:SetBackdropColor(0.03, 0.07, 0.13, 1)
-    panel:SetBackdropBorderColor(0.16, 0.78, 0.75, 1)
+    ns.RegisterThemedBackdropBorder(panel, 0.16, 0.78, 0.75, 1)
     panel:EnableMouse(false)
 
     local title = panel:CreateFontString(nil, "OVERLAY")
     title:SetFont(FONT_HEADERS, 14, GetFontFlags())
     title:SetPoint("TOP", panel, "TOP", 0, -22)
     title:SetText(L["Config_SetKeyBinding"] or "Set Show / Hide Key")
-    title:SetTextColor(0.16, 0.91, 0.78)
+    ns.RegisterThemedFontString(title, 0.16, 0.91, 0.78)
 
     local prompt = panel:CreateFontString(nil, "OVERLAY")
     prompt:SetFont(FONT_ROWS, 11, GetFontFlags())
@@ -365,9 +365,9 @@ function MR:BuildConfigFrame()
 
     local ttitle = tbar:CreateFontString(nil, "OVERLAY")
     ttitle:SetFont(ns.FONT_HEADERS, 11, GetFontFlags())
-    ttitle:SetText(L["Config_Title"])
+    ttitle:SetText(ns.StripColorCodes(L["Config_Title"]))
     ttitle:SetPoint("LEFT", tbar, "LEFT", 8, 0)
-    ttitle:SetTextColor(1.00, 0.56, 0.08)
+    ns.RegisterThemedFontString(ttitle, 1.00, 0.56, 0.08)
     f.titleText = ttitle
     f.titleBar = tbar
 
@@ -375,7 +375,7 @@ function MR:BuildConfigFrame()
     titleEdge:SetPoint("BOTTOMLEFT", tbar, "BOTTOMLEFT", 0, 0)
     titleEdge:SetPoint("BOTTOMRIGHT", tbar, "BOTTOMRIGHT", 0, 0)
     titleEdge:SetHeight(1)
-    titleEdge:SetColorTexture(0.10, 0.24, 0.30, 0.85)
+    ns.RegisterThemedTexture(titleEdge, 0.10, 0.24, 0.30, 0.85)
 
     CloseButton(tbar, function() f:Hide() end)
 

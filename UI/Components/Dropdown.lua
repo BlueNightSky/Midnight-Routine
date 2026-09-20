@@ -70,6 +70,23 @@ function ns.CreateDropdown(parent, opts)
     opts = opts or {}
     local style = STYLES[opts.style or "teal"] or STYLES.teal
 
+    local function ThemeColor(color)
+        if opts.themed == false then
+            return color[1], color[2], color[3]
+        end
+        return ns.ResolveThemeColor(color[1], color[2], color[3])
+    end
+
+    local function SetThemeTextColor(fontString, color, alpha)
+        local r, g, b = ThemeColor(color)
+        fontString:SetTextColor(r, g, b, (color[4] or 1) * alpha)
+    end
+
+    local function SetThemeBorderColor(frame, color, alpha)
+        local r, g, b = ThemeColor(color)
+        frame:SetBackdropBorderColor(r, g, b, (color[4] or 1) * alpha)
+    end
+
     local function GetAlpha()
         return math.max(0, math.min(Resolve(opts, "alpha", 1), 1))
     end
@@ -98,6 +115,10 @@ function ns.CreateDropdown(parent, opts)
     caret:SetPoint("RIGHT", button, "RIGHT", opts.caretInset or -7, opts.textYOffset or 1)
     caret:SetText("v")
     button._caret = caret
+    if opts.themed ~= false then
+        label:SetTextColor(0.94, 0.96, 0.98, style.label[4])
+        ns.RegisterThemedFontString(caret, style.caret[1], style.caret[2], style.caret[3], style.caret[4])
+    end
 
     local popup
     local popupScroll
@@ -166,9 +187,9 @@ function ns.CreateDropdown(parent, opts)
         label:SetFont(ns.FONT_ROWS, fontSize, ns.GetFontFlags())
         caret:SetFont(ns.FONT_HEADERS, caretSize, ns.GetFontFlags())
         SetBackdropColor(self, BUTTON_BG, alpha)
-        SetBackdropBorderColor(self, style.buttonBorder, alpha)
-        SetTextColor(label, style.label, alpha)
-        SetTextColor(caret, style.caret, alpha)
+        SetThemeBorderColor(self, style.buttonBorder, alpha)
+        label:SetTextColor(0.94, 0.96, 0.98, alpha)
+        SetThemeTextColor(caret, style.caret, alpha)
 
         if opts.dynamicWidth then
             local textWidth = (label:GetStringWidth() or 0) + (opts.widthPadding or 30)
@@ -187,12 +208,19 @@ function ns.CreateDropdown(parent, opts)
     button:SetScript("OnEnter", function(self)
         local alpha = GetAlpha()
         SetBackdropColor(self, HOVER_BG, alpha)
-        SetBackdropBorderColor(self, style.hoverBorder, alpha)
+        SetThemeBorderColor(self, style.hoverBorder, alpha)
     end)
     button:SetScript("OnLeave", function(self)
         local alpha = GetAlpha()
         SetBackdropColor(self, BUTTON_BG, alpha)
-        SetBackdropBorderColor(self, style.buttonBorder, alpha)
+        SetThemeBorderColor(self, style.buttonBorder, alpha)
+    end)
+    ns.RegisterThemedState(button, function(self)
+        local alpha = GetAlpha()
+        SetBackdropColor(self, self:IsMouseOver() and HOVER_BG or BUTTON_BG, alpha)
+        SetThemeBorderColor(self, self:IsMouseOver() and style.hoverBorder or style.buttonBorder, alpha)
+        label:SetTextColor(0.94, 0.96, 0.98, alpha)
+        SetThemeTextColor(caret, style.caret, alpha)
     end)
 
     local function EnsurePopupButton(index)
@@ -213,12 +241,16 @@ function ns.CreateDropdown(parent, opts)
         row:SetScript("OnEnter", function(self)
             local alpha = GetAlpha()
             SetBackdropColor(self, HOVER_BG, alpha)
-            SetBackdropBorderColor(self, style.hoverBorder, alpha)
+            SetThemeBorderColor(self, style.hoverBorder, alpha)
         end)
         row:SetScript("OnLeave", function(self)
             local alpha = GetAlpha()
             SetBackdropColor(self, self._checked and SELECTED_BG or ROW_BG, alpha)
-            SetBackdropBorderColor(self, self._checked and style.selectedBorder or ROW_BORDER, alpha)
+            if self._checked then
+                SetThemeBorderColor(self, style.selectedBorder, alpha)
+            else
+                SetBackdropBorderColor(self, ROW_BORDER, alpha)
+            end
         end)
         row:SetScript("OnClick", function(self)
             local option = self._option
@@ -274,7 +306,7 @@ function ns.CreateDropdown(parent, opts)
         popup:SetSize(rowWidth + (needsScroll and 10 or 0), (visibleRows * (rowHeight + rowSpacing)) + 6)
         local alpha = GetAlpha()
         SetBackdropColor(popup, POPUP_BG, alpha)
-        SetBackdropBorderColor(popup, style.popupBorder, alpha)
+        SetThemeBorderColor(popup, style.popupBorder, alpha)
 
         popupScroll:ClearAllPoints()
         popupScroll:SetPoint("TOPLEFT", popup, "TOPLEFT", 3, -3)
@@ -294,11 +326,15 @@ function ns.CreateDropdown(parent, opts)
             row._option = option
             row._checked = OptionKey(option) == selectedKey
             row._label:SetText(OptionLabel(option))
-            SetTextColor(row._label, row._checked and style.selectedLabel or style.optionLabel, alpha)
+            row._label:SetTextColor(row._checked and 1 or 0.90, row._checked and 1 or 0.93, row._checked and 1 or 0.96, alpha)
             row._check:SetText(row._checked and "x" or "")
-            SetTextColor(row._check, style.check, alpha)
+            SetThemeTextColor(row._check, style.check, alpha)
             SetBackdropColor(row, row._checked and SELECTED_BG or ROW_BG, alpha)
-            SetBackdropBorderColor(row, row._checked and style.selectedBorder or ROW_BORDER, alpha)
+            if row._checked then
+                SetThemeBorderColor(row, style.selectedBorder, alpha)
+            else
+                SetBackdropBorderColor(row, ROW_BORDER, alpha)
+            end
             row:Show()
         end
 

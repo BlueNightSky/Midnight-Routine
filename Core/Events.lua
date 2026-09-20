@@ -76,6 +76,9 @@ function MR:OnEnteringWorld()
         if shouldBuildMainFrame and not self.frame then
             self:BuildUI()
         end
+        if self:IsThemeColorClassColor() and self._appliedThemeColor ~= self:GetThemeColor() then
+            self:ApplyThemeColorSelection()
+        end
         if self.frame and not mainPanelOpen then
             self.frame:Hide()
         end

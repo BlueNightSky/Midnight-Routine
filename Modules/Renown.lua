@@ -500,7 +500,7 @@ local function BuildRenownFrame()
     local titleTxt = titleBar:CreateFontString(nil, "OVERLAY")
     titleTxt:SetFont(ns.FONT_HEADERS, math.max(9, fontSize + 1), GetFontFlags())
     titleTxt:SetPoint("LEFT", titleBar, "LEFT", 10, 0)
-    titleTxt:SetText(L["Renown_Title"])
+    titleTxt:SetText(ns.StripColorCodes(L["Renown_Title"]))
 
     local closeBtn = CloseButton(titleBar, function()
         f:Hide()
@@ -531,6 +531,7 @@ local function BuildRenownFrame()
     titleTxt:SetPoint("RIGHT", minBtn, "LEFT", -6, 0)
     titleTxt:SetJustifyH("LEFT")
     titleTxt:SetWordWrap(false)
+    ns.RegisterThemedFontString(titleTxt, 0.85, 0.65, 0.10)
 
     f.factionRows = {}
 
@@ -1076,8 +1077,9 @@ local function BuildRenownConfigFrame()
 
     local ttitle = tbar:CreateFontString(nil, "OVERLAY")
     ttitle:SetFont(ns.FONT_HEADERS, 11, GetFontFlags())
-    ttitle:SetText(L["Renown_Config_Title"])
+    ttitle:SetText(ns.StripColorCodes(L["Renown_Config_Title"]))
     ttitle:SetPoint("LEFT", tbar, "LEFT", 8, 0)
+    ns.RegisterThemedFontString(ttitle, 0.85, 0.65, 0.10)
 
     local closeBtn = CloseButton(tbar, function() f:Hide() end)
 
@@ -1476,6 +1478,7 @@ PopulateRenownConfig = function(f)
         rowFr:SetHeight(ROW_H)
 
         local visCheck = CreateFrame("CheckButton", nil, rowFr, "UICheckButtonTemplate")
+        ns.ThemeCheckButton(visCheck)
         visCheck:SetSize(20, 20)
         visCheck:SetPoint("LEFT", rowFr, "LEFT", 18, 0)
         visCheck:SetChecked(not (db.renownHiddenFactions and db.renownHiddenFactions[faction.key]))

@@ -2275,7 +2275,7 @@ local function BuildGatheringLocationsFrame(isRetry)
     titleTxt:SetPoint("RIGHT", expansionDropdown, "LEFT", -6, 0)
     titleTxt:SetJustifyH("LEFT")
     titleTxt:SetText(StripInlineColor(L["ProfKnowledge_Title"] or "Profession Knowledge"))
-    titleTxt:SetTextColor(1, 1, 1)
+    ns.RegisterThemedFontString(titleTxt, 0.78, 0.88, 0.92)
     titleTxt:Hide()
 
     local scroll = CreateFrame("ScrollFrame", nil, frame)
@@ -2302,7 +2302,7 @@ local function BuildGatheringLocationsFrame(isRetry)
 
     local UpdateScrollBar, _, trackBg, thumbTex = ns.AttachScrollList(scroll, content, track)
     trackBg:SetColorTexture(0, 0, 0, 0.3 * chromeAlpha)
-    thumbTex:SetColorTexture(0.80, 0.53, 0.20, 0.6 * chromeAlpha)
+    ns.RegisterThemedTexture(thumbTex, 0.80, 0.53, 0.20, 0.6 * chromeAlpha)
     frame.UpdateScrollBar = UpdateScrollBar
 
     local ApplyMinimized
@@ -2483,7 +2483,8 @@ local function BuildGatheringLocationsFrame(isRetry)
         titleTxt:SetFont(ns.FONT_HEADERS, math.max(10, (db.gatheringFontSize or 9) + 1), GetFontFlags())
         expansionDropdown:Update()
         trackBg:SetColorTexture(0, 0, 0, 0.3 * chromeAlpha)
-        thumbTex:SetColorTexture(0.80, 0.53, 0.20, 0.6 * chromeAlpha)
+        local tr, tg, tb = ns.ResolveThemeColor(0.80, 0.53, 0.20)
+        thumbTex:SetColorTexture(tr, tg, tb, 0.6 * chromeAlpha)
 
         frame._emptyDrag = nil
         BeginProfessionRender(content)
@@ -2596,8 +2597,9 @@ local function BuildGatheringConfigFrame()
     tbar:SetScript("OnDragStop", function() frame:StopMovingOrSizing() end)
     local ttitle = tbar:CreateFontString(nil, "OVERLAY")
     ttitle:SetFont(ns.FONT_HEADERS, 10, GetFontFlags())
-    ttitle:SetText(L["ProfKnowledge_Config_Title"])
+    ttitle:SetText(ns.StripColorCodes(L["ProfKnowledge_Config_Title"]))
     ttitle:SetPoint("LEFT", tbar, "LEFT", 8, 0)
+    ns.RegisterThemedFontString(ttitle, 0.79, 0.52, 0.25)
     CloseButton(tbar, function() frame:Hide() end)
 
     local scroll = CreateFrame("ScrollFrame", nil, frame)
@@ -2776,6 +2778,7 @@ PopulateGatheringConfig = function(frame)
             local cb
             if hasToggle then
                 cb = CreateFrame("CheckButton", nil, btn, "UICheckButtonTemplate")
+                ns.ThemeCheckButton(cb)
                 cb:SetSize(18, 18)
                 cb:SetPoint("LEFT", btn, "LEFT", 0, 0)
                 cb:SetChecked(enabled)
@@ -2992,6 +2995,7 @@ PopulateGatheringConfig = function(frame)
                     local nameLbl
                     local professionEnabled = IsProfessionEnabled(expansion, profession)
                     local toggleBtn = CreateFrame("CheckButton", nil, row, "UICheckButtonTemplate")
+                    ns.ThemeCheckButton(toggleBtn)
                     toggleBtn:SetSize(20, 20)
                     toggleBtn:SetPoint("LEFT", row, "LEFT", 5, 0)
                     toggleBtn:SetChecked(professionEnabled)
