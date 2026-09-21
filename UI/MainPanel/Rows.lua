@@ -638,10 +638,16 @@ end
 
 local function RenderMainGroupedRows(self, card, mod, rows, hideComplete, yOff, colW, usedRows, buildRowFunc)
     local lastGroup
+    local stats = self._moduleStatsCache and self._moduleStatsCache[mod.key]
+    local groupHeaders = stats and stats.groupHeaders
     for _, row in ipairs(rows or {}) do
         local rowVisible = IsMainRowVisible(mod, row)
         local group = GetMainRowGroupKey(row)
-        if rowVisible and group and group ~= lastGroup and HasVisibleRowsInMainGroup(mod, rows, group) and ShouldRenderMainRowGroupHeader(self, mod, rows, group, hideComplete) then
+        local showGroupHeader = groupHeaders and groupHeaders[group]
+        if not groupHeaders and rowVisible and group and group ~= lastGroup then
+            showGroupHeader = ShouldRenderMainRowGroupHeader(self, mod, rows, group, hideComplete)
+        end
+        if rowVisible and group and group ~= lastGroup and showGroupHeader then
             local header = BuildMainRowGroupHeader(mod, group)
             local rowFrame, nextY, rowId = buildRowFunc(header, 0, yOff)
             yOff = nextY
@@ -664,32 +670,63 @@ end
 
 local function CountMainGroupedRows(self, mod, rows, hideComplete, isOpen)
     local shownRows = 0
-    local extraHeight = 0
+    local totalRows = 0
+    local doneRows = 0
     local lastGroup
+    local groups
     for _, row in ipairs(rows or {}) do
         local rowVisible = IsMainRowVisible(mod, row)
         local group = GetMainRowGroupKey(row)
-        if rowVisible and group and group ~= lastGroup and HasVisibleRowsInMainGroup(mod, rows, group) and ShouldRenderMainRowGroupHeader(self, mod, rows, group, hideComplete) then
-            shownRows = shownRows + 1
-            if isOpen then
-                extraHeight = extraHeight + ROW_HEIGHT
+        local groupState
+        if rowVisible and group then
+            groups = groups or {}
+            groupState = groups[group]
+            if not groupState then
+                groupState = { starts = 0, hasDisabledRow = false, hasShownRow = false }
+                groups[group] = groupState
+            end
+            if group ~= lastGroup then
+                groupState.starts = groupState.starts + 1
             end
         end
         lastGroup = group
 
-        if rowVisible and MR:IsRowEnabled(mod.key, row.key) then
-            local done = MR:GetProgress(GetRowProgressModuleKey(mod, row), row.key)
-            local rowComplete = self:IsRowComplete(mod, row, done)
-            if ShouldRenderMainRow(row, rowComplete, hideComplete) then
-                shownRows = shownRows + 1
-                if isOpen then
-                    extraHeight = extraHeight + ROW_HEIGHT
+        if rowVisible then
+            local enabled = MR:IsRowEnabled(mod.key, row.key)
+            if groupState and not enabled then
+                groupState.hasDisabledRow = true
+            end
+            if enabled then
+                local done = MR:GetProgress(GetRowProgressModuleKey(mod, row), row.key)
+                local rowComplete = self:IsRowComplete(mod, row, done)
+                if not row.control then
+                    totalRows = totalRows + 1
+                    if rowComplete then
+                        doneRows = doneRows + 1
+                    end
+                end
+                if ShouldRenderMainRow(row, rowComplete, hideComplete) then
+                    shownRows = shownRows + 1
+                    if groupState then
+                        groupState.hasShownRow = true
+                    end
                 end
             end
         end
     end
 
-    return shownRows, extraHeight
+    local groupHeaders
+    if groups then
+        groupHeaders = {}
+        for group, state in pairs(groups) do
+            if state.hasDisabledRow or state.hasShownRow then
+                groupHeaders[group] = true
+                shownRows = shownRows + state.starts
+            end
+        end
+    end
+
+    return totalRows, doneRows, shownRows, isOpen and shownRows * ROW_HEIGHT or 0, groupHeaders
 end
 
 local function EnsureMainSeparator(self, index)
@@ -1880,28 +1917,11 @@ BuildModuleStatsCache = function(self, requestedMod)
         if requestedMod or MR:IsModuleEnabled(mod.key) then
             local hideComplete = MR:IsModuleHideComplete(mod.key)
             local isOpen = MR:IsModuleOpen(mod.key)
-            local totalRows, doneRows, shownRows = 0, 0, 0
             local showCurrencyBrowserButton = mod.key == "currencies" and MR.ToggleCurrencyBrowserFrame and MR:IsRowEnabled("currencies", "currency_browser_button")
             local height = HEADER_HEIGHT + 1 + SECTION_GAP + (showCurrencyBrowserButton and CURRENCY_BROWSER_HEIGHT or 0)
 
             local rows = MR.GetOrderedRows and MR:GetOrderedRows(mod) or mod.rows
-            for _, row in ipairs(rows) do
-                local rowVisible = IsMainRowVisible(mod, row)
-                if rowVisible and MR:IsRowEnabled(mod.key, row.key) then
-                    local done = MR:GetProgress(GetRowProgressModuleKey(mod, row), row.key)
-                    local countsForTotals = not row.control
-                    local isComplete = countsForTotals and self:IsRowComplete(mod, row, done) or false
-                    if countsForTotals then
-                        totalRows = totalRows + 1
-                        if isComplete then
-                            doneRows = doneRows + 1
-                        end
-                    end
-                end
-            end
-
-            local countedShownRows, extraHeight = CountMainGroupedRows(self, mod, rows, hideComplete, isOpen)
-            shownRows = countedShownRows
+            local totalRows, doneRows, shownRows, extraHeight, groupHeaders = CountMainGroupedRows(self, mod, rows, hideComplete, isOpen)
             height = height + extraHeight
 
             if shownRows == 0 then
@@ -1915,6 +1935,7 @@ BuildModuleStatsCache = function(self, requestedMod)
             entry.isOpen = isOpen
             entry.shownRows = shownRows
             entry.totalRows = totalRows
+            entry.groupHeaders = groupHeaders
             cache[mod.key] = entry
             seen[mod.key] = true
         end
