@@ -265,6 +265,8 @@ L["Prey_Hard_Label"] = "|cffcc2244Сложная охота:|r"
 L["Prey_Hard_Note"] = "Завершено охот в сложном режиме на этой неделе (макс. %d)"
 L["Prey_Nightmare_Label"] = "|cffcc2244Кошмарная охота:|r"
 L["Prey_Nightmare_Note"] = "Завершено охот в режиме кошмара на этой неделе (макс. %d)"
+L["Prey_Nightmare_Weekly_Label"] = "|cffcc2244Nightmare Weekly:|r"
+L["Prey_Nightmare_Weekly_Note"] = "A Nightmarish Task: complete 3 Nightmare Prey hunts (quest 94446)."
 L["Prey_Remnants_Label"] = "|cffcc2244Отголосок страдания:|r"
 L["Prey_Remnants_Note"] = "Текущее количество Отголосков страдания"
 

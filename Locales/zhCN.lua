@@ -266,6 +266,8 @@ L["Prey_Hard_Label"] = "|cffcc2244困难狩猎：|r"
 L["Prey_Hard_Note"] = "本周已完成的困难难度狩猎（最多%d次）"
 L["Prey_Nightmare_Label"] = "|cffcc2244噩梦狩猎：|r"
 L["Prey_Nightmare_Note"] = "本周已完成的噩梦难度狩猎（最多%d次）"
+L["Prey_Nightmare_Weekly_Label"] = "|cffcc2244Nightmare Weekly:|r"
+L["Prey_Nightmare_Weekly_Note"] = "A Nightmarish Task: complete 3 Nightmare Prey hunts (quest 94446)."
 L["Prey_Remnants_Label"] = "|cffcc2244痛苦残渣：|r"
 L["Prey_Remnants_Note"] = "当前的痛苦残渣"
 

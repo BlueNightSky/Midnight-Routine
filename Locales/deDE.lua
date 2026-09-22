@@ -265,6 +265,8 @@ L["Prey_Hard_Label"] = "|cffcc2244Schwere Jagden:|r"
 L["Prey_Hard_Note"] = "Diese Woche abgeschlossene Jagden auf schwerem Schwierigkeitsgrad (max. %d)"
 L["Prey_Nightmare_Label"] = "|cffcc2244Albtraumjagden:|r"
 L["Prey_Nightmare_Note"] = "Diese Woche abgeschlossene Jagden auf Albtraum-Schwierigkeitsgrad (max. %d)"
+L["Prey_Nightmare_Weekly_Label"] = "|cffcc2244Nightmare Weekly:|r"
+L["Prey_Nightmare_Weekly_Note"] = "A Nightmarish Task: complete 3 Nightmare Prey hunts (quest 94446)."
 L["Prey_Remnants_Label"] = "|cffcc2244Ueberreste der Pain:|r"
 L["Prey_Remnants_Note"] = "Aktuelle Überreste der Pain"
 

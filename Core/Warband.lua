@@ -29,7 +29,7 @@ local function GetRowWarbandCharacterName(charKey, charData, currentKey)
     return name
 end
 
-function MR:GetRowWarbandStatuses(modKey, rowKey, rowMax)
+function MR:GetRowWarbandStatuses(modKey, rowKey, rowMax, expanded)
     if not (self.db and self.db.sv and self.db.sv.char and modKey and rowKey) then
         return nil, 0, 0
     end
@@ -64,8 +64,14 @@ function MR:GetRowWarbandStatuses(modKey, rowKey, rowMax)
         end
     end
 
+    local orderIndex = expanded and self:GetAltBoardCharacterOrderIndex() or nil
     table.sort(rows, function(a, b)
         if a.current ~= b.current then return a.current end
+        if orderIndex then
+            local aOrder = orderIndex[a.key] or math.huge
+            local bOrder = orderIndex[b.key] or math.huge
+            if aOrder ~= bOrder then return aOrder < bOrder end
+        end
         if a.complete ~= b.complete then return a.complete end
         if a.stale ~= b.stale then return not a.stale end
         return (a.key or "") < (b.key or "")
@@ -293,6 +299,10 @@ function MR:GetAltBoardCharacterOrder()
 
     self.db.profile.altBoardCharacterOrder = self.db.profile.altBoardCharacterOrder or {}
     return self.db.profile.altBoardCharacterOrder
+end
+
+function MR:GetAltBoardCharacterOrderIndex()
+    return GetCharacterOrderIndex(self:GetAltBoardCharacterOrder())
 end
 
 function MR:SetAltBoardCharacterOrder(order)
@@ -1227,4 +1237,3 @@ function MR:SetAltBoardCharacterNote(charKey, note)
         self.db.profile.altBoardCharacterNotes[charKey] = note
     end
 end
-

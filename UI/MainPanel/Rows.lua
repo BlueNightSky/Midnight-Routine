@@ -235,7 +235,8 @@ local function MainRowOnEnter(selfRow)
     if data.mod and ns.ShowWarbandTooltip and MR:IsWarbandTrackedRow(data.mod, row) then
         local modKey, rowKey, rowMax = data.mod.key, row.key, row.max
         ns.ShowWarbandTooltip(selfRow, function(tip)
-            local rows, done, total = MR:GetRowWarbandStatuses(modKey, rowKey, rowMax)
+            local expanded = IsShiftKeyDown()
+            local rows, done, total = MR:GetRowWarbandStatuses(modKey, rowKey, rowMax, expanded)
             if not rows or total <= 0 then
                 return
             end
@@ -243,7 +244,6 @@ local function MainRowOnEnter(selfRow)
             local headerText = L["Tooltip_WarbandHeader"] or "Warband: %d/%d done this week"
             tip:AddLine(string.format(headerText, done, total), 0.65, 0.90, 1)
 
-            local expanded = IsShiftKeyDown()
             local shown = expanded and total or math.min(total, 4)
             for i = 1, shown do
                 local charRow = rows[i]

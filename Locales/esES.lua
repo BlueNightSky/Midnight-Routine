@@ -266,6 +266,8 @@ L["Prey_Hard_Label"] = "|cffcc2244Cacerías difíciles:|r"
 L["Prey_Hard_Note"] = "Cacerías de presas en dificultad difícil completadas esta semana (máx. %d)"
 L["Prey_Nightmare_Label"] = "|cffcc2244Cacerías de pesadilla:|r"
 L["Prey_Nightmare_Note"] = "Cacerías de presas en dificultad pesadilla completadas esta semana (máx. %d)"
+L["Prey_Nightmare_Weekly_Label"] = "|cffcc2244Nightmare Weekly:|r"
+L["Prey_Nightmare_Weekly_Note"] = "A Nightmarish Task: complete 3 Nightmare Prey hunts (quest 94446)."
 L["Prey_Remnants_Label"] = "|cffcc2244Remanentes de angustia:|r"
 L["Prey_Remnants_Note"] = "Remanentes de angustia actuales"
 

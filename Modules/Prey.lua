@@ -46,6 +46,24 @@ MR:RegisterModule({
     labelColor  = "#cc2244",
     resetType   = "weekly",
     defaultOpen = true,
+    onScan = function(mod)
+        local progress = MR.db.char.progress
+        progress[mod.key] = progress[mod.key] or {}
+        local bucket = progress[mod.key]
+        local previous = bucket.prey_nightmare_weekly
+        local value = 0
+
+        if C_QuestLog.IsQuestFlaggedCompleted(94446) then
+            value = 3
+        elseif C_QuestLog.GetQuestObjectives then
+            local objectives = C_QuestLog.GetQuestObjectives(94446)
+            local objective = objectives and objectives[1]
+            value = math.min(tonumber(objective and objective.numFulfilled) or 0, 3)
+        end
+
+        bucket.prey_nightmare_weekly = value
+        return previous ~= value
+    end,
     rows = {
         {
             key      = "prey_normal_hunts",
@@ -67,6 +85,13 @@ MR:RegisterModule({
             max      = PREY_NIGHTMARE_WEEKLY_MAX,
             note     = string.format(L["Prey_Nightmare_Note"], PREY_NIGHTMARE_WEEKLY_MAX),
             questIds = BuildPreyNightmareQuestIds(),
+        },
+        {
+            key  = "prey_nightmare_weekly",
+            label = L["Prey_Nightmare_Weekly_Label"],
+            max = 3,
+            note = L["Prey_Nightmare_Weekly_Note"],
+            questIds = { 94446 },
         },
         {
             key        = "prey_remnants",

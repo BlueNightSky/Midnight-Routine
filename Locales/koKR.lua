@@ -266,6 +266,8 @@ L["Prey_Hard_Label"] = "|cffcc2244어려운 사냥:|r"
 L["Prey_Hard_Note"] = "이번 주 어려운 난이도 사냥 완료 (최대 %d)"
 L["Prey_Nightmare_Label"] = "|cffcc2244악몽 사냥:|r"
 L["Prey_Nightmare_Note"] = "이번 주 악몽 난이도 사냥 완료 (최대 %d)"
+L["Prey_Nightmare_Weekly_Label"] = "|cffcc2244Nightmare Weekly:|r"
+L["Prey_Nightmare_Weekly_Note"] = "A Nightmarish Task: complete 3 Nightmare Prey hunts (quest 94446)."
 L["Prey_Remnants_Label"] = "|cffcc2244고통의 잔재:|r"
 L["Prey_Remnants_Note"] = "현재 고통의 잔재"
 

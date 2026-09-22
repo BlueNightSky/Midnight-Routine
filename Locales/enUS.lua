@@ -265,6 +265,8 @@ L["Prey_Hard_Label"] = "|cffcc2244Hard Hunts:|r"
 L["Prey_Hard_Note"] = "Hard-difficulty prey hunts completed this week (max %d)"
 L["Prey_Nightmare_Label"] = "|cffcc2244Nightmare Hunts:|r"
 L["Prey_Nightmare_Note"] = "Nightmare-difficulty prey hunts completed this week (max %d)"
+L["Prey_Nightmare_Weekly_Label"] = "|cffcc2244Nightmare Weekly:|r"
+L["Prey_Nightmare_Weekly_Note"] = "A Nightmarish Task: complete 3 Nightmare Prey hunts (quest 94446)."
 L["Prey_Remnants_Label"] = "|cffcc2244Remnants of Anguish:|r"
 L["Prey_Remnants_Note"] = "Current Remnants of Anguish"
 

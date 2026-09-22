@@ -266,6 +266,8 @@ L["Prey_Hard_Label"] = "|cffcc2244Traques difficiles :|r"
 L["Prey_Hard_Note"] = "Traques de proies de difficulté difficile terminées cette semaine (max %d)"
 L["Prey_Nightmare_Label"] = "|cffcc2244Traques de cauchemar :|r"
 L["Prey_Nightmare_Note"] = "Traques de proies de difficulté cauchemar terminées cette semaine (max %d)"
+L["Prey_Nightmare_Weekly_Label"] = "|cffcc2244Nightmare Weekly:|r"
+L["Prey_Nightmare_Weekly_Note"] = "A Nightmarish Task: complete 3 Nightmare Prey hunts (quest 94446)."
 L["Prey_Remnants_Label"] = "|cffcc2244Vestiges d'angoisse :|r"
 L["Prey_Remnants_Note"] = "Vestiges d'angoisse actuels"
 

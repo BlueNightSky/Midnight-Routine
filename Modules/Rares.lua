@@ -498,7 +498,7 @@ local function GetCharacterTooltipName(charKey, charData, currentKey)
     return name
 end
 
-local function GetWarbandRareStatuses(rare)
+local function GetWarbandRareStatuses(rare, expanded)
     local svChars = MR.db and MR.db.sv and MR.db.sv.char
     local questKey = rare and rare[2] and tostring(rare[2]) or nil
     local npcKey = rare and rare[6] and ("npc:" .. tostring(rare[6])) or nil
@@ -540,8 +540,14 @@ local function GetWarbandRareStatuses(rare)
         end
     end
 
+    local orderIndex = expanded and MR:GetAltBoardCharacterOrderIndex() or nil
     table.sort(rows, function(a, b)
         if a.current ~= b.current then return a.current end
+        if orderIndex then
+            local aOrder = orderIndex[a.key] or math.huge
+            local bOrder = orderIndex[b.key] or math.huge
+            if aOrder ~= bOrder then return aOrder < bOrder end
+        end
         if (a.status ~= nil) ~= (b.status ~= nil) then return a.status ~= nil end
         if a.status ~= b.status then
             if a.status == "today" then return true end
@@ -559,7 +565,8 @@ end
 local WARBAND_SHORT_LIST_COUNT = 4
 
 local function AddWarbandRareTooltipLines(tip, rare)
-    local rows, killed, total = GetWarbandRareStatuses(rare)
+    local expanded = IsShiftKeyDown()
+    local rows, killed, total = GetWarbandRareStatuses(rare, expanded)
     if not rows or total <= 0 then
         return
     end
@@ -568,7 +575,6 @@ local function AddWarbandRareTooltipLines(tip, rare)
     tip:AddLine(" ")
     tip:AddLine(string.format(headerText, killed, total), 0.65, 0.90, 1)
 
-    local expanded = IsShiftKeyDown()
     local shown = expanded and total or math.min(total, WARBAND_SHORT_LIST_COUNT)
     for i = 1, shown do
         local row = rows[i]
