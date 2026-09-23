@@ -544,6 +544,10 @@ L["Chat_CurseSurgeAnnounceNext"] = "Routine: Curse Surge next at %s in %s (%.1f,
 L["Chat_CurseSurgeNoSite"] = "|cff2ae7c6MidnightRoutine:|r Nothing to announce right now."
 L["Chat_CurseSurgeNoGroup"] = "|cff2ae7c6MidnightRoutine:|r You are not in a party, raid, or instance group."
 
+L["Holidays_Title"] = "Holidays"
+L["Holiday_BrewfestBanquet_Label"] = "|cffffc76dBrewfest Banquet:|r"
+L["Holiday_BrewfestBanquet_Note"] = "Starts every hour at the top of the hour during Brewfest."
+
 -- WeeklyTasks
 L["Weekly_SeasonTitle"] = "주간 퀘스트"
 L["Weekly_Abundance_Label"] = "|cff2ae7c6주간: 풍요:|r"
@@ -687,6 +691,9 @@ L["Weekly_TrailingXalatath_Label"] = "Trailing Xal'atath:"
 L["Weekly_TrailingXalatath_Note"] = "Complete the weekly Trailing Xal'atath task on the Coiled Isle."
 L["Weekly_PurgingVaults_Label"] = "Purging the Vaults:"
 L["Weekly_PurgingVaults_Note"] = "Complete Purging the Vaults after unlocking it on the Coiled Isle."
+
+L["Weekly_AncientFoe_Label"] = "Ancient Foe:"
+L["Weekly_AncientFoe_Note"] = "Defeat this week's Ancient Foe in the Vaults of Atal'Utek."
 
 -- WorldEvents
 L["DMF_Title"] = "다크문 축제"

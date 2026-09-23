@@ -526,6 +526,7 @@ local ROW_GROUP_LABEL_KEYS = {
     treasures = "ProfKnowledge_Section_Discoveries",
     books = "ProfKnowledge_Section_Books",
     darkmoon = "ProfKnowledge_Section_Darkmoon",
+    holidays = "Holidays_Title",
 }
 
 local ROW_GROUP_LABEL_FALLBACKS = {

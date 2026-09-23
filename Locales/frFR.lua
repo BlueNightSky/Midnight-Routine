@@ -544,6 +544,10 @@ L["Chat_CurseSurgeAnnounceNext"] = "Routine : prochaine Vague de malédiction à
 L["Chat_CurseSurgeNoSite"] = "|cff2ae7c6MidnightRoutine :|r Rien à annoncer pour le moment."
 L["Chat_CurseSurgeNoGroup"] = "|cff2ae7c6MidnightRoutine:|r You are not in a party, raid, or instance group."
 
+L["Holidays_Title"] = "Holidays"
+L["Holiday_BrewfestBanquet_Label"] = "|cffffc76dBrewfest Banquet:|r"
+L["Holiday_BrewfestBanquet_Note"] = "Starts every hour at the top of the hour during Brewfest."
+
 -- WeeklyTasks
 L["Weekly_SeasonTitle"] = "Hebdomadaires"
 L["Weekly_Abundance_Label"] = "|cff2ae7c6Hebdomadaire : Abondance :|r"
@@ -687,6 +691,9 @@ L["Weekly_TrailingXalatath_Label"] = "Sur la piste de Xal'atath :"
 L["Weekly_TrailingXalatath_Note"] = "Terminez la tâche hebdomadaire Sur la piste de Xal'atath sur l'Île Enroulée."
 L["Weekly_PurgingVaults_Label"] = "Purger les Voûtes :"
 L["Weekly_PurgingVaults_Note"] = "Terminez Purger les Voûtes après l'avoir débloqué sur l'Île Enroulée."
+
+L["Weekly_AncientFoe_Label"] = "Ancient Foe:"
+L["Weekly_AncientFoe_Note"] = "Defeat this week's Ancient Foe in the Vaults of Atal'Utek."
 
 -- WorldEvents
 L["DMF_Title"] = "Foire de Sombrelune"

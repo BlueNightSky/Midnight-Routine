@@ -132,6 +132,37 @@ local function EnsureWarbandShiftWatcher()
     warbandShiftWatcher = CreateFrame("Frame")
 end
 
+local function PositionWarbandTooltip(tip)
+    local gap = 2
+    local screenLeft = UIParent:GetLeft() or 0
+    local screenRight = UIParent:GetRight() or UIParent:GetWidth()
+    local screenBottom = UIParent:GetBottom() or 0
+    local screenTop = UIParent:GetTop() or UIParent:GetHeight()
+    local tooltipLeft = GameTooltip:GetLeft()
+    local tooltipRight = GameTooltip:GetRight()
+    local tooltipBottom = GameTooltip:GetBottom()
+    local tooltipTop = GameTooltip:GetTop()
+
+    if not (tooltipLeft and tooltipRight and tooltipBottom and tooltipTop) then
+        return
+    end
+
+    tip:ClearAllPoints()
+    if tooltipBottom - screenBottom >= tip:GetHeight() + gap then
+        tip:SetPoint("TOPLEFT", GameTooltip, "BOTTOMLEFT", 0, -gap)
+    elseif screenTop - tooltipTop >= tip:GetHeight() + gap then
+        tip:SetPoint("BOTTOMLEFT", GameTooltip, "TOPLEFT", 0, gap)
+    elseif tooltipLeft - screenLeft >= tip:GetWidth() + gap then
+        tip:SetPoint("TOPRIGHT", GameTooltip, "TOPLEFT", -gap, 0)
+    elseif screenRight - tooltipRight >= tip:GetWidth() + gap then
+        tip:SetPoint("TOPLEFT", GameTooltip, "TOPRIGHT", gap, 0)
+    elseif tooltipLeft - screenLeft >= screenRight - tooltipRight then
+        tip:SetPoint("TOPRIGHT", GameTooltip, "TOPLEFT", -gap, 0)
+    else
+        tip:SetPoint("TOPLEFT", GameTooltip, "TOPRIGHT", gap, 0)
+    end
+end
+
 function ns.ShowWarbandTooltip(owner, build)
     if not owner or type(build) ~= "function" or not GameTooltip then
         return false
@@ -162,6 +193,7 @@ function ns.ShowWarbandTooltip(owner, build)
 
     if tip:NumLines() > 0 then
         tip:Show()
+        PositionWarbandTooltip(tip)
         return true
     else
         ns.HideWarbandTooltip()

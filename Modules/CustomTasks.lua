@@ -980,6 +980,7 @@ local function BuildSectionRows(rows, tasks, resetType, headerKey, addKey, heade
                     taskScope = taskScope,
                     accountWideComplete = task.accountWideComplete,
                     preserveCompletion = resetType == "none",
+                    resetType = resetType,
                     configGroup = resetType,
                     orderGroup = orderGroup,
                     category = task.category,

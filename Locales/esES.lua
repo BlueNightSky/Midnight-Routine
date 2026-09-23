@@ -544,6 +544,10 @@ L["Chat_CurseSurgeAnnounceNext"] = "Routine: Próxima Oleada de maldición en %s
 L["Chat_CurseSurgeNoSite"] = "|cff2ae7c6MidnightRoutine:|r No hay nada que anunciar ahora mismo."
 L["Chat_CurseSurgeNoGroup"] = "|cff2ae7c6MidnightRoutine:|r You are not in a party, raid, or instance group."
 
+L["Holidays_Title"] = "Holidays"
+L["Holiday_BrewfestBanquet_Label"] = "|cffffc76dBrewfest Banquet:|r"
+L["Holiday_BrewfestBanquet_Note"] = "Starts every hour at the top of the hour during Brewfest."
+
 -- WeeklyTasks
 L["Weekly_SeasonTitle"] = "Semanales"
 L["Weekly_Abundance_Label"] = "|cff2ae7c6Semanal: Abundancia:|r"
@@ -687,6 +691,9 @@ L["Weekly_TrailingXalatath_Label"] = "Rastreando a Xal'atath:"
 L["Weekly_TrailingXalatath_Note"] = "Completa la tarea semanal Rastreando a Xal'atath en la Isla Espiral."
 L["Weekly_PurgingVaults_Label"] = "Purga de las bóvedas:"
 L["Weekly_PurgingVaults_Note"] = "Completa Purga de las bóvedas tras desbloquearlo en la Isla Espiral."
+
+L["Weekly_AncientFoe_Label"] = "Ancient Foe:"
+L["Weekly_AncientFoe_Note"] = "Defeat this week's Ancient Foe in the Vaults of Atal'Utek."
 
 -- WorldEvents
 L["DMF_Title"] = "Feria de la Luna Negra"

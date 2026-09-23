@@ -3,6 +3,22 @@ local MR = ns.MR
 
 local L = LibStub("AceLocale-3.0"):GetLocale("MidnightRoutine")
 
+local function IsBrewfestActive()
+    if MR.IsCalendarHolidayActive and MR:IsCalendarHolidayActive(372) then
+        return true
+    end
+    local now = GetServerTime()
+    return now >= 1789923600 and now < 1791306000
+end
+
+local brewfestVisible
+
+function MR:RefreshBrewfestVisibility()
+    local previous = brewfestVisible
+    brewfestVisible = IsBrewfestActive()
+    return previous == nil or previous ~= brewfestVisible
+end
+
 local CURSE_SURGE_DURATION = 600
 local CURSE_SURGE_SITES = {
     { name = L["CurseSurgeSite_MalformedLeviathan"],       zone = 2512, x = 46.7, y = 62.8 },
@@ -428,6 +444,19 @@ MR:RegisterModule({
             timerEpoch    = 1772370083,
             timerInterval = 1800,
             timerDuration = 900,
+        },
+        {
+            key           = "brewfest_banquet",
+            label         = L["Holiday_BrewfestBanquet_Label"],
+            max           = 1,
+            note          = L["Holiday_BrewfestBanquet_Note"],
+            group         = "holidays",
+            groupInConfigOnly = true,
+            isVisible     = IsBrewfestActive,
+            autoTracked   = true,
+            timerEpoch    = 0,
+            timerInterval = 3600,
+            timerDuration = 600,
         },
         {
             key           = "curse_surge",

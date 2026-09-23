@@ -155,6 +155,46 @@ local function IsHolidayInfoActive(info)
     return now ~= nil and now >= startTime and now <= endTime
 end
 
+function MR:IsCalendarHolidayActive(eventID)
+    if not (C_Calendar and C_Calendar.GetNumDayEvents and C_Calendar.GetDayEvent) then return false end
+    local today = GetCurrentCalendarDate()
+    if not CanReadTable(today) or type(today) ~= "table" then return false end
+    local monthDay = today.monthDay
+    if not CanReadValue(monthDay) or not monthDay then return false end
+    local monthOffset = 0
+    if C_Calendar.GetMonthInfo then
+        local month = C_Calendar.GetMonthInfo(0)
+        if CanReadTable(month) and type(month) == "table" then
+            if not CanReadAll(month.year, month.month, today.year, today.month) then return false end
+            monthOffset = (today.year - month.year) * 12 + today.month - month.month
+        end
+    end
+    local numEvents = C_Calendar.GetNumDayEvents(monthOffset, monthDay)
+    if not CanReadValue(numEvents) then return false end
+    for index = 1, numEvents or 0 do
+        local event = C_Calendar.GetDayEvent(monthOffset, monthDay, index)
+        if CanReadTable(event) and type(event) == "table" then
+            local currentID = event.eventID
+            if CanReadValue(currentID) and currentID == eventID then
+                if C_DateAndTime and C_DateAndTime.CompareCalendarTime
+                    and CanReadTable(event.startTime) and CanReadTable(event.endTime) then
+                    local okStart, startRemaining = pcall(C_DateAndTime.CompareCalendarTime, event.startTime, today)
+                    local okEnd, endRemaining = pcall(C_DateAndTime.CompareCalendarTime, event.endTime, today)
+                    if okStart and okEnd and CanReadAll(startRemaining, endRemaining)
+                        and type(startRemaining) == "number" and type(endRemaining) == "number" then
+                        if startRemaining >= 0 and endRemaining < 0 then return true end
+                    elseif IsHolidayInfoActive(event) then
+                        return true
+                    end
+                elseif IsHolidayInfoActive(event) then
+                    return true
+                end
+            end
+        end
+    end
+    return false
+end
+
 local function IsDarkmoonOnCalendar()
     if not C_Calendar then return false end
     local today = GetCurrentCalendarDate()
@@ -239,6 +279,7 @@ end
 
 local function ComputeDarkmoonVisible()
     return IsOnDarkmoonIsland()
+        or MR:IsCalendarHolidayActive(HOLIDAY_DARKMOON_FAIRE)
         or IsDarkmoonOnCalendar()
         or IsHolidayActive(HOLIDAY_DARKMOON_FAIRE)
         or HasActiveDarkmoonQuest()

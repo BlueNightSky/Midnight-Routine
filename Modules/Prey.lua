@@ -47,10 +47,6 @@ MR:RegisterModule({
     resetType   = "weekly",
     defaultOpen = true,
     onScan = function(mod)
-        local progress = MR.db.char.progress
-        progress[mod.key] = progress[mod.key] or {}
-        local bucket = progress[mod.key]
-        local previous = bucket.prey_nightmare_weekly
         local value = 0
 
         if C_QuestLog.IsQuestFlaggedCompleted(94446) then
@@ -61,8 +57,7 @@ MR:RegisterModule({
             value = math.min(tonumber(objective and objective.numFulfilled) or 0, 3)
         end
 
-        bucket.prey_nightmare_weekly = value
-        return previous ~= value
+        return MR:WriteScanProgress(mod.key, "prey_nightmare_weekly", value)
     end,
     rows = {
         {

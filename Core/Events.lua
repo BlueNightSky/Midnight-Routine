@@ -437,7 +437,9 @@ function MR:OnZoneChanged()
 end
 
 function MR:OnCalendarEventsUpdated()
-    if not (self.RefreshDarkmoonVisibility and self:RefreshDarkmoonVisibility()) then
+    local darkmoonChanged = self.RefreshDarkmoonVisibility and self:RefreshDarkmoonVisibility()
+    local brewfestChanged = self.RefreshBrewfestVisibility and self:RefreshBrewfestVisibility()
+    if not darkmoonChanged and not brewfestChanged then
         return
     end
     if self:HasVisibleMainTrackingSurface() then

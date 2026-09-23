@@ -1535,7 +1535,7 @@ MR:RegisterModule({
         },
         {
             key      = "trailing_xalatath",
-            label    = L["Weekly_TrailingXalatath_Label"] or "Trailing Xal'atath:",
+            label    = "|cff58c9d4" .. (L["Weekly_TrailingXalatath_Label"] or "Trailing Xal'atath:") .. "|r",
             max      = 1,
             note     = L["Weekly_TrailingXalatath_Note"] or "Complete the weekly Trailing Xal'atath task on the Coiled Isle.",
             patchKey = "12.1.0",
@@ -1543,11 +1543,19 @@ MR:RegisterModule({
         },
         {
             key      = "purging_vaults",
-            label    = L["Weekly_PurgingVaults_Label"] or "Purging the Vaults:",
+            label    = "|cff58c9d4" .. (L["Weekly_PurgingVaults_Label"] or "Purging the Vaults:") .. "|r",
             max      = 1,
             note     = L["Weekly_PurgingVaults_Note"] or "Complete Purging the Vaults after unlocking it on the Coiled Isle.",
             patchKey = "12.1.0",
             questIds = { 95520 },
+        },
+        {
+            key      = "ancient_foe",
+            label    = "|cff58c9d4" .. (L["Weekly_AncientFoe_Label"] or "Ancient Foe:") .. "|r",
+            max      = 1,
+            note     = L["Weekly_AncientFoe_Note"] or "Defeat this week's Ancient Foe in the Vaults of Atal'Utek.",
+            patchKey = "12.1.0",
+            questIds = { 97768, 97769, 97770 },
         },
         {
             key      = "nymrissa_lair",

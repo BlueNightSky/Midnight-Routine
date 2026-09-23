@@ -544,6 +544,10 @@ L["Chat_CurseSurgeAnnounceNext"] = "Routine：诅咒狂潮将于%s后在%s开始
 L["Chat_CurseSurgeNoSite"] = "|cff2ae7c6MidnightRoutine：|r当前没有可宣布的信息。"
 L["Chat_CurseSurgeNoGroup"] = "|cff2ae7c6MidnightRoutine：|r你不在小队、团队或副本队伍中。"
 
+L["Holidays_Title"] = "Holidays"
+L["Holiday_BrewfestBanquet_Label"] = "|cffffc76dBrewfest Banquet:|r"
+L["Holiday_BrewfestBanquet_Note"] = "Starts every hour at the top of the hour during Brewfest."
+
 -- WeeklyTasks
 L["Weekly_SeasonTitle"] = "周常"
 L["Weekly_Abundance_Label"] = "|cff2ae7c6每周：丰饶供品：|r"
@@ -687,6 +691,9 @@ L["Weekly_TrailingXalatath_Label"] = "追踪萨拉塔斯："
 L["Weekly_TrailingXalatath_Note"] = "在盘卷蛇岛完成每周追踪萨拉塔斯任务。"
 L["Weekly_PurgingVaults_Label"] = "净化地窟："
 L["Weekly_PurgingVaults_Note"] = "在盘卷蛇岛解锁后完成净化地窟任务。"
+
+L["Weekly_AncientFoe_Label"] = "Ancient Foe:"
+L["Weekly_AncientFoe_Note"] = "Defeat this week's Ancient Foe in the Vaults of Atal'Utek."
 
 -- WorldEvents
 L["DMF_Title"] = "暗月马戏团"

@@ -29,7 +29,63 @@ local function GetRowWarbandCharacterName(charKey, charData, currentKey)
     return name
 end
 
-function MR:GetRowWarbandStatuses(modKey, rowKey, rowMax, expanded)
+local function CustomTaskIdentity(task)
+    if type(task) ~= "table" then
+        return nil
+    end
+
+    local ids = {}
+    local sourceIds = task.questIds or task.questId
+    if type(sourceIds) == "table" then
+        for _, id in ipairs(sourceIds) do
+            ids[#ids + 1] = tonumber(id) or 0
+        end
+    elseif tonumber(sourceIds) then
+        ids[1] = tonumber(sourceIds)
+    end
+    if task.orderedQuestSequence ~= true then
+        table.sort(ids)
+    end
+
+    local encounters = {}
+    for _, id in ipairs(type(task.encounterIds) == "table" and task.encounterIds or {}) do
+        encounters[#encounters + 1] = tonumber(id) or 0
+    end
+    table.sort(encounters)
+
+    local difficulties = {}
+    for id, enabled in pairs(type(task.encounterDifficulties) == "table" and task.encounterDifficulties or {}) do
+        if enabled == true then
+            difficulties[#difficulties + 1] = tonumber(id) or 0
+        end
+    end
+    table.sort(difficulties)
+
+    return table.concat({
+        tostring(task.label or ""):gsub("^%s+", ""):gsub("%s+$", ""):lower(),
+        tostring(tonumber(task.max) or 1),
+        tostring(task.resetType or "weekly"),
+        task.orderedQuestSequence == true and "ordered" or "unordered",
+        table.concat(ids, ","),
+        table.concat(encounters, ","),
+        table.concat(difficulties, ","),
+    }, "\031")
+end
+
+local function FindMatchingCharacterTaskKey(charData, identity)
+    local match
+    for _, task in ipairs(charData.customTasks or {}) do
+        if CustomTaskIdentity(task) == identity then
+            if match then
+                return nil
+            end
+            match = tonumber(task.id)
+        end
+    end
+    return match and ("task_" .. tostring(match)) or nil
+end
+
+function MR:GetRowWarbandStatuses(modKey, rowKey, rowMax, expanded, row)
     if not (self.db and self.db.sv and self.db.sv.char and modKey and rowKey) then
         return nil, 0, 0
     end
@@ -39,28 +95,50 @@ function MR:GetRowWarbandStatuses(modKey, rowKey, rowMax, expanded)
     local hiddenChars = (self.db.profile and self.db.profile.altBoardHiddenCharacters) or {}
     local showHidden = self.db.profile and self.db.profile.altBoardShowHidden == true
     local resetAt = self.GetLastResetTimestamp and self:GetLastResetTimestamp() or 0
+    local isCustomTask = modKey == "custom_tasks" or (row and row.progressModuleKey == "custom_tasks")
+    local progressKey = isCustomTask and "custom_tasks" or modKey
+    local isSharedTask = isCustomTask and type(rowKey) == "string" and rowKey:match("^shared_task_%d+$") ~= nil
+    local isAccountComplete = isSharedTask and row and row.accountWideComplete == true
+    local accountValue = isAccountComplete and self.GetProgress and tonumber(self:GetProgress("custom_tasks", rowKey)) or nil
+    if isCustomTask and row then
+        if row.preserveCompletion then
+            resetAt = 0
+        elseif row.resetType == "daily" then
+            resetAt = self.GetLastDailyTimestamp and self:GetLastDailyTimestamp() or 0
+        end
+    end
+    local localTask = isCustomTask and not isSharedTask and row and row.taskId
+        and self.GetCustomTaskById and self:GetCustomTaskById(row.taskId, "character") or nil
+    local localIdentity = CustomTaskIdentity(localTask)
     local rows, done = {}, 0
 
     for charKey, charData in pairs(self.db.sv.char) do
         if type(charData) == "table" and type(charData.progress) == "table"
             and (charKey == currentKey or showHidden or not hiddenChars[charKey]) then
-            local modProgress = charData.progress[modKey]
-            local value = modProgress and tonumber(modProgress[rowKey]) or 0
-            local complete = rowMax > 0 and value >= rowMax
-            local lastSyncAt = tonumber(charData.lastSyncAt) or 0
-            local stale = resetAt > 0 and lastSyncAt > 0 and lastSyncAt < resetAt
-
-            if complete then
-                done = done + 1
+            local characterRowKey = rowKey
+            if localIdentity and charKey ~= currentKey then
+                characterRowKey = FindMatchingCharacterTaskKey(charData, localIdentity)
             end
+            if not isCustomTask or isSharedTask or (characterRowKey and (charKey == currentKey or localIdentity)) then
+                local modProgress = charData.progress[progressKey]
+                local value = isAccountComplete and (accountValue or 0)
+                    or (modProgress and tonumber(modProgress[characterRowKey])) or 0
+                local complete = rowMax > 0 and value >= rowMax
+                local lastSyncAt = tonumber(charData.lastSyncAt) or 0
+                local stale = not isAccountComplete and resetAt > 0 and lastSyncAt > 0 and lastSyncAt < resetAt
 
-            rows[#rows + 1] = {
-                key = charKey,
-                name = GetRowWarbandCharacterName(charKey, charData, currentKey),
-                complete = complete,
-                stale = stale,
-                current = charKey == currentKey,
-            }
+                if complete then
+                    done = done + 1
+                end
+
+                rows[#rows + 1] = {
+                    key = charKey,
+                    name = GetRowWarbandCharacterName(charKey, charData, currentKey),
+                    complete = complete,
+                    stale = stale,
+                    current = charKey == currentKey,
+                }
+            end
         end
     end
 
@@ -187,7 +265,7 @@ function MR:IsWarbandTrackedRow(mod, row)
         return true
     end
 
-    if not IsAltBoardModule(mod) then
+    if not IsAltBoardModule(mod) and not mod.customTaskCategoryModule then
         return false
     end
 
@@ -249,6 +327,7 @@ local function GetAltBoardModuleRows(mod, charData, globalData)
                 label = tostring(task.label or ""),
                 max = maxValue,
                 accountWideComplete = task.accountWideComplete == true,
+                resetType = task.resetType,
             }
         end
     end
@@ -945,7 +1024,18 @@ function MR:GetWarbandWeeklyData(showHiddenOverride, detailCharKey, onlyCharKey)
                                     and MR.db.global.customTaskProgress[mod.key]
                                     or nil
                                 local progressSource = accountProgress or modProgress
-                                local value = stale and not accountProgress and 0 or tonumber(progressSource[row.key]) or 0
+                                local rowResetAt = resetAt
+                                if mod.key == "custom_tasks" then
+                                    if row.resetType == "none" then
+                                        rowResetAt = 0
+                                    elseif row.resetType == "daily" then
+                                        rowResetAt = self.GetLastDailyTimestamp and self:GetLastDailyTimestamp() or 0
+                                    end
+                                end
+                                local rowStale = rowResetAt > 0 and lastSyncAt > 0 and lastSyncAt < rowResetAt
+                                local value = row.accountWideComplete
+                                    and (tonumber(accountProgress and accountProgress[row.key]) or 0)
+                                    or (rowStale and 0 or tonumber(progressSource[row.key]) or 0)
                                 local maxValue = tonumber(row.max) or 0
                                 if row.trackWeeklyEarned then
                                     value = stale and not accountProgress and 0 or tonumber(progressSource[row.key .. "_collected"]) or value

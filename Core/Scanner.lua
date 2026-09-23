@@ -19,21 +19,43 @@ local function ReportScanFailure(source, err)
         tostring(source), tostring(err)))
 end
 
+local function WriteProgress(progress, modKey, rowKey, val, overrides)
+    if overrides and overrides[modKey] then
+        local mo = tonumber(overrides[modKey][rowKey])
+        if mo and mo > val then val = mo end
+    end
+    return SetProgressValue(progress, modKey, rowKey, val)
+end
+
+function MR:WriteScanProgress(moduleKey, rowKey, value)
+    local progress = self:GetProgressBucket(moduleKey, rowKey)
+    local overrides = self:GetManualOverrideBucket(moduleKey, rowKey)
+    return WriteProgress(progress, moduleKey, rowKey, value, overrides)
+end
+
 local function SafeModuleScan(mod)
     local ok, changed = pcall(mod.onScan, mod)
     if not ok then
         ReportScanFailure(mod.key or "?", changed)
-        return nil
     end
-    return changed
-end
 
-local function WriteProgress(progress, modKey, rowKey, val, overrides)
-    if overrides and overrides[modKey] then
-        local mo = overrides[modKey][rowKey]
-        if mo and mo > val then val = mo end
+    local restored = false
+    for _, row in ipairs(mod.rows or {}) do
+        local moduleKey = row.progressModuleKey or mod.key
+        local overrides = MR:GetManualOverrideBucket(moduleKey, row.key)
+        if overrides[moduleKey] and tonumber(overrides[moduleKey][row.key]) then
+            local progress = MR:GetProgressBucket(moduleKey, row.key)
+            local current = progress[moduleKey] and tonumber(progress[moduleKey][row.key]) or 0
+            if MR:WriteScanProgress(moduleKey, row.key, current or 0) then
+                restored = true
+            end
+        end
     end
-    return SetProgressValue(progress, modKey, rowKey, val)
+
+    if not ok then
+        return restored
+    end
+    return changed == true or restored
 end
 
 local function ValuesEqual(a, b)

@@ -236,7 +236,7 @@ local function MainRowOnEnter(selfRow)
         local modKey, rowKey, rowMax = data.mod.key, row.key, row.max
         ns.ShowWarbandTooltip(selfRow, function(tip)
             local expanded = IsShiftKeyDown()
-            local rows, done, total = MR:GetRowWarbandStatuses(modKey, rowKey, rowMax, expanded)
+            local rows, done, total = MR:GetRowWarbandStatuses(modKey, rowKey, rowMax, expanded, row)
             if not rows or total <= 0 then
                 return
             end
@@ -507,6 +507,9 @@ local EnsureMainRowWidget
 local UpdateMainRowWidget
 
 local function GetMainRowGroupKey(row)
+    if row and row.groupInConfigOnly then
+        return nil
+    end
     local group = row and row.group
     if group then
         return group

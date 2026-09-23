@@ -543,6 +543,10 @@ L["Chat_CurseSurgeAnnounceNext"] = "Routine: Fluchwelle nächte um %s in %s (%.1
 L["Chat_CurseSurgeNoSite"] = "|cff2ae7c6MidnightRoutine:|r Im Moment gibt es nichts zu verkünden."
 L["Chat_CurseSurgeNoGroup"] = "|cff2ae7c6MidnightRoutine:|r You are not in a party, raid, or instance group."
 
+L["Holidays_Title"] = "Holidays"
+L["Holiday_BrewfestBanquet_Label"] = "|cffffc76dBrewfest Banquet:|r"
+L["Holiday_BrewfestBanquet_Note"] = "Starts every hour at the top of the hour during Brewfest."
+
 -- WeeklyTasks
 L["Weekly_SeasonTitle"] = "Wochenaufgaben"
 L["Weekly_Abundance_Label"] = "|cff2ae7c6Wöchentlich: Überfluss:|r"
@@ -686,6 +690,9 @@ L["Weekly_TrailingXalatath_Label"] = "Jagd auf Xal'atath:"
 L["Weekly_TrailingXalatath_Note"] = "Schließe die wöchentliche Quest „Jagd auf Xal'atath“ auf der Gewundenen Insel ab."
 L["Weekly_PurgingVaults_Label"] = "Die Kammern läutern:"
 L["Weekly_PurgingVaults_Note"] = "Schließe Die Kammern läutern nach dem freischalten auf der Gewundenen Insel ab."
+
+L["Weekly_AncientFoe_Label"] = "Ancient Foe:"
+L["Weekly_AncientFoe_Note"] = "Defeat this week's Ancient Foe in the Vaults of Atal'Utek."
 
 -- WorldEvents
 L["DMF_Title"] = "Dunkelmond-Jahrmarkt"
