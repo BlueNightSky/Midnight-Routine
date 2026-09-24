@@ -544,9 +544,9 @@ L["Chat_CurseSurgeAnnounceNext"] = "例行公事: 詛咒狂湧下次 %s 還有 %
 L["Chat_CurseSurgeNoSite"] = "|cff2ae7c6至暗之夜例行公事:|r 現在沒有什麼可通告的。"
 L["Chat_CurseSurgeNoGroup"] = "|cff2ae7c6至暗之夜例行公事:|r 你不在一個副本或團隊的隊伍中。"
 
-L["Holidays_Title"] = "Holidays"
-L["Holiday_BrewfestBanquet_Label"] = "|cffffc76dBrewfest Banquet:|r"
-L["Holiday_BrewfestBanquet_Note"] = "Starts every hour at the top of the hour during Brewfest."
+L["Holidays_Title"] = "節日"
+L["Holiday_BrewfestBanquet_Label"] = "|cffffc76d啤酒節任務:|r"
+L["Holiday_BrewfestBanquet_Note"] = "啤酒節期間每小時整點開始。"
 
 -- WeeklyTasks
 L["Weekly_SeasonTitle"] = "每週任務"
@@ -692,8 +692,8 @@ L["Weekly_TrailingXalatath_Note"] = "完成盤蛇島上的每週追蹤薩拉塔�
 L["Weekly_PurgingVaults_Label"] = "淨化寶庫："
 L["Weekly_PurgingVaults_Note"] = "在盤蛇島解鎖後完成淨化寶庫活動。"
 
-L["Weekly_AncientFoe_Label"] = "Ancient Foe:"
-L["Weekly_AncientFoe_Note"] = "Defeat this week's Ancient Foe in the Vaults of Atal'Utek."
+L["Weekly_AncientFoe_Label"] = "遠古敵人:"
+L["Weekly_AncientFoe_Note"] = "擊敗本週阿塔烏泰克寶庫中的遠古敵人。"
 
 -- WorldEvents
 L["DMF_Title"] = "暗月馬戲團"
