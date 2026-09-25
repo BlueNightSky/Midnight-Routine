@@ -87,7 +87,7 @@ end
 
 function MR:GetRowWarbandStatuses(modKey, rowKey, rowMax, expanded, row)
     if not (self.db and self.db.sv and self.db.sv.char and modKey and rowKey) then
-        return nil, 0, 0
+        return nil, 0
     end
 
     rowMax = tonumber(rowMax) or 0
@@ -110,7 +110,7 @@ function MR:GetRowWarbandStatuses(modKey, rowKey, rowMax, expanded, row)
     local localTask = isCustomTask and not isSharedTask and row and row.taskId
         and self.GetCustomTaskById and self:GetCustomTaskById(row.taskId, "character") or nil
     local localIdentity = CustomTaskIdentity(localTask)
-    local rows, done = {}, 0
+    local rows = {}
 
     for charKey, charData in pairs(self.db.sv.char) do
         if type(charData) == "table" and type(charData.progress) == "table"
@@ -123,18 +123,18 @@ function MR:GetRowWarbandStatuses(modKey, rowKey, rowMax, expanded, row)
                 local modProgress = charData.progress[progressKey]
                 local value = isAccountComplete and (accountValue or 0)
                     or (modProgress and tonumber(modProgress[characterRowKey])) or 0
-                local complete = rowMax > 0 and value >= rowMax
                 local lastSyncAt = tonumber(charData.lastSyncAt) or 0
                 local stale = not isAccountComplete and resetAt > 0 and lastSyncAt > 0 and lastSyncAt < resetAt
-
-                if complete then
-                    done = done + 1
-                end
+                local complete = not (row and row.noMax) and rowMax > 0 and value >= rowMax
+                local active = row and row.noMax and value > 0
 
                 rows[#rows + 1] = {
                     key = charKey,
                     name = GetRowWarbandCharacterName(charKey, charData, currentKey),
+                    value = value,
+                    max = rowMax,
                     complete = complete,
+                    active = active,
                     stale = stale,
                     current = charKey == currentKey,
                 }
@@ -150,12 +150,13 @@ function MR:GetRowWarbandStatuses(modKey, rowKey, rowMax, expanded, row)
             local bOrder = orderIndex[b.key] or math.huge
             if aOrder ~= bOrder then return aOrder < bOrder end
         end
-        if a.complete ~= b.complete then return a.complete end
         if a.stale ~= b.stale then return not a.stale end
+        if a.complete ~= b.complete then return a.complete end
+        if a.active ~= b.active then return a.active end
         return (a.key or "") < (b.key or "")
     end)
 
-    return rows, done, #rows
+    return rows, #rows
 end
 
 local function CleanAccountLabel(text)
@@ -1016,7 +1017,14 @@ function MR:GetWarbandWeeklyData(showHiddenOverride, detailCharKey, onlyCharKey)
                             local rowVisible = self.IsRowVisibleForCharacter and self:IsRowVisibleForCharacter(mod, row, charData) or (not row.isVisible or row.isVisible())
                             local rowEnabled = not (effectiveSettings and effectiveSettings.hiddenRows and effectiveSettings.hiddenRows[row.key] == false)
 
-                            if rowVisible and rowEnabled then
+                            if rowVisible and rowEnabled and mod.key == "currencies" and row.key == "currency_browser_button" then
+                                if moduleEntry then
+                                    table.insert(moduleEntry.rows, 1, {
+                                        key = row.key,
+                                        currencyBrowserButton = true,
+                                    })
+                                end
+                            elseif rowVisible and rowEnabled then
                                 local accountProgress = row.accountWideComplete
                                     and MR.db
                                     and MR.db.global
@@ -1094,7 +1102,7 @@ function MR:GetWarbandWeeklyData(showHiddenOverride, detailCharKey, onlyCharKey)
                             moduleEntry.totalRows = moduleTotalRows
                             moduleEntry.doneRows = moduleDoneRows
                         end
-                        if moduleEntry and moduleTotalRows > 0 and (mod.resetType == "weekly" or mod.key == "custom_tasks" or moduleDoneRows < moduleTotalRows) then
+                        if moduleEntry and #moduleEntry.rows > 0 and (mod.resetType == "weekly" or mod.key == "custom_tasks" or moduleDoneRows < moduleTotalRows) then
                             table.insert(snapshot.modules, moduleEntry)
                         end
                     end

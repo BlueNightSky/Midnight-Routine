@@ -414,6 +414,29 @@ local function EnsureWarbandDetailRow(frame, card, index)
         row._accent = row:CreateFontString(nil, "OVERLAY")
         row._accent:SetPoint("RIGHT", row._value, "LEFT", -8, 0)
         row._accent:SetJustifyH("RIGHT")
+        row._currencyBrowserButton = CreateFrame("Button", nil, row, "BackdropTemplate")
+        row._currencyBrowserButton:SetPoint("TOPLEFT", row, "TOPLEFT", 4, -1)
+        row._currencyBrowserButton:SetPoint("TOPRIGHT", row, "TOPRIGHT", -4, -1)
+        row._currencyBrowserButton:SetHeight(20)
+        row._currencyBrowserButton:SetBackdrop(MakeBackdrop())
+        row._currencyBrowserButton:SetScript("OnClick", function()
+            if MR.ToggleCurrencyBrowserFrame then MR:ToggleCurrencyBrowserFrame(frame) end
+        end)
+        row._currencyBrowserButton:SetScript("OnEnter", function(selfBtn)
+            local ui = ns.UIInternal
+            if ui and ui.CurrencyBrowserButtonOnEnter then ui.CurrencyBrowserButtonOnEnter(selfBtn) end
+        end)
+        row._currencyBrowserButton:SetScript("OnLeave", function(selfBtn)
+            local ui = ns.UIInternal
+            if ui and ui.CurrencyBrowserButtonOnLeave then ui.CurrencyBrowserButtonOnLeave(selfBtn) end
+        end)
+        row._currencyBrowserButton._label = row._currencyBrowserButton:CreateFontString(nil, "OVERLAY")
+        row._currencyBrowserButton._label:SetPoint("CENTER", row._currencyBrowserButton, "CENTER", 7, 0)
+        row._currencyBrowserButton._icon = row._currencyBrowserButton:CreateTexture(nil, "OVERLAY")
+        row._currencyBrowserButton._icon:SetSize(13, 13)
+        row._currencyBrowserButton._icon:SetTexture("Interface\\Common\\UI-Searchbox-Icon")
+        row._currencyBrowserButton._icon:SetPoint("RIGHT", row._currencyBrowserButton._label, "LEFT", -5, 0)
+        row._currencyBrowserButton:Hide()
 
         row:SetScript("OnEnter", function(selfRow)
             local entry = selfRow._entry
@@ -467,32 +490,51 @@ local function RenderWarbandDetailRows(frame)
                 local rowTop = (card._detailY or 0) + 42 + ((rowIndex - 1) * 24)
                 if rowTop + 23 >= scrollTop - 48 and rowTop <= scrollBottom + 48 then
                     local row = EnsureWarbandDetailRow(frame, card, rowIndex)
-                    row._entry = rowEntry
-                    row._bg:SetColorTexture(1, 1, 1, rowIndex % 2 == 0 and 0.018 or 0)
-                    local rr, rg, rb
-                    if stale then
-                        rr, rg, rb = 0.42, 0.42, 0.46
-                    elseif rowEntry.complete then
-                        rr, rg, rb = 0.20, 0.95, 0.60
-                    elseif rowEntry.value > 0 then
-                        rr, rg, rb = 1.00, 0.76, 0.28
-                    else
-                        rr, rg, rb = 0.42, 0.48, 0.56
-                    end
-                    row._dot:SetColorTexture(rr, rg, rb, 0.92)
-                    row._label:SetFont(ns.FONT_ROWS, GetFontSize(), GetFontFlags())
-                    row._label:SetText(rowEntry.label)
-                    row._label:SetTextColor(0.84, 0.88, 0.93)
-                    row._value:SetFont(ns.FONT_ROWS, GetFontSize(), GetFontFlags())
-                    row._value:SetText(stale and (L["AltBoard_AwaitingRefresh"] or "Awaiting refresh") or rowEntry.displayValue)
-                    row._value:SetTextColor(rr, rg, rb)
-                    if rowEntry.accentLabel then
-                        row._accent:SetFont(ns.FONT_ROWS, math.max(8, GetFontSize() - 1), GetFontFlags())
-                        row._accent:SetText(WBClean(rowEntry.accentLabel))
-                        row._accent:SetTextColor(WBHexColor(rowEntry.accentColor, 0.78, 0.82, 0.95))
-                        row._accent:Show()
-                    else
+                    if rowEntry.currencyBrowserButton then
+                        row._entry = nil
+                        row._bg:Hide()
+                        row._dot:Hide()
+                        row._label:Hide()
+                        row._value:Hide()
                         row._accent:Hide()
+                        local ui = ns.UIInternal
+                        if ui and ui.StyleCurrencyBrowserButton then
+                            ui.StyleCurrencyBrowserButton(row._currencyBrowserButton, false, 1)
+                        end
+                        row._currencyBrowserButton:Show()
+                    else
+                        row._currencyBrowserButton:Hide()
+                        row._entry = rowEntry
+                        row._bg:Show()
+                        row._dot:Show()
+                        row._label:Show()
+                        row._value:Show()
+                        row._bg:SetColorTexture(1, 1, 1, rowIndex % 2 == 0 and 0.018 or 0)
+                        local rr, rg, rb
+                        if stale then
+                            rr, rg, rb = 0.42, 0.42, 0.46
+                        elseif rowEntry.complete then
+                            rr, rg, rb = 0.20, 0.95, 0.60
+                        elseif rowEntry.value > 0 then
+                            rr, rg, rb = 1.00, 0.76, 0.28
+                        else
+                            rr, rg, rb = 0.42, 0.48, 0.56
+                        end
+                        row._dot:SetColorTexture(rr, rg, rb, 0.92)
+                        row._label:SetFont(ns.FONT_ROWS, GetFontSize(), GetFontFlags())
+                        row._label:SetText(rowEntry.label)
+                        row._label:SetTextColor(0.84, 0.88, 0.93)
+                        row._value:SetFont(ns.FONT_ROWS, GetFontSize(), GetFontFlags())
+                        row._value:SetText(stale and (L["AltBoard_AwaitingRefresh"] or "Awaiting refresh") or rowEntry.displayValue)
+                        row._value:SetTextColor(rr, rg, rb)
+                        if rowEntry.accentLabel then
+                            row._accent:SetFont(ns.FONT_ROWS, math.max(8, GetFontSize() - 1), GetFontFlags())
+                            row._accent:SetText(WBClean(rowEntry.accentLabel))
+                            row._accent:SetTextColor(WBHexColor(rowEntry.accentColor, 0.78, 0.82, 0.95))
+                            row._accent:Show()
+                        else
+                            row._accent:Hide()
+                        end
                     end
                     row:Show()
                 end
@@ -1813,6 +1855,9 @@ function MR:ToggleWarbandBoard()
             end
         end)
         frame:SetScript("OnHide", function()
+            if MR._currencyBrowserAnchor == frame and MR.HideCurrencyBrowserFrame then
+                MR:HideCurrencyBrowserFrame()
+            end
             if MR._tickFrame and not MR:HasVisibleMainTrackingSurface() then
                 MR._tickFrame:Hide()
             end

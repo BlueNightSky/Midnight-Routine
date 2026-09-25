@@ -341,27 +341,30 @@ local function BuildCurrencyEntries(searchText, warbandOnly)
     return entries
 end
 
-local function PositionBrowser(frame)
+local function PositionBrowser(frame, anchor)
     frame:ClearAllPoints()
-    if MR.frame and MR.frame:IsShown() then
-        local mainLeft = MR.frame:GetLeft()
-        local mainRight = MR.frame:GetRight()
+    anchor = anchor and anchor:IsShown() and anchor
+        or (MR.frame and MR.frame:IsShown() and MR.frame)
+        or (MR.altBoardFrame and MR.altBoardFrame:IsShown() and MR.altBoardFrame)
+    if anchor then
+        local mainLeft = anchor:GetLeft()
+        local mainRight = anchor:GetRight()
         local screenLeft = UIParent:GetLeft()
         local screenRight = UIParent:GetRight()
         if mainLeft and mainRight and screenLeft and screenRight then
             local uiScale = UIParent:GetEffectiveScale()
-            local mainScale = MR.frame:GetEffectiveScale()
+            local mainScale = anchor:GetEffectiveScale()
             local frameScale = frame:GetEffectiveScale()
             local leftSpace = (mainLeft * mainScale / uiScale) - screenLeft
             local rightSpace = screenRight - (mainRight * mainScale / uiScale)
             local requiredSpace = (frame:GetWidth() * frameScale / uiScale) + 8
             if rightSpace >= requiredSpace or rightSpace >= leftSpace then
-                frame:SetPoint("TOPLEFT", MR.frame, "TOPRIGHT", 8, 0)
+                frame:SetPoint("TOPLEFT", anchor, "TOPRIGHT", 8, 0)
             else
-                frame:SetPoint("TOPRIGHT", MR.frame, "TOPLEFT", -8, 0)
+                frame:SetPoint("TOPRIGHT", anchor, "TOPLEFT", -8, 0)
             end
         else
-            frame:SetPoint("TOPLEFT", MR.frame, "TOPRIGHT", 8, 0)
+            frame:SetPoint("TOPLEFT", anchor, "TOPRIGHT", 8, 0)
         end
     else
         frame:SetPoint("CENTER", UIParent, "CENTER", 220, 0)
@@ -604,7 +607,9 @@ function MR:RefreshCurrencyBrowserFrame(keepScroll)
         return
     end
 
-    if not (self.frame and self.frame:IsShown()) or (self.db and self.db.profile and self.db.profile.minimized) then
+    local mainShown = self.frame and self.frame:IsShown() and not (self.db and self.db.profile and self.db.profile.minimized)
+    local boardShown = self.altBoardFrame and self.altBoardFrame:IsShown()
+    if not mainShown and not boardShown then
         frame:Hide()
         return
     end
@@ -716,8 +721,10 @@ function MR:ApplyCurrencyBrowserTheme()
     end
 end
 
-function MR:ShowCurrencyBrowserFrame()
-    if not (self.frame and self.frame:IsShown()) or (self.db and self.db.profile and self.db.profile.minimized) then
+function MR:ShowCurrencyBrowserFrame(anchor)
+    local mainShown = self.frame and self.frame:IsShown() and not (self.db and self.db.profile and self.db.profile.minimized)
+    local boardShown = self.altBoardFrame and self.altBoardFrame:IsShown()
+    if not mainShown and not boardShown then
         return
     end
 
@@ -730,6 +737,8 @@ function MR:ShowCurrencyBrowserFrame()
             math.max(FRAME_MIN_HEIGHT, math.min(FRAME_MAX_HEIGHT, savedH or FRAME_HEIGHT))
         )
         self:RegisterPriorityFrame(frame)
+        frame:SetFrameLevel(80)
+        frame:SetClampedToScreen(true)
         frame:SetMovable(true)
         frame:EnableMouse(true)
         frame:RegisterForDrag("LeftButton")
@@ -737,7 +746,7 @@ function MR:ShowCurrencyBrowserFrame()
         frame:SetScript("OnDragStop", frame.StopMovingOrSizing)
         if self.frame and self.frame.HookScript and not self._currencyBrowserMainHideHooked then
             self.frame:HookScript("OnHide", function()
-                if MR.HideCurrencyBrowserFrame then
+                if not (MR.altBoardFrame and MR.altBoardFrame:IsShown()) and MR.HideCurrencyBrowserFrame then
                     MR:HideCurrencyBrowserFrame()
                 end
             end)
@@ -1024,7 +1033,8 @@ function MR:ShowCurrencyBrowserFrame()
         self.currencyBrowserFrame = frame
     end
 
-    PositionBrowser(self.currencyBrowserFrame)
+    self._currencyBrowserAnchor = anchor and anchor:IsShown() and anchor or (mainShown and self.frame or self.altBoardFrame)
+    PositionBrowser(self.currencyBrowserFrame, self._currencyBrowserAnchor)
     self.currencyBrowserFrame:Show()
     if self.ApplyCurrencyBrowserTheme then
         self:ApplyCurrencyBrowserTheme()
@@ -1035,8 +1045,10 @@ function MR:ShowCurrencyBrowserFrame()
     self:RefreshCurrencyBrowserFrame()
 end
 
-function MR:ToggleCurrencyBrowserFrame()
-    if not (self.frame and self.frame:IsShown()) or (self.db and self.db.profile and self.db.profile.minimized) then
+function MR:ToggleCurrencyBrowserFrame(anchor)
+    local mainShown = self.frame and self.frame:IsShown() and not (self.db and self.db.profile and self.db.profile.minimized)
+    local boardShown = self.altBoardFrame and self.altBoardFrame:IsShown()
+    if not mainShown and not boardShown then
         if self.HideCurrencyBrowserFrame then
             self:HideCurrencyBrowserFrame()
         end
@@ -1046,7 +1058,7 @@ function MR:ToggleCurrencyBrowserFrame()
     if self.currencyBrowserFrame and self.currencyBrowserFrame:IsShown() then
         self.currencyBrowserFrame:Hide()
     else
-        self:ShowCurrencyBrowserFrame()
+        self:ShowCurrencyBrowserFrame(anchor)
     end
 end
 

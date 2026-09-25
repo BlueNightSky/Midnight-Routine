@@ -571,7 +571,7 @@ local function AddWarbandRareTooltipLines(tip, rare)
         return
     end
 
-    local headerText = L["Rares_Tooltip_WarbandHeader"] or "Warband: %d/%d killed this week"
+    local headerText = L["Rares_Tooltip_WarbandHeader"] or "Warband: %d of %d characters killed this week"
     tip:AddLine(" ")
     tip:AddLine(string.format(headerText, killed, total), 0.65, 0.90, 1)
 

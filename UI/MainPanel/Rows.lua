@@ -229,6 +229,12 @@ local function MainRowOnEnter(selfRow)
                     tooltip:AddLine(L["Tooltip_ManualClick"], 0.5, 0.5, 0.5)
                 end
             end
+            local max = tonumber(row.max)
+            if data.mod and row.key and max and max > 0 and not row.control then
+                local value = tonumber(MR:GetProgress(row.progressModuleKey or data.mod.key, row.key)) or 0
+                local progress = row.noMax and tostring(value) or string.format("%d/%d", value, max)
+                tooltip:AddLine(progress, 0.65, 0.90, 1)
+            end
         end,
     })
 
@@ -236,23 +242,25 @@ local function MainRowOnEnter(selfRow)
         local modKey, rowKey, rowMax = data.mod.key, row.key, row.max
         ns.ShowWarbandTooltip(selfRow, function(tip)
             local expanded = IsShiftKeyDown()
-            local rows, done, total = MR:GetRowWarbandStatuses(modKey, rowKey, rowMax, expanded, row)
+            local rows, total = MR:GetRowWarbandStatuses(modKey, rowKey, rowMax, expanded, row)
             if not rows or total <= 0 then
                 return
             end
 
-            local headerText = L["Tooltip_WarbandHeader"] or "Warband: %d/%d done this week"
-            tip:AddLine(string.format(headerText, done, total), 0.65, 0.90, 1)
+            tip:AddLine(L["Tooltip_WarbandHeader"], 0.65, 0.90, 1)
 
             local shown = expanded and total or math.min(total, 4)
             for i = 1, shown do
                 local charRow = rows[i]
-                if charRow.complete then
-                    tip:AddDoubleLine(charRow.name, L["Tooltip_WarbandDone"] or "Done", 0.90, 0.90, 0.90, 0.20, 0.85, 0.45)
-                elseif charRow.stale then
+                local progress = row.noMax and tostring(charRow.value) or string.format("%d/%d", charRow.value, charRow.max)
+                if charRow.stale then
                     tip:AddDoubleLine(charRow.name, L["Tooltip_WarbandStale"] or "Needs login", 0.65, 0.65, 0.65, 0.70, 0.70, 0.70)
+                elseif charRow.complete then
+                    tip:AddDoubleLine(charRow.name, progress, 0.90, 0.90, 0.90, 0.20, 0.85, 0.45)
+                elseif charRow.active then
+                    tip:AddDoubleLine(charRow.name, progress, 0.90, 0.90, 0.90, 0.85, 0.65, 0.10)
                 else
-                    tip:AddDoubleLine(charRow.name, L["Tooltip_WarbandNotDone"] or "Not done", 0.90, 0.90, 0.90, 0.50, 0.50, 0.50)
+                    tip:AddDoubleLine(charRow.name, progress, 0.90, 0.90, 0.90, 0.50, 0.50, 0.50)
                 end
             end
 
@@ -396,6 +404,10 @@ local function MainStatusButtonOnEnter(selfBtn)
             tooltip:SetText(row.label, 1, 1, 1, 1, true)
             if row.note then
                 tooltip:AddLine(row.note, 0.7, 0.7, 0.7, true)
+            end
+            if max and max > 0 then
+                local value = tonumber(MR:GetProgress(progressModuleKey, row.key)) or 0
+                tooltip:AddLine(row.noMax and tostring(value) or string.format("%d/%d", value, max), 0.65, 0.90, 1)
             end
             tooltip:AddLine(" ")
             if max and mo >= max then
