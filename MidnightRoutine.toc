@@ -57,6 +57,7 @@ Modules/CustomTasks.lua
 Forever/Features.lua
 Forever/Professions.lua
 Forever/Reputations.lua
+Forever/Locations/Locations.xml
 Forever/Rares.lua
 Forever/Bootstrap.lua
 Modules/Renown.lua

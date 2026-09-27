@@ -425,7 +425,7 @@ local function BuildWelcomeScreen()
         { 0.65, 0.50, 0.10, 0.90 }
     )
 
-    if not MR.isForever or not ns.Forever.hideUnfinishedTrackers then
+    if not MR.isForever or not ns.Forever.hideRares then
     CreateUtilityPanel(
         L["Welcome_Rares"],
         L["Welcome_Rares_Desc"],
@@ -433,7 +433,9 @@ local function BuildWelcomeScreen()
         function(val) pendingRares = val end,
         { 0.65, 0.20, 0.10, 0.90 }
     )
+    end
 
+    if not MR.isForever or not ns.Forever.hideProfessions then
     CreateUtilityPanel(
         L["Welcome_ProfKnowledge"],
         L["Welcome_ProfKnowledge_Desc"],

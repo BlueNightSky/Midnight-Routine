@@ -1,5 +1,5 @@
 local _, ns = ...
-if ns.MR.isForever and ns.Forever.hideUnfinishedTrackers then return end
+if ns.MR.isForever and ns.Forever.hideRares then return end
 local MR = ns.MR
 
 local FONT_HEADERS = ns.FONT_HEADERS
@@ -63,8 +63,7 @@ local MAP_TO_ZONE_KEY = {
 
 local function GetCurrentZoneKey()
     if MR.isForever then
-        local mapID = C_Map and C_Map.GetBestMapForUnit and C_Map.GetBestMapForUnit("player")
-        return mapID and tostring(mapID) or nil
+        return ns.Forever.GetCurrentRareZoneKey()
     end
     if not (C_Map and C_Map.GetBestMapForUnit and C_Map.GetMapInfo) then
         return nil
@@ -458,6 +457,10 @@ local function GetRareNPCIDFromGUID(guid)
     return tonumber(npcID)
 end
 
+function MR:GetRareNPCIDFromGUID(guid)
+    return GetRareNPCIDFromGUID(guid)
+end
+
 function MR:OnRareUnitDied(_, unitGUID)
     local npcID = GetRareNPCIDFromGUID(unitGUID)
     local rare = npcID and RARE_BY_NPC_ID[npcID]
@@ -784,7 +787,9 @@ end
 
 local function RefreshForeverRareZones()
     if not MR.isForever then return end
-    ZONES = ns.Forever.GetRareZones()
+    local zones = ns.Forever.GetRareZones()
+    if ZONES == zones then return end
+    ZONES = zones
     wipe(ZONE_BY_KEY)
     wipe(RARE_BY_NPC_ID)
     for _, zone in ipairs(ZONES) do
@@ -801,6 +806,10 @@ local function GetVisibleZones()
     local key = GetCurrentZoneKey()
     local function zoneVisible(z)
         return not (db.raresHiddenZones and db.raresHiddenZones[z.key])
+    end
+    if MR.isForever and not db.raresShowAllZones then
+        local zone = key and ZONE_BY_KEY[key]
+        return zone and zoneVisible(zone) and { zone } or {}
     end
     if not db.raresShowAllZones and key and ZONE_BY_KEY[key] and zoneVisible(ZONE_BY_KEY[key]) then
         return { ZONE_BY_KEY[key] }
@@ -822,7 +831,7 @@ local function GetRaresLayoutKey()
             local flagged = questId and C_QuestLog.IsQuestFlaggedCompleted(questId) or false
             local killStat = GetRareTrackedKillStatus(rare) or (flagged and "today") or nil
             if not (db.raresHideKilled and killStat == "today") then
-                parts[#parts + 1] = tostring(questId or rare[1])
+                parts[#parts + 1] = tostring(questId or (MR.isForever and rare[6]) or rare[1]) .. (MR.isForever and (":" .. rare[1]) or "")
             end
         end
     end
@@ -1189,9 +1198,9 @@ BuildRaresFrame = function()
                             tooltip:AddLine(L["Rares_Tooltip_NotKilled"], 0.50, 0.50, 0.50)
                         end
                         AddWarbandRareTooltipLines(tooltip, rare)
+                        if MR.isForever then ns.Forever.AddRareLocationTooltip(tooltip, rare) end
                         if rare[3] and rare[4] and rare[5] then
                             tooltip:AddLine(" ")
-                            if MR.isForever then tooltip:AddLine(L["Forever_RareRecordedLocation"], 0.7, 0.7, 0.7, true) end
                             tooltip:AddLine(L["Gathering_ClickWaypoint"], 0.45, 0.85, 1)
                         end
                     end,
@@ -1212,15 +1221,18 @@ BuildRaresFrame = function()
             hit:SetScript("OnMouseUp", function(_, button)
                 if button ~= "LeftButton" or not (rare[3] and rare[4] and rare[5]) then return end
 
-                local ok, source = MR:SetWaypoint({
+                local target = MR.isForever and ns.Forever.GetRareWaypoint(rare) or {
                     label = rare[1],
                     waypointTitle = rare[1],
                     zone = rare[3],
                     x = rare[4],
                     y = rare[5],
-                })
+                }
+                if not target then return end
+                local ok, source = MR:SetWaypoint(target)
                 if ok then
-                    print(string.format(L["Waypoint_Set"], source, rare[1], rare[4], rare[5]))
+                    print(string.format(L["Waypoint_Set"], source, rare[1], target.x, target.y))
+                    if MR.isForever then ns.Forever.AdvanceRareWaypoint(rare) end
                 else
                     print(L["Waypoint_Unavailable"])
                 end
@@ -1927,10 +1939,6 @@ end
 
 
 function MR:RefreshRares()
-    if self.isForever and raresFrame and raresFrame:IsShown() and raresFrame.layoutKey ~= GetRaresLayoutKey() then
-        RebuildRaresFrame()
-        self.raresFrame = raresFrame
-    end
     if not raresFrame or not raresFrame:IsShown() then
         return
     end
@@ -1943,6 +1951,10 @@ function MR:RefreshRares()
         return
     end
 
+    if self.isForever and raresFrame and raresFrame:IsShown() and raresFrame.layoutKey ~= GetRaresLayoutKey() then
+        RebuildRaresFrame()
+        self.raresFrame = raresFrame
+    end
     RefreshRaresFrame()
 end
 

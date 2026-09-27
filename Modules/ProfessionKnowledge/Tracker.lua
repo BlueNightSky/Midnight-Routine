@@ -1,5 +1,5 @@
 local _, ns = ...
-if ns.MR.isForever and ns.Forever.hideUnfinishedTrackers then return end
+if ns.MR.isForever and ns.Forever.hideProfessions then return end
 local MR = ns.MR
 
 local FONT_HEADERS = ns.FONT_HEADERS

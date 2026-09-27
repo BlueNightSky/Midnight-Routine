@@ -320,7 +320,7 @@ function MR:PopulateConfigFrame(f)
                 elseif not v and MR.HideRenown then MR:HideRenown() end
             end, "#d9b82e")
 
-        if not MR.isForever or not ns.Forever.hideUnfinishedTrackers then
+        if not MR.isForever or not ns.Forever.hideRares then
         Checkbox(L["Config_OpenRares"],
             function() return MR.GetManagedWindowOpen and MR:GetManagedWindowOpen("raresOpen") end,
             function(v)
@@ -328,7 +328,9 @@ function MR:PopulateConfigFrame(f)
                 if v and MR.EnsureRaresShown then MR:EnsureRaresShown()
                 elseif not v and MR.HideRares then MR:HideRares() end
             end, "#e05050")
+        end
 
+        if not MR.isForever or not ns.Forever.hideProfessions then
         Checkbox(MR.isForever and L["Forever_Professions"] or L["Profession_Knowledge"],
             function() return MR.GetManagedWindowOpen and MR:GetManagedWindowOpen("gatheringLocOpen") end,
             function(v)

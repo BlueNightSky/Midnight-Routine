@@ -19,6 +19,9 @@ lifecycle:OnAddonLoaded(function(addon)
             if loginAddon.OnInitialize then
                 loginAddon:OnInitialize()
             end
+            if loginAddon.InitializeMinimapButton then
+                loginAddon:InitializeMinimapButton()
+            end
             if loginAddon.OnEnable then
                 loginAddon:OnEnable()
             end

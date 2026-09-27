@@ -41,26 +41,12 @@ local function RefreshReputations(mod)
 end
 
 local function RefreshRares(mod)
-    local rows = {}
-    local saved = MR.db and MR.db.char and MR.db.char.foreverRares or {}
-    for rareID, savedRare in pairs(saved) do
-        local name = type(savedRare) == "table" and savedRare.name or savedRare
-        rows[#rows + 1] = {
-            key = "rare_" .. rareID,
-            label = name,
-            max = 1,
-            autoTracked = true,
-            note = L["Forever_RareDiscoveryNote"],
-        }
-    end
-    table.sort(rows, function(a, b) return a.label < b.label end)
-    mod.rows = rows
+    local changed = MR.SyncAllRareKills and MR:SyncAllRareKills() or false
     if MR.RefreshRares then MR:RefreshRares() end
-    MR._moduleStatsCache = nil
-    return true
+    return changed
 end
 
-if not ns.Forever.hideUnfinishedTrackers then
+if not ns.Forever.hideProfessions then
 MR:RegisterModule({
     key = "forever_professions",
     expansionKey = "forever",
@@ -86,7 +72,7 @@ MR:RegisterModule({
     isVisible = function() return false end,
 })
 
-if not ns.Forever.hideUnfinishedTrackers then
+if not ns.Forever.hideRares then
 MR:RegisterModule({
     key = "forever_rares",
     expansionKey = "forever",
@@ -101,12 +87,14 @@ MR:RegisterModule({
 end
 
 local rareWatcher = CreateFrame("Frame")
-if not ns.Forever.hideUnfinishedTrackers then
+if not ns.Forever.hideRares then
     rareWatcher:RegisterEvent("PLAYER_TARGET_CHANGED")
+    rareWatcher:RegisterEvent("UPDATE_MOUSEOVER_UNIT")
+    rareWatcher:RegisterEvent("NAME_PLATE_UNIT_ADDED")
 end
 rareWatcher:RegisterEvent("SKILL_LINES_CHANGED")
 rareWatcher:RegisterEvent("ZONE_CHANGED_NEW_AREA")
-if not ns.Forever.hideUnfinishedTrackers and C_EventUtils and C_EventUtils.IsEventValid and C_EventUtils.IsEventValid("UNIT_DIED") then
+if not ns.Forever.hideRares and C_EventUtils and C_EventUtils.IsEventValid and C_EventUtils.IsEventValid("UNIT_DIED") then
     rareWatcher:RegisterEvent("UNIT_DIED")
 end
 rareWatcher:RegisterEvent("UPDATE_FACTION")
@@ -134,7 +122,8 @@ rareWatcher:SetScript("OnEvent", function(_, event, unitGUID)
         if MR.RequestScan then MR:RequestScan(0.2) end
         return
     end
-    if not ns.Forever.hideUnfinishedTrackers and ns.Forever.DiscoverRare() then
+    local unit = event == "UPDATE_MOUSEOVER_UNIT" and "mouseover" or event == "NAME_PLATE_UNIT_ADDED" and unitGUID or "target"
+    if not ns.Forever.hideRares and ns.Forever.DiscoverRare(unit) then
         RefreshRares(MR.moduleByKey.forever_rares)
         if MR.RepopulateRaresConfig then MR:RepopulateRaresConfig() end
     end

@@ -81,20 +81,17 @@ local function StyleMinimapButton()
         return
     end
 
-    LDBIcon:SetButtonSize(LDB_NAME, 34)
-    LDBIcon:RemoveButtonBorder(LDB_NAME)
-    LDBIcon:RemoveButtonBackground(LDB_NAME)
-    LDBIcon:SetButtonIcon(LDB_NAME, MINIMAP_ICON, 34, "CENTER", 0, 0)
+    if LDBIcon.SetButtonSize then LDBIcon:SetButtonSize(LDB_NAME, 34) end
+    if LDBIcon.RemoveButtonBorder then LDBIcon:RemoveButtonBorder(LDB_NAME) end
+    if LDBIcon.RemoveButtonBackground then LDBIcon:RemoveButtonBackground(LDB_NAME) end
+    if LDBIcon.SetButtonIcon then LDBIcon:SetButtonIcon(LDB_NAME, MINIMAP_ICON, 34, "CENTER", 0, 0) end
 end
 
-local mmLoader = CreateFrame("Frame")
-mmLoader:RegisterEvent("PLAYER_LOGIN")
-mmLoader:SetScript("OnEvent", function(self)
-    self:UnregisterAllEvents()
-
-    if not MR.db or not MR.db.profile then
-        return
+function MR:InitializeMinimapButton()
+    if not self.db or not self.db.profile then
+        return false
     end
+    if self._minimapInitialized then return true end
 
     MR.db.profile.minimap = MR.db.profile.minimap or { hide = false }
     MR.db.profile.minimap.showInCompartment = true
@@ -106,6 +103,12 @@ mmLoader:SetScript("OnEvent", function(self)
         LDBIcon:AddButtonToCompartment(LDB_NAME, MINIMAP_ICON)
     end
     StyleMinimapButton()
+    if MR.db.profile.minimap.hide then
+        LDBIcon:Hide(LDB_NAME)
+    else
+        LDBIcon:Show(LDB_NAME)
+    end
+    self._minimapInitialized = true
 
     if not MR.db.profile.firstSeen then
         C_Timer.After(2.0, function()
@@ -114,6 +117,13 @@ mmLoader:SetScript("OnEvent", function(self)
             end
         end)
     end
+    return true
+end
+
+local mmLoader = CreateFrame("Frame")
+mmLoader:RegisterEvent("PLAYER_LOGIN")
+mmLoader:SetScript("OnEvent", function(self)
+    if MR:InitializeMinimapButton() then self:UnregisterAllEvents() end
 end)
 
 function MR:SetMinimapHidden(hide)
