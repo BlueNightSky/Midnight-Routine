@@ -437,9 +437,9 @@ SlashCmdList["MIDROUTE"] = function(msg)
     elseif msg == "welcome" then MR:ShowWelcomeScreen()
     elseif msg == "renown" then MR:ToggleRenown()
     elseif msg == "renown config" then MR:ToggleRenownConfig()
-    elseif msg == "rares" then MR:ToggleRares()
-    elseif msg == "rares config" then MR:ToggleRaresConfig()
-    elseif msg == "gathering" then MR:ToggleGatheringLocations()
+    elseif msg == "rares" then if MR.ToggleRares then MR:ToggleRares() end
+    elseif msg == "rares config" then if MR.ToggleRaresConfig then MR:ToggleRaresConfig() end
+    elseif msg == "gathering" then if MR.ToggleGatheringLocations then MR:ToggleGatheringLocations() end
     elseif msg == "scrollprofile" or msg == "scroll profile" then MR:ArmScrollProfile()
     elseif msg == "mem" or msg == "memory" then MR:PrintMemoryReport()
     elseif msg == "mem modules" or msg == "memory modules" then

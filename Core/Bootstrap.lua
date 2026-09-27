@@ -14,6 +14,17 @@ local lifecycle = Foundry.Lifecycle:New(MR, addonName)
 MR._lifecycle = lifecycle
 
 lifecycle:OnAddonLoaded(function(addon)
+    if addon.isForever then
+        lifecycle:OnLogin(function(loginAddon)
+            if loginAddon.OnInitialize then
+                loginAddon:OnInitialize()
+            end
+            if loginAddon.OnEnable then
+                loginAddon:OnEnable()
+            end
+        end)
+        return
+    end
     if addon.OnInitialize then
         addon:OnInitialize()
     end

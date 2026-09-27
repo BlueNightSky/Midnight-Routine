@@ -312,7 +312,7 @@ function MR:PopulateConfigFrame(f)
                 end
             end, "#2ae7c6", true)
 
-        Checkbox(L["Config_OpenRenown"],
+        Checkbox(MR.isForever and L["Forever_OpenReputations"] or L["Config_OpenRenown"],
             function() return MR.GetManagedWindowOpen and MR:GetManagedWindowOpen("renownOpen") end,
             function(v)
                 if v and MR.ClearManagedWindowsBundleHidden then MR:ClearManagedWindowsBundleHidden() end
@@ -320,6 +320,7 @@ function MR:PopulateConfigFrame(f)
                 elseif not v and MR.HideRenown then MR:HideRenown() end
             end, "#d9b82e")
 
+        if not MR.isForever or not ns.Forever.hideUnfinishedTrackers then
         Checkbox(L["Config_OpenRares"],
             function() return MR.GetManagedWindowOpen and MR:GetManagedWindowOpen("raresOpen") end,
             function(v)
@@ -328,13 +329,14 @@ function MR:PopulateConfigFrame(f)
                 elseif not v and MR.HideRares then MR:HideRares() end
             end, "#e05050")
 
-        Checkbox(L["Profession_Knowledge"],
+        Checkbox(MR.isForever and L["Forever_Professions"] or L["Profession_Knowledge"],
             function() return MR.GetManagedWindowOpen and MR:GetManagedWindowOpen("gatheringLocOpen") end,
             function(v)
                 if v and MR.ClearManagedWindowsBundleHidden then MR:ClearManagedWindowsBundleHidden() end
                 if v and MR.EnsureGatheringLocationsShown then MR:EnsureGatheringLocationsShown()
                 elseif not v and MR.HideGatheringLocations then MR:HideGatheringLocations() end
             end, "#c9853f")
+        end
 
         Gap(4); Divider()
         SectionLabel(L["Config_SectionKeyBinding"] or "KEY BINDING")

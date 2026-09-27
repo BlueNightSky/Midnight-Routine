@@ -211,6 +211,9 @@ function MR:GetQuestName(questId, fallback)
 end
 
 function MR:GetSelectableExpansions()
+    if self.isForever then
+        return { self:GetExpansionInfo("forever") }
+    end
     local counts = {}
     for _, mod in ipairs(self.modules) do
         local key = self:GetModuleExpansionKey(mod)
@@ -237,6 +240,9 @@ function MR:GetSelectableExpansions()
 end
 
 function MR:GetSelectedExpansionKey(forAltBoard)
+    if self.isForever then
+        return "forever"
+    end
     if not (self and self.db and self.db.profile) then
         return "midnight"
     end
@@ -273,7 +279,8 @@ function MR:GetVisibleExpansionModules(expansionKey)
     expansionKey = expansionKey or self:GetSelectedExpansionKey()
     local result = {}
     for _, mod in ipairs(self.modules) do
-        if mod.allExpansions or self:GetModuleExpansionKey(mod) == expansionKey then
+        if (not self.isForever or mod.foreverAvailable or self:GetModuleExpansionKey(mod) == "forever")
+            and (mod.allExpansions or self:GetModuleExpansionKey(mod) == expansionKey or (self.isForever and mod.foreverAvailable)) then
             result[#result + 1] = mod
         end
     end
@@ -637,7 +644,7 @@ end
 function MR:GetOrderedMainModules(expansionKey)
     local result = {}
     local seen = {}
-    local source = expansionKey and self:GetOrderedModules(expansionKey) or self:GetOrderedModules("all")
+    local source = (expansionKey or self.isForever) and self:GetOrderedModules(expansionKey or "forever") or self:GetOrderedModules("all")
     local stories = {}
 
     for _, mod in ipairs(source) do
@@ -776,6 +783,9 @@ end
 
 function MR:IsModuleEnabled(key)
     local mod = self.moduleByKey[key]
+    if self.isForever and mod and not (mod.foreverAvailable or self:GetModuleExpansionKey(mod) == "forever") then
+        return false
+    end
     if mod and not self:IsModuleAvailable(mod) then
         return false
     end

@@ -418,13 +418,14 @@ local function BuildWelcomeScreen()
     yOff = yOff - 8
 
     CreateUtilityPanel(
-        L["Welcome_Renown"],
-        L["Welcome_Renown_Desc"],
+        MR.isForever and L["Forever_WelcomeReputations"] or L["Welcome_Renown"],
+        MR.isForever and L["Forever_WelcomeReputationsDesc"] or L["Welcome_Renown_Desc"],
         function() return pendingRenown end,
         function(val) pendingRenown = val end,
         { 0.65, 0.50, 0.10, 0.90 }
     )
 
+    if not MR.isForever or not ns.Forever.hideUnfinishedTrackers then
     CreateUtilityPanel(
         L["Welcome_Rares"],
         L["Welcome_Rares_Desc"],
@@ -440,6 +441,7 @@ local function BuildWelcomeScreen()
         function(val) pendingGathering = val end,
         { 0.65, 0.57, 0.10, 0.90 }
     )
+    end
 
     content:SetHeight(math.abs(yOff) + 20)
     UpdateScrollBar()

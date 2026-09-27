@@ -1,4 +1,5 @@
 local _, ns = ...
+if ns.MR.isForever then return end
 local MR = ns.MR
 local CoreData = assert(ns.CoreData, "Core/Progress.lua must load before Modules/StoryCampaign.lua")
 local SetProgressValue = CoreData.SetProgressValue

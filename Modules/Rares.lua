@@ -1,4 +1,5 @@
 local _, ns = ...
+if ns.MR.isForever and ns.Forever.hideUnfinishedTrackers then return end
 local MR = ns.MR
 
 local FONT_HEADERS = ns.FONT_HEADERS
@@ -61,6 +62,10 @@ local MAP_TO_ZONE_KEY = {
 }
 
 local function GetCurrentZoneKey()
+    if MR.isForever then
+        local mapID = C_Map and C_Map.GetBestMapForUnit and C_Map.GetBestMapForUnit("player")
+        return mapID and tostring(mapID) or nil
+    end
     if not (C_Map and C_Map.GetBestMapForUnit and C_Map.GetMapInfo) then
         return nil
     end
@@ -236,6 +241,8 @@ local ZONES = {
     } or nil,
 }
 
+if MR.isForever then ZONES = {} end
+
 local ZONE_BY_KEY = {}
 for _, z in ipairs(ZONES) do ZONE_BY_KEY[z.key] = z end
 
@@ -279,6 +286,7 @@ for _, zone in ipairs(ZONES) do
 end
 
 local function ResolveRareQuestIDs(zone)
+    if MR.isForever then return false end
     if not zone then
         return
     end
@@ -401,7 +409,7 @@ local function GetRareTrackedKillStatus(rare)
 end
 
 local function SyncNewAchievementCriteriaKills(zone)
-    if not zone or type(GetAchievementCriteriaInfo) ~= "function" then
+    if not zone or not zone.achievId or type(GetAchievementCriteriaInfo) ~= "function" then
         return
     end
     local rareByNPC = RARES_BY_ZONE_AND_NPC[zone]
@@ -453,6 +461,13 @@ end
 function MR:OnRareUnitDied(_, unitGUID)
     local npcID = GetRareNPCIDFromGUID(unitGUID)
     local rare = npcID and RARE_BY_NPC_ID[npcID]
+    if not rare and self.isForever then
+        for _, zone in ipairs(ns.Forever.GetRareZones()) do
+            for _, candidate in ipairs(zone.rares) do
+                if candidate[6] == npcID then rare = candidate end
+            end
+        end
+    end
     if not rare then return end
     if SyncRareKillRecord("npc:" .. tostring(npcID)) and self.RefreshRares then self:RefreshRares() end
 end
@@ -615,6 +630,10 @@ local function ResetZoneColor(zone)
 end
 
 local function IsAchievementCriteriaCompleted(achievementId, criteriaIndex, rare)
+    if MR.isForever then
+        local char = MR.db and MR.db.char
+        return char and char.raresKills and rare and char.raresKills["npc:" .. tostring(rare[6])] ~= nil or false
+    end
     if not achievementId or not criteriaIndex then
         return false
     end
@@ -763,7 +782,21 @@ local function ApplyRaresFrameUpdater(frame)
     end)
 end
 
+local function RefreshForeverRareZones()
+    if not MR.isForever then return end
+    ZONES = ns.Forever.GetRareZones()
+    wipe(ZONE_BY_KEY)
+    wipe(RARE_BY_NPC_ID)
+    for _, zone in ipairs(ZONES) do
+        ZONE_BY_KEY[zone.key] = zone
+        for _, rare in ipairs(zone.rares) do
+            if rare[6] then RARE_BY_NPC_ID[rare[6]] = rare end
+        end
+    end
+end
+
 local function GetVisibleZones()
+    RefreshForeverRareZones()
     local db  = MR.db and MR.db.profile or {}
     local key = GetCurrentZoneKey()
     local function zoneVisible(z)
@@ -1158,6 +1191,7 @@ BuildRaresFrame = function()
                         AddWarbandRareTooltipLines(tooltip, rare)
                         if rare[3] and rare[4] and rare[5] then
                             tooltip:AddLine(" ")
+                            if MR.isForever then tooltip:AddLine(L["Forever_RareRecordedLocation"], 0.7, 0.7, 0.7, true) end
                             tooltip:AddLine(L["Gathering_ClickWaypoint"], 0.45, 0.85, 1)
                         end
                     end,
@@ -1399,6 +1433,7 @@ local function BuildRaresConfigFrame()
 end
 
 PopulateRaresConfig = function(f)
+    RefreshForeverRareZones()
     RefreshFonts()
     local keepLeft, keepTop
     if f.IsShown and f:IsShown() and MR.CaptureFrameScreenPosition then
@@ -1850,6 +1885,7 @@ function MR:OnRaresZoneChanged()
 end
 
 function MR:SyncAllRareKills(resolveQuestIDs)
+    RefreshForeverRareZones()
     local now = GetTime()
     local remaining = self._lastRareKillSyncAt and (1 - (now - self._lastRareKillSyncAt)) or 0
     if resolveQuestIDs ~= true and remaining > 0 then
@@ -1891,6 +1927,10 @@ end
 
 
 function MR:RefreshRares()
+    if self.isForever and raresFrame and raresFrame:IsShown() and raresFrame.layoutKey ~= GetRaresLayoutKey() then
+        RebuildRaresFrame()
+        self.raresFrame = raresFrame
+    end
     if not raresFrame or not raresFrame:IsShown() then
         return
     end

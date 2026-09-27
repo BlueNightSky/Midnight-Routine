@@ -1,4 +1,5 @@
 local _, ns = ...
+if ns.MR.isForever and ns.Forever.hideUnfinishedTrackers then return end
 local MR = ns.MR
 
 local FONT_HEADERS = ns.FONT_HEADERS
@@ -87,9 +88,9 @@ local PROFESSION_ICONS = {
     tailoring = "Interface\\Icons\\Trade_Tailoring",
 }
 
-local ALL_EXPANSIONS = ns.AllExpansions
+local ALL_EXPANSIONS = MR.isForever and ns.Forever.expansions or ns.AllExpansions
 
-local KNOWLEDGE_EXPANSION_MIDNIGHT_KEY = "midnight"
+local KNOWLEDGE_EXPANSION_MIDNIGHT_KEY = MR.isForever and "forever" or "midnight"
 
 local function GetKnowledgeExpansionOptions()
     local options = {}
@@ -126,7 +127,7 @@ local ENTRY_FALLBACK_ICONS = {
     reference = "Interface\\Icons\\INV_Misc_Book_09",
 }
 
-local PROFESSIONS = ns.MidnightProfessions
+local PROFESSIONS = MR.isForever and ns.Forever.professions or ns.MidnightProfessions
 
 local RECURRING_SECTION_KEYS = { weekly = true, darkmoon = true, lures = true }
 
@@ -135,6 +136,7 @@ local function IsRecurringSection(section)
 end
 
 local function HasProfessionLearned(skillLine, source)
+    if MR.isForever then return ns.Forever.HasProfession(skillLine) end
     if source and MR.HasProfessionForModule then
         return MR:HasProfessionForModule(skillLine, source)
     end
@@ -433,6 +435,7 @@ local function GetProfessionTaskProgress(mod, row)
 end
 
 local function GetProfessionTaskRows(profession, filterFn)
+    if MR.isForever then return ns.Forever.GetProfessionTasks(profession) end
     local rows = {}
     local doneCount, totalCount = 0, 0
     local db = MR.db and MR.db.profile or {}
@@ -503,6 +506,7 @@ local function GetProfessionTaskGroupLabel(group)
 end
 
 local function GetEntryIcon(entry)
+    if entry.icon then return entry.icon end
     if entry.itemID and C_Item and C_Item.GetItemIconByID then
         local icon = C_Item.GetItemIconByID(entry.itemID)
         if icon then
@@ -1571,7 +1575,7 @@ local function RenderProfessionTasksSection(card, cardW, cardY, fontSize, conten
         local maxValue = (type(row.max) == "number" and row.max > 0 and row.max)
             or (type(task.max) == "number" and task.max > 0 and task.max)
             or 1
-        local canManualToggle = not (row.key == "prof_catchup" and not catchupMax)
+        local canManualToggle = not MR.isForever and not (row.key == "prof_catchup" and not catchupMax)
         local manualOverride = MR:GetManualOverride(mod.key, row.key) or 0
         local forcedComplete = canManualToggle and maxValue and manualOverride >= maxValue
         local activeDone = forcedComplete and maxValue or (task.current or 0)
@@ -1783,7 +1787,7 @@ local function RenderSkinningLuresCard(content, width, yOff, fontSize, contentAl
     local iconTex = RenderTexture(iconPlate, "ARTWORK")
     iconTex:SetPoint("TOPLEFT", iconPlate, "TOPLEFT", 2, -2)
     iconTex:SetPoint("BOTTOMRIGHT", iconPlate, "BOTTOMRIGHT", -2, 2)
-    iconTex:SetTexture(PROFESSION_ICONS[profession.key] or "Interface\\Icons\\INV_Misc_QuestionMark")
+    iconTex:SetTexture(profession.icon or PROFESSION_ICONS[profession.key] or "Interface\\Icons\\INV_Misc_QuestionMark")
     iconTex:SetTexCoord(0.07, 0.93, 0.07, 0.93)
 
     local cardGlow = RenderTexture(card, "BACKGROUND")
@@ -1870,6 +1874,7 @@ local function RenderSkinningLuresCard(content, width, yOff, fontSize, contentAl
 end
 
 local function BuildProfessionCards(content, width, yOff, fontSize, contentAlpha, borderAlpha, chromeAlpha, accentAlpha, db, filterExpansionKey)
+    if MR.isForever then ns.Forever.RefreshProfessions() end
     local professionSource = MR.GetMainFrameProgressSource and MR:GetMainFrameProgressSource() or nil
     for _, expansion in ipairs(ALL_EXPANSIONS) do
       if not filterExpansionKey or expansion.key == filterExpansionKey then
@@ -2597,7 +2602,7 @@ local function BuildGatheringConfigFrame()
     tbar:SetScript("OnDragStop", function() frame:StopMovingOrSizing() end)
     local ttitle = tbar:CreateFontString(nil, "OVERLAY")
     ttitle:SetFont(ns.FONT_HEADERS, 10, GetFontFlags())
-    ttitle:SetText(ns.StripColorCodes(L["ProfKnowledge_Config_Title"]))
+    ttitle:SetText(MR.isForever and L["Forever_Professions"] or ns.StripColorCodes(L["ProfKnowledge_Config_Title"]))
     ttitle:SetPoint("LEFT", tbar, "LEFT", 8, 0)
     ns.RegisterThemedFontString(ttitle, 0.79, 0.52, 0.25)
     CloseButton(tbar, function() frame:Hide() end)
@@ -2627,6 +2632,7 @@ local function BuildGatheringConfigFrame()
 end
 
 PopulateGatheringConfig = function(frame)
+    if MR.isForever then ns.Forever.RefreshProfessions() end
     RefreshFonts()
     local keepLeft, keepTop
     if frame.IsShown and frame:IsShown() and MR.CaptureFrameScreenPosition then
@@ -3057,7 +3063,12 @@ PopulateGatheringConfig = function(frame)
                         yOff = yOff - 30
 
                         if isExpanded then
-                            if ns.BuildMainMenuRows then
+                            if MR.isForever then
+                                local tasks = ns.Forever.GetProfessionTasks(profession)
+                                for _, task in ipairs(tasks) do
+                                    ModuleRowControl(pad + 26, task.mod.key, task.row)
+                                end
+                            elseif ns.BuildMainMenuRows then
                                 local modKey = (ns.GetProfessionModuleKey and ns.GetProfessionModuleKey(expansion.key, profession)) or ("prof_" .. profession.key)
                                 local rowsByGroup, groupOrder = {}, {}
                                 for _, row in ipairs(ns.BuildMainMenuRows(profession, expansion)) do

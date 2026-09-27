@@ -12,6 +12,8 @@ local MR = {
 }
 ns.MR = MR
 MR.ns = ns
+local interfaceVersion = GetBuildInfo and tonumber((select(4, GetBuildInfo()))) or 0
+MR.isForever = interfaceVersion >= 16000 and interfaceVersion < 17000
 MR._eventController = Foundry:RequireModule("Events", 2):New(addonName)
 MR._timers = {}
 MR._buckets = {}
@@ -193,6 +195,15 @@ MR.pinnedModuleOrder = {
     midnight_activities = 1,
     s1_weekly = 2,
 }
+if MR.isForever then
+    MR.pinnedModuleOrder = {
+        custom_tasks = 1,
+        currencies = 2,
+        forever_professions = 3,
+        forever_rares = 4,
+        forever_reputations = 5,
+    }
+end
 MR.expansions  = {
     midnight = {
         key = "midnight",

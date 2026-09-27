@@ -1,4 +1,5 @@
 local _, ns = ...
+if ns.MR.isForever then return end
 local MR = ns.MR
 
 local SCAN_THROTTLE      = 2

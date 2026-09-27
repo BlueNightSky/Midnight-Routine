@@ -1,4 +1,5 @@
 local _, ns = ...
+if ns.MR.isForever then return end
 local L = LibStub("AceLocale-3.0"):GetLocale("MidnightRoutine", true)
 
 local T, WQ, WD, DMF = ns.T, ns.WQ, ns.WD, ns.DMF

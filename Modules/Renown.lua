@@ -149,6 +149,7 @@ local function AddDynamicFaction(factions, seenFactionIds, key, label, factionId
 end
 
 local function BuildDynamicFactions()
+    if MR.isForever then return ns.Forever.GetFactions() end
     local factions = {}
     local seenFactionIds = {}
     for _, faction in ipairs(BASE_FACTIONS) do
@@ -205,6 +206,7 @@ local function BuildDynamicFactions()
 end
 
 local function GetRenownData(faction)
+    if MR.isForever then return ns.Forever.GetReputation(faction) end
     local data = C_MajorFactions.GetMajorFactionData(faction.factionId)
     local maxRenown = GetFactionRenownCap(faction.factionId, faction.maxRenown)
     if not data then return 0, maxRenown, 0, 2500 end
@@ -217,17 +219,17 @@ end
 local function ShowRenownTooltip(owner, faction)
     local renown, maxRenown, rep, needed = GetRenownData(faction)
     local cr, cg, cb = GetFactionColor(faction)
-    local capped = C_MajorFactions.HasMaximumRenown(faction.factionId)
+    local capped = (MR.isForever and ns.Forever.IsReputationCapped(faction) or (not MR.isForever and C_MajorFactions.HasMaximumRenown(faction.factionId)))
 
     ns.ShowTooltip(owner, {
         build = function(tooltip)
             tooltip:SetText(string.format("|cff%s%s|r", faction.hex, faction.label), 1, 1, 1)
-            tooltip:AddLine(string.format(L["Renown_Level"], renown, maxRenown), cr, cg, cb)
+            tooltip:AddLine(MR.isForever and ns.Forever.GetStandingLabel(renown) or string.format(L["Renown_Level"], renown, maxRenown), cr, cg, cb)
             if capped then
-                tooltip:AddLine(L["Renown_MaxReached"], 0.2, 1, 0.5)
+                tooltip:AddLine(MR.isForever and L["Forever_ReputationMaxReached"] or L["Renown_MaxReached"], 0.2, 1, 0.5)
             else
                 tooltip:AddLine(string.format(L["Renown_Progress"], rep, needed), 0.7, 0.7, 0.7)
-                tooltip:AddLine(string.format(L["Renown_RepToNext"], needed - rep), 0.5, 0.5, 0.5)
+                tooltip:AddLine(string.format(MR.isForever and L["Forever_ReputationToNextStanding"] or L["Renown_RepToNext"], needed - rep), 0.5, 0.5, 0.5)
             end
         end,
     })
@@ -500,7 +502,7 @@ local function BuildRenownFrame()
     local titleTxt = titleBar:CreateFontString(nil, "OVERLAY")
     titleTxt:SetFont(ns.FONT_HEADERS, math.max(9, fontSize + 1), GetFontFlags())
     titleTxt:SetPoint("LEFT", titleBar, "LEFT", 10, 0)
-    titleTxt:SetText(ns.StripColorCodes(L["Renown_Title"]))
+    titleTxt:SetText(MR.isForever and L["Forever_Reputations"] or ns.StripColorCodes(L["Renown_Title"]))
 
     local closeBtn = CloseButton(titleBar, function()
         f:Hide()
@@ -513,7 +515,7 @@ local function BuildRenownFrame()
         "Interface\\Buttons\\UI-OptionsButton",
         {0.85, 0.65, 0.20},
         {1, 1, 1},
-        L["Renown_OptionsTitle"],
+        MR.isForever and L["Forever_ReputationOptions"] or L["Renown_OptionsTitle"],
         function() MR:ToggleRenownConfig() end
     )
 
@@ -886,7 +888,7 @@ RefreshRenownFrame = function()
         local faction   = row.faction
         local renown, maxRenown, rep, needed = GetRenownData(faction)
         local cr, cg, cb = GetFactionColor(faction)
-        local capped = C_MajorFactions.HasMaximumRenown(faction.factionId)
+        local capped = (MR.isForever and ns.Forever.IsReputationCapped(faction) or (not MR.isForever and C_MajorFactions.HasMaximumRenown(faction.factionId)))
         local visualAlpha = (db.renownCompact and not renownFrame.emblemMode) and 1.0 or ((renownFrame and renownFrame.bgAlpha) or 1.0)
 
         if renownFrame.emblemMode then
@@ -986,7 +988,7 @@ RefreshRenownFrame = function()
 
         if row.renownLabel then
             if not db.renownCompact and showLevel then
-                row.renownLabel:SetText(string.format("|cff%s%d|r |cff666666/|r |cffbbbbbb%d|r", faction.hex, renown, maxRenown))
+                row.renownLabel:SetText(MR.isForever and ns.Forever.GetStandingLabel(renown) or string.format("|cff%s%d|r |cff666666/|r |cffbbbbbb%d|r", faction.hex, renown, maxRenown))
                 row.renownLabel:Show()
             else
                 row.renownLabel:Hide()
@@ -1077,7 +1079,7 @@ local function BuildRenownConfigFrame()
 
     local ttitle = tbar:CreateFontString(nil, "OVERLAY")
     ttitle:SetFont(ns.FONT_HEADERS, 11, GetFontFlags())
-    ttitle:SetText(ns.StripColorCodes(L["Renown_Config_Title"]))
+    ttitle:SetText(ns.StripColorCodes(MR.isForever and L["Forever_ReputationOptions"] or L["Renown_Config_Title"]))
     ttitle:SetPoint("LEFT", tbar, "LEFT", 8, 0)
     ns.RegisterThemedFontString(ttitle, 0.85, 0.65, 0.10)
 
@@ -1637,6 +1639,10 @@ function MR:EnsureRenownShown()
 end
 
 function MR:RefreshRenown()
+    if self.isForever and renownFrame and renownFrame:IsShown() and renownFrame.layoutKey ~= GetRenownLayoutKey() then
+        RebuildRenownFrame()
+        self.renownFrame = renownFrame
+    end
     if self.ShouldSuspendBackgroundWorkInCurrentInstance and self:ShouldSuspendBackgroundWorkInCurrentInstance() then
         return
     end

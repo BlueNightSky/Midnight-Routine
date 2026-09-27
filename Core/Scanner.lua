@@ -684,7 +684,7 @@ end
 
 local function RunScanPass(self)
     self.db.char.lastSyncAt = GetServerTime()
-    if self.RefreshCurrentMythicPlusScore then
+    if not self.isForever and self.RefreshCurrentMythicPlusScore then
         self:RefreshCurrentMythicPlusScore()
     end
     if self.RefreshCurrentGold then
@@ -703,8 +703,8 @@ local function RunScanPass(self)
     end
     local now = GetTime and GetTime() or 0
     local concentrationChanged = false
-    if not self._lastProfessionConcentrationRefreshAt
-        or (now - self._lastProfessionConcentrationRefreshAt) > 1 then
+    if not self.isForever and (not self._lastProfessionConcentrationRefreshAt
+        or (now - self._lastProfessionConcentrationRefreshAt) > 1) then
         concentrationChanged = self:RefreshProfessionConcentration()
     end
 
@@ -760,11 +760,15 @@ local function RunScanPass(self)
     end
 
     if dirty then self:RequestDataRefresh() end
-    if self.RefreshRares  then self:RefreshRares()  end
-    if self.RefreshRenown then self:RefreshRenown() end
+    if not self.isForever and self.RefreshRares then self:RefreshRares() end
+    if not self.isForever and self.RefreshRenown then self:RefreshRenown() end
 end
 
 function MR:Scan()
+    if not (self.db and self.db.char) then
+        return
+    end
+
     if self:ShouldDeferForCombat("scan") then
         return
     end

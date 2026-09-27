@@ -39,7 +39,7 @@ function MR:OnEnteringWorld()
         self.db.char.classFile = classFile
     end
     self.db.char.lastSyncAt = GetServerTime()
-    if self.RefreshCurrentMythicPlusScore then
+    if not self.isForever and self.RefreshCurrentMythicPlusScore then
         self:RefreshCurrentMythicPlusScore()
         self:ScheduleTimer(function()
             if self:RefreshCurrentMythicPlusScore() then
@@ -50,7 +50,7 @@ function MR:OnEnteringWorld()
     if self.RefreshCurrentGold then
         self:RefreshCurrentGold()
     end
-    if self.RefreshWarbandGold then
+    if not self.isForever and self.RefreshWarbandGold then
         self:RefreshWarbandGold()
     end
     self:RebuildTurnInCompletions()
@@ -103,7 +103,7 @@ function MR:OnEnteringWorld()
     if not self._autoHideOnLoginPending then
         self:MaybeShowWelcomeScreen()
     end
-    if self.OnRenownUpdate and not self._renownUpdateBucketHandle then
+    if not self.isForever and self.OnRenownUpdate and not self._renownUpdateBucketHandle then
         self._renownUpdateBucketHandle = self:RegisterBucketEvent({
             "MAJOR_FACTION_RENOWN_LEVEL_CHANGED",
             "UPDATE_FACTION",

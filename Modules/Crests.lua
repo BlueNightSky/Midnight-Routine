@@ -164,6 +164,15 @@ function MR:IsCurrencyInCurrenciesModule(currencyID)
         return true
     end
 
+    if MR.isForever then
+        for _, row in ipairs(crestRows or {}) do
+            if tonumber(row.currencyId) == currencyID then
+                return true
+            end
+        end
+        return false
+    end
+
     for _, row in ipairs(defaultCrestRows or {}) do
         if tonumber(row.currencyId) == currencyID then
             return not (hiddenDefaults and hiddenDefaults[currencyID])
@@ -182,13 +191,30 @@ function MR:RefreshCurrenciesModule(refreshUI)
     local previousCount = #crestRows
     wipe(crestRows)
 
-    for _, row in ipairs(defaultCrestRows or {}) do
+    for _, row in ipairs(MR.isForever and { defaultCrestRows and defaultCrestRows[1] } or (defaultCrestRows or {})) do
         if row.currencyId and custom and custom[row.currencyId] then
             custom[row.currencyId] = nil
             RemoveCurrencyProgress(row.currencyId, "custom_currency_" .. tostring(row.currencyId))
         end
         if not (row.currencyId and hiddenDefaults and hiddenDefaults[row.currencyId]) then
             crestRows[#crestRows + 1] = CopyDefaultCurrencyRow(row)
+        end
+    end
+
+    if MR.isForever and C_CurrencyInfo and C_CurrencyInfo.GetCurrencyListSize and C_CurrencyInfo.GetCurrencyListInfo then
+        local seen = {}
+        for index = 1, C_CurrencyInfo.GetCurrencyListSize() do
+            local entry = C_CurrencyInfo.GetCurrencyListInfo(index)
+            local currencyID = entry and tonumber(entry.currencyID or entry.currencyId)
+            if currencyID and not seen[currencyID] and not (custom and custom[currencyID]) then
+                seen[currencyID] = true
+                local row = BuildCustomCurrencyRow(currencyID, entry)
+                row.removableCurrency = false
+                row.onRightClick = nil
+                row.tooltipFunc = nil
+                row.note = "From the character's currency list."
+                crestRows[#crestRows + 1] = row
+            end
         end
     end
 
@@ -443,6 +469,7 @@ RefreshCrestItemLabels()
 
 MR:RegisterModule({
     key         = "currencies",
+    foreverAvailable = true,
     label       = L["Currencies"],
     labelColor  = "#f1c232",
     resetType   = "weekly",

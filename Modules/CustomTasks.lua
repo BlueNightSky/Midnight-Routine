@@ -1598,6 +1598,7 @@ local function SyncCustomTaskCategoryModules(rows)
             local module = {
                 key = moduleKey,
                 allExpansions = true,
+                foreverAvailable = true,
                 label = group.category,
                 labelColor = RESET_TYPE_COLORS[group.resetType] or "#b07cff",
                 defaultOpen = true,
@@ -1750,6 +1751,7 @@ end
 MR:RegisterModule({
     key = CUSTOM_MODULE_KEY,
     allExpansions = true,
+    foreverAvailable = true,
     label = L["CustomTasks_Title"] or "Custom Tasks",
     labelColor = "#b07cff",
     defaultOpen = true,
