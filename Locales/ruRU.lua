@@ -93,6 +93,7 @@ L["Config_RememberManagedWindowsVisibility"] = "Помнить скрыть вс
 L["Config_PeekOnHover"]    = "Автоскрытие: показ при наведении"
 L["Config_AutoHidePanelHeaders"] = "Автоматически скрывать заголовки панелей"
 L["Config_ShowIcons"] = "Показывать иконки"
+L["Config_HideStatusBoxes"] = "Hide Clickable Boxes"
 L["Config_ShowSectionHeaders"] = "Показывать заголовки разделов"
 L["Config_ThemeColor"] = "Theme Color"
 L["Config_ThemeColorDesc"] = "Изменить цвет заголовков и акцентов по всему трекеру."

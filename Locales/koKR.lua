@@ -94,6 +94,7 @@ L["Config_RememberManagedWindowsVisibility"] = "미니맵 전체 숨기기 기�
 L["Config_PeekOnHover"] = "자동 숨김: 마우스 오버 시 표시"
 L["Config_AutoHidePanelHeaders"] = "패널 헤더 자동 숨김"
 L["Config_ShowIcons"] = "아이콘 표시"
+L["Config_HideStatusBoxes"] = "Hide Clickable Boxes"
 L["Config_ShowSectionHeaders"] = "섹션 헤더 표시"
 L["Config_ThemeColor"] = "Theme Color"
 L["Config_ThemeColorDesc"] = "Recolor headers and accents across the tracker."

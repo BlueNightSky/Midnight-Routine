@@ -543,7 +543,7 @@ end
 local function GetReservedTextWidth(rowFrame, desiredWidth)
     local rowWidth = rowFrame:GetWidth() or 0
     local minimumLabelWidth = math.max(40, GetFontSize() * 4)
-    local fixedLeftWidth = PADDING + 32
+    local fixedLeftWidth = PADDING + (MR.db.profile.hideStatusBoxes == true and 10 or 32)
     local maximumWidth = math.max(rowWidth - fixedLeftWidth - minimumLabelWidth, 0)
     return math.max(math.min(desiredWidth, maximumWidth), 0)
 end
@@ -1548,12 +1548,17 @@ UpdateMainRowWidget = function(self, section, mod, row, done, yOff, colW)
         rowFrame._statusFill:SetColorTexture(0.09, 0.10, 0.14, transparent and 0 or (0.70 * frameAlpha))
         rowFrame._statusCheck:Hide()
     end
-    if row.hideStatus then
+    local hideStatusBoxes = MR.db.profile.hideStatusBoxes == true
+    if row.hideStatus or hideStatusBoxes then
         rowFrame._statusBtn:Hide()
     else
         rowFrame._statusBtn:Show()
     end
-    rowFrame._statusBtn:EnableMouse((((isAutoTracked and not row.noMax) or row.toggleStatus) and not row.hideStatus) and true or false)
+    rowFrame._statusBtn:EnableMouse((((isAutoTracked and not row.noMax) or row.toggleStatus) and not row.hideStatus and not hideStatusBoxes) and true or false)
+
+    local contentAnchor = hideStatusBoxes and rowFrame or rowFrame._statusBtn
+    local contentPoint = hideStatusBoxes and "LEFT" or "RIGHT"
+    local contentOffset = hideStatusBoxes and (PADDING + 2) or 8
 
     local isCurrencyModule = mod and (mod.key == "currencies" or mod.key == "pvp_currencies")
     local countIconInfo = (showIcons and isCurrencyModule and row.currencyId) and GetRowIconInfo(mod, row) or nil
@@ -1565,7 +1570,10 @@ UpdateMainRowWidget = function(self, section, mod, row, done, yOff, colW)
     elseif rowIcon then
         rowIcon:SetVertexColor(1, 1, 1, 1)
     end
-    if rowIcon then rowIcon:SetShown(hasRowIcon) end
+    if rowIcon then
+        SetOneAnchor(rowIcon, "LEFT", contentAnchor, contentPoint, contentOffset, 0)
+        rowIcon:SetShown(hasRowIcon)
+    end
 
     local countIcon = countIconInfo and EnsureMainRowTexture(rowFrame, "_countIcon") or nil
     local hasCountIcon = countIcon and ApplyIconToTexture(countIcon, countIconInfo) or false
@@ -1582,7 +1590,7 @@ UpdateMainRowWidget = function(self, section, mod, row, done, yOff, colW)
     local professionCountEntry = isProfessionRow and row.mode == "count"
     local hasCoordText = hasWaypoint and not row.hideCoordText and not isProfessionRow
     local hasKnowledgeText = not professionCountEntry and type(row.kpTotal) == "number" and row.kpTotal > 0
-    local availableRightWidth = math.max(colW - (PADDING + 32) - math.max(40, GetFontSize() * 4), 0)
+    local availableRightWidth = math.max(colW - (hideStatusBoxes and (PADDING + 10) or (PADDING + 32)) - math.max(40, GetFontSize() * 4), 0)
     if hasCoordText and (hasKnowledgeText and 168 or 128) > availableRightWidth then
         hasCoordText = false
     end
@@ -1595,7 +1603,7 @@ UpdateMainRowWidget = function(self, section, mod, row, done, yOff, colW)
             "RIGHT", rowFrame, "RIGHT", lblRightOff, 0)
     else
         SetTwoAnchors(rowFrame._labelClip,
-            "LEFT", rowFrame._statusBtn, "RIGHT", 8, 0,
+            "LEFT", contentAnchor, contentPoint, contentOffset, 0,
             "RIGHT", rowFrame, "RIGHT", lblRightOff, 0)
     end
     rowFrame._label:SetJustifyH("LEFT")
@@ -1668,7 +1676,7 @@ UpdateMainRowWidget = function(self, section, mod, row, done, yOff, colW)
                     "RIGHT", rowFrame._count, "LEFT", -8, 0)
             else
                 SetTwoAnchors(rowFrame._labelClip,
-                    "LEFT", rowFrame._statusBtn, "RIGHT", 8, 0,
+                    "LEFT", contentAnchor, contentPoint, contentOffset, 0,
                     "RIGHT", rowFrame._count, "LEFT", -8, 0)
             end
         else
@@ -1682,18 +1690,18 @@ UpdateMainRowWidget = function(self, section, mod, row, done, yOff, colW)
         rowFrame._count:SetTextColor(countColor(done, row.max))
         if walletText then walletText:SetShown(not row.hideWallet) end
         if row.hideWallet then
-            local leftAnchor = hasRowIcon and rowFrame._rowIcon or rowFrame._statusBtn
+            local leftAnchor = hasRowIcon and rowFrame._rowIcon or contentAnchor
             SetTwoAnchors(rowFrame._labelClip,
-                "LEFT", leftAnchor, "RIGHT", 8, 0,
+                "LEFT", leftAnchor, hasRowIcon and "RIGHT" or contentPoint, hasRowIcon and 8 or contentOffset, 0,
                 "RIGHT", rowFrame._count, "LEFT", -8, 0)
         else
             SetFontIfChanged(walletText, FONT_ROWS, GetFontSize(), GetFontFlags())
             SetOneAnchor(walletText, "RIGHT", rowFrame._count, "LEFT", -5, 0)
             walletText:SetJustifyH("RIGHT")
             walletText:SetText(string.format("|cffaaaaaa(%d)|r", wallet))
-            local leftAnchor = hasRowIcon and rowFrame._rowIcon or rowFrame._statusBtn
+            local leftAnchor = hasRowIcon and rowFrame._rowIcon or contentAnchor
             SetTwoAnchors(rowFrame._labelClip,
-                "LEFT", leftAnchor, "RIGHT", 8, 0,
+                "LEFT", leftAnchor, hasRowIcon and "RIGHT" or contentPoint, hasRowIcon and 8 or contentOffset, 0,
                 "RIGHT", walletText, "LEFT", -8, 0)
         end
     elseif isProfessionRow then
@@ -1707,7 +1715,7 @@ UpdateMainRowWidget = function(self, section, mod, row, done, yOff, colW)
         end
         if hasCountIcon and row.currencyId then
             SetTwoAnchors(rowFrame._labelClip,
-                "LEFT", rowFrame._statusBtn, "RIGHT", 8, 0,
+                "LEFT", contentAnchor, contentPoint, contentOffset, 0,
                 "RIGHT", rowFrame._count, "LEFT", -8, 0)
         end
     end
@@ -1845,7 +1853,7 @@ UpdateMainRowWidget = function(self, section, mod, row, done, yOff, colW)
                 "RIGHT", rowFrame, "RIGHT", -(reservedRight + 8), 0)
         else
             SetTwoAnchors(rowFrame._labelClip,
-                "LEFT", rowFrame._statusBtn, "RIGHT", 8, 0,
+                "LEFT", contentAnchor, contentPoint, contentOffset, 0,
                 "RIGHT", rowFrame, "RIGHT", -(reservedRight + 8), 0)
         end
     end

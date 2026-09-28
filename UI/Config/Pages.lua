@@ -583,7 +583,17 @@ function MR:PopulateConfigFrame(f)
                 MR.db.profile.keepIconsVisibleInTextMode = v
                 RefreshVisualSettings()
             end,
-            0.40, 0.40, 0.40, 8, nil, cfgFs)
+            1, 1, 1, 8, nil, cfgFs)
+
+        Gap(2)
+        yOff = OptionsCheckbox(body, yOff,
+            L["Config_HideStatusBoxes"] or "Hide Clickable Boxes",
+            function() return MR.db.profile.hideStatusBoxes == true end,
+            function(v)
+                MR.db.profile.hideStatusBoxes = v and true or false
+                MR:RefreshUI()
+            end,
+            1, 1, 1, 8, nil, cfgFs)
 
         Gap(4); Divider()
         SectionLabel(L["Config_MainHeaderPosition"] or "Header & Sections")

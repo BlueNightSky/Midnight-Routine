@@ -94,6 +94,7 @@ L["Config_RememberManagedWindowsVisibility"] = "记住小地图全局隐藏状�
 L["Config_PeekOnHover"]    = "自动隐藏：鼠标悬停时显示"
 L["Config_AutoHidePanelHeaders"] = "自动隐藏界面标题"
 L["Config_ShowIcons"] = "显示图标"
+L["Config_HideStatusBoxes"] = "Hide Clickable Boxes"
 L["Config_ShowSectionHeaders"] = "显示模块标题"
 L["Config_ThemeColor"] = "主题颜色"
 L["Config_ThemeColorDesc"] = "修改追踪器内标题及高亮颜色。"

@@ -38,6 +38,7 @@ local DEFAULTS = {
         managedWindowsBundleHidden       = false,
         transparentMode = false,
         keepIconsVisibleInTextMode = true,
+        hideStatusBoxes = false,
         keepHeadersVisibleInTextMode = true,
         autoHidePanelHeaders = false,
         width           = 260,

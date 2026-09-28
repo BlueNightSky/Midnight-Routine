@@ -94,6 +94,7 @@ L["Config_RememberManagedWindowsVisibility"] = "Mémoriser tout masquer (minicar
 L["Config_PeekOnHover"]    = "Masquage auto : Révéler au survol"
 L["Config_AutoHidePanelHeaders"] = "Masquer automatiquement les en-têtes de panneau"
 L["Config_ShowIcons"] = "Afficher les icônes"
+L["Config_HideStatusBoxes"] = "Hide Clickable Boxes"
 L["Config_ShowSectionHeaders"] = "Afficher les en-têtes de section"
 L["Config_ThemeColor"] = "Theme Color"
 L["Config_ThemeColorDesc"] = "Recolor headers and accents across the tracker."

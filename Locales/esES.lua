@@ -94,6 +94,7 @@ L["Config_RememberManagedWindowsVisibility"] = "Recordar ocultar todo del minima
 L["Config_PeekOnHover"]    = "Ocultar automáticamente: revelar al pasar el ratón"
 L["Config_AutoHidePanelHeaders"] = "Ocultar automáticamente cabeceras de paneles"
 L["Config_ShowIcons"] = "Mostrar iconos"
+L["Config_HideStatusBoxes"] = "Hide Clickable Boxes"
 L["Config_ShowSectionHeaders"] = "Mostrar cabeceras de secciones"
 L["Config_ThemeColor"] = "Theme Color"
 L["Config_ThemeColorDesc"] = "Recolor headers and accents across the tracker."
