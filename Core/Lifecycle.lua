@@ -1,6 +1,5 @@
 local addonName, ns = ...
 local MR = ns.MR
-local L = LibStub("AceLocale-3.0"):GetLocale(addonName)
 local Foundry = _G.Foundry_1_0
 local Core = assert(ns.CoreInternals, "Core/Foundation.lua must load first")
 local DeepCopy = Core.DeepCopy
@@ -8,11 +7,8 @@ local MergeMissing = Core.MergeMissing
 local RestoreDefaults = Core.RestoreDefaults
 local IsTableEmpty = Core.IsTableEmpty
 local DEFAULTS = Core.defaults
-local STATIC_TURN_IN_COMPLETIONS = assert(Core.staticTurnInCompletions, "Core settings must load first")
-local TURN_IN_COMPLETIONS = assert(Core.turnInCompletions, "Core settings must load first")
 local CoreData = assert(ns.CoreData, "Core progress must load before lifecycle")
 local PruneProgressStore = CoreData.PruneProgressStore
-local SetProgressValue = CoreData.SetProgressValue
 
 local function CountArray(t)
     return type(t) == "table" and #t or 0
@@ -698,27 +694,6 @@ function MR:StartMemoryIdleAudit(duration)
     self._lastMemoryReportLuaKB = startLuaKB
 end
 
-function MR:RebuildTurnInCompletions()
-    wipe(TURN_IN_COMPLETIONS)
-
-    for questID, entry in pairs(STATIC_TURN_IN_COMPLETIONS) do
-        TURN_IN_COMPLETIONS[questID] = entry
-    end
-
-    for _, mod in ipairs(self.modules) do
-        for _, row in ipairs(mod.rows) do
-            if row.turnInTracked and row.questIds then
-                for _, questID in ipairs(row.questIds) do
-                    TURN_IN_COMPLETIONS[questID] = {
-                        mod = mod.key,
-                        row = row.key,
-                    }
-                end
-            end
-        end
-    end
-end
-
 function MR:OnInitialize()
     self.db = Foundry.DB:New({
         name = addonName,
@@ -1091,55 +1066,6 @@ function MR:UpdateInstanceFrameVisibility()
         self:HideManagedWindows(false)
     end
     self:ResumeDeferredInstanceWork()
-end
-
-function MR:CheckScheduledResets()
-    self:CheckWeeklyReset()
-    self:CheckDailyReset()
-    if self.RefreshDarkmoonVisibility and self:RefreshDarkmoonVisibility() then
-        if self:HasVisibleMainTrackingSurface() then
-            self:RequestDataRefresh()
-        else
-            self:MarkBackgroundDataDirty()
-        end
-        if self.RequestProfessionKnowledgeSurfaceRefresh then
-            self:RequestProfessionKnowledgeSurfaceRefresh()
-        end
-    end
-    self:ScheduleNextResetCheck()
-end
-
-function MR:OnQuestTurnInCompletion(_, questID)
-    local entry = TURN_IN_COMPLETIONS[questID]
-    if not entry or not self.db then return end
-    local ch = self.db.char
-    local modProgress = ch.progress and ch.progress[entry.mod]
-    if entry.mod == "s1_weekly" and entry.row == "saltherils_soiree" then
-        if not modProgress or modProgress["soiree_active_quest"] ~= questID then
-            return
-        end
-        modProgress["soiree_completed_name"] = modProgress["soiree_active_name"]
-    elseif entry.mod == "s1_weekly" and entry.row == "unity_against_void" then
-        if modProgress then
-            modProgress["uatv_completed_branch_name"] = modProgress["uatv_branch_name"]
-        end
-    elseif entry.mod == "s1_weekly" and entry.row == "ritual_sites" then
-        if modProgress then
-            modProgress["ritual_site_completed_name"] = modProgress["ritual_site_active_name"]
-                or modProgress["ritual_site_completed_name"]
-            modProgress["ritual_site_completed_map_id"] = modProgress["ritual_site_active_map_id"]
-                or modProgress["ritual_site_completed_map_id"]
-        end
-    end
-    SetProgressValue(ch.progress, entry.mod, entry.row, 1)
-    self._moduleStatsCache = nil
-    if self:IsModuleEnabled(entry.mod) then
-        if self.RequestDataRefresh then
-            self:RequestDataRefresh()
-        else
-            self:RefreshUI()
-        end
-    end
 end
 
 function MR:OnEnable()

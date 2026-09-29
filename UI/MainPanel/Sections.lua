@@ -1,170 +1,46 @@
 local _, ns = ...
 local MR = ns.MR
 local UI = assert(ns.UIInternal, "UI/Foundation.lua must load first")
-local L = UI.L
-local PANEL_MIN_WIDTH = UI.PANEL_MIN_WIDTH
-local PANEL_MAX_WIDTH = UI.PANEL_MAX_WIDTH
-local PANEL_MIN_HEIGHT = UI.PANEL_MIN_HEIGHT
-local PANEL_MAX_HEIGHT = UI.PANEL_MAX_HEIGHT
+local BuildVisibleMainModules = UI.BuildVisibleMainModules
 local FONT_ROWS = UI.FONT_ROWS
 local FONT_HEADERS = UI.FONT_HEADERS
-local MakeBackdrop = UI.MakeBackdrop
-local StyledFrame = UI.StyledFrame
-local LeftAccent = UI.LeftAccent
-local TitleBar = UI.TitleBar
-local CloseButton = UI.CloseButton
-local RestoreFramePos = UI.RestoreFramePos
-local RestoreManagedFramePos = UI.RestoreManagedFramePos
-local CaptureManagedFrameAnchor = UI.CaptureManagedFrameAnchor
-local ApplyManagedFrameAnchor = UI.ApplyManagedFrameAnchor
-local AnimateManagedFrameHeight = UI.AnimateManagedFrameHeight
-local WrapColor = UI.WrapColor
-local SetDotColor = UI.SetDotColor
-local OptionsGap = UI.OptionsGap
-local OptionsDivider = UI.OptionsDivider
-local OptionsSectionLabel = UI.OptionsSectionLabel
-local OptionsCheckbox = UI.OptionsCheckbox
-local OptionsBtn = UI.OptionsBtn
-local OptionsSlider = UI.OptionsSlider
-local OptionsColorSwatch = UI.OptionsColorSwatch
-local ApplyBackgroundTexture = UI.ApplyBackgroundTexture
-local FONT_SIZE_MIN = UI.FONT_SIZE_MIN
-local FONT_SIZE_MAX = UI.FONT_SIZE_MAX
-local DAY_SECONDS = UI.DAY_SECONDS
 local ROW_HEIGHT = UI.ROW_HEIGHT
 local HEADER_HEIGHT = UI.HEADER_HEIGHT
-local PADDING = UI.PADDING
 local SECTION_GAP = UI.SECTION_GAP
 local CURRENCY_BROWSER_HEIGHT = 26
 local BuildModuleStatsCache = UI.BuildModuleStatsCache
 local GetModuleStats = UI.GetModuleStats
 local IsMainTextOnlyMode = UI.IsMainTextOnlyMode
-local DIFF_BADGE_DEFS = UI.DIFF_BADGE_DEFS
-local DIFF_BADGE_ORDER = UI.DIFF_BADGE_ORDER
-local DIFF_BADGE_COLORS = UI.DIFF_BADGE_COLORS
-local GetWindowLayoutValue = UI.GetWindowLayoutValue
-local SetWindowLayoutValue = UI.SetWindowLayoutValue
 local countColor = UI.countColor
 local WC = UI.WC
 local GetFontSize = UI.GetFontSize
 local GetFontFlags = UI.GetFontFlags
-local GetLocaleFont = UI.GetLocaleFont
-local RefreshFonts = UI.RefreshFonts
 local SetFontIfChanged = UI.SetFontIfChanged
-local SetFontForText = UI.SetFontForText
-local GetMainHeaderHeight = UI.GetMainHeaderHeight
-local GetMainCharacterBarHeight = UI.GetMainCharacterBarHeight
-local GetMainHeaderMetrics = UI.GetMainHeaderMetrics
-local PEEK_ALPHA_IDLE = UI.PEEK_ALPHA_IDLE
-local PEEK_ALPHA_HOVER = UI.PEEK_ALPHA_HOVER
-local PEEK_FADE_IN = UI.PEEK_FADE_IN
-local PEEK_FADE_OUT = UI.PEEK_FADE_OUT
-local PeekFrameList = UI.PeekFrameList
-local AnyFrameHovered = UI.AnyFrameHovered
-local GetMovableHostFrame = UI.GetMovableHostFrame
-local peekUpdater = UI.peekUpdater
-local StopPeekAnimation = UI.StopPeekAnimation
-local StartPeekAnimation = UI.StartPeekAnimation
 local RecalcLayout = UI.RecalcLayout
 local hex = UI.hex
 local COL = UI.COL
-local ApplyTheme = UI.ApplyTheme
-local CleanLabelText = UI.CleanLabelText
-local ExtractInlineLabelColor = UI.ExtractInlineLabelColor
-local MainSectionHeaderOnMouseDown = UI.MainSectionHeaderOnMouseDown
-local MainSectionHeaderOnDragStart = UI.MainSectionHeaderOnDragStart
-local MainSectionHeaderOnDragStop = UI.MainSectionHeaderOnDragStop
-local MainSectionHeaderOnMouseUp = UI.MainSectionHeaderOnMouseUp
-local MainSectionHeaderOnEnter = UI.MainSectionHeaderOnEnter
-local MainSectionHeaderOnLeave = UI.MainSectionHeaderOnLeave
-local CurrencyBrowserButtonOnClick = UI.CurrencyBrowserButtonOnClick
-local CurrencyBrowserButtonOnEnter = UI.CurrencyBrowserButtonOnEnter
-local CurrencyBrowserButtonOnLeave = UI.CurrencyBrowserButtonOnLeave
 local StyleSectionCollapseIndicator = UI.StyleSectionCollapseIndicator
 local StyleCurrencyBrowserButton = UI.StyleCurrencyBrowserButton
-local MainHeaderActionOnClick = UI.MainHeaderActionOnClick
-local MainHeaderActionOnEnter = UI.MainHeaderActionOnEnter
-local MainHeaderActionOnLeave = UI.MainHeaderActionOnLeave
 
-local MainRowOnEnter = UI.MainRowOnEnter
-local MainRowOnLeave = UI.MainRowOnLeave
-local MainRowOnMouseDown = UI.MainRowOnMouseDown
-local MainStatusButtonOnClick = UI.MainStatusButtonOnClick
-local MainStatusButtonOnEnter = UI.MainStatusButtonOnEnter
-local MainStatusButtonOnLeave = UI.MainStatusButtonOnLeave
-local HideMainRowWidget = UI.HideMainRowWidget
 local PoolMainRowWidget = UI.PoolMainRowWidget
 local HideMainSectionWidget = UI.HideMainSectionWidget
 local HideMainExpansionHeaderWidget = UI.HideMainExpansionHeaderWidget
 local GetTextOnlyHeaderAlpha = UI.GetTextOnlyHeaderAlpha
 local ShouldShowIcons = UI.ShouldShowIcons
 local ShouldShowSectionHeaders = UI.ShouldShowSectionHeaders
-local UIIcons = UI.UIIcons
-local GetRowIconInfo = UI.GetRowIconInfo
 local GetModuleIconInfo = UI.GetModuleIconInfo
 local ShouldShowModuleHeaderIcon = UI.ShouldShowModuleHeaderIcon
 local ApplyIconToTexture = UI.ApplyIconToTexture
-local EnsureMainRowWidget = UI.EnsureMainRowWidget
 local UpdateMainRowWidget = UI.UpdateMainRowWidget
-local GetMainRowGroupKey = UI.GetMainRowGroupKey
-local IsMainRowVisible = UI.IsMainRowVisible
-local IsMainRowInGroup = UI.IsMainRowInGroup
-local HasVisibleRowsInMainGroup = UI.HasVisibleRowsInMainGroup
-local IsMainRowGroupEnabled = UI.IsMainRowGroupEnabled
-local SetMainRowGroupEnabled = UI.SetMainRowGroupEnabled
-local BuildMainRowGroupHeader = UI.BuildMainRowGroupHeader
-local ShouldRenderMainRowGroupHeader = UI.ShouldRenderMainRowGroupHeader
 local RenderMainGroupedRows = UI.RenderMainGroupedRows
-local CountMainGroupedRows = UI.CountMainGroupedRows
 local EnsureMainSeparator = UI.EnsureMainSeparator
-local EnsureMainExpansionHeaderWidget = UI.EnsureMainExpansionHeaderWidget
 local UpdateMainExpansionHeaderWidget = UI.UpdateMainExpansionHeaderWidget
-local CreateSectionWidget = UI.CreateSectionWidget
 local EnsureMainSectionWidget = UI.EnsureMainSectionWidget
-local EnsureDetachedSectionWidget = UI.EnsureDetachedSectionWidget
 local AddSectionRegistryEntry = UI.AddSectionRegistryEntry
-local UpdateDetachedSectionWidget = UI.UpdateDetachedSectionWidget
-local EnsureMainDifficultyBadges = UI.EnsureMainDifficultyBadges
-local GetMainFrameProgressModule = UI.GetMainFrameProgressModule
-local GetMainFrameRowCount = UI.GetMainFrameRowCount
-local RegisterTimerRow = UI.RegisterTimerRow
 
-local function SetOneAnchor(region, point, relativeTo, relativePoint, x, y)
-    if region._mrPoint1 == point
-        and region._mrRelative1 == relativeTo
-        and region._mrRelativePoint1 == relativePoint
-        and region._mrX1 == x
-        and region._mrY1 == y
-        and region._mrPoint2 == nil then
-        return
-    end
-    region:ClearAllPoints()
-    region:SetPoint(point, relativeTo, relativePoint, x, y)
-    region._mrPoint1, region._mrRelative1, region._mrRelativePoint1 = point, relativeTo, relativePoint
-    region._mrX1, region._mrY1, region._mrPoint2, region._mrRelative2 = x, y, nil, nil
-end
+local SetOneAnchor = ns.SetOneAnchor
 
-local function SetTwoAnchors(region, point1, relative1, relativePoint1, x1, y1, point2, relative2, relativePoint2, x2, y2)
-    if region._mrPoint1 == point1
-        and region._mrRelative1 == relative1
-        and region._mrRelativePoint1 == relativePoint1
-        and region._mrX1 == x1
-        and region._mrY1 == y1
-        and region._mrPoint2 == point2
-        and region._mrRelative2 == relative2
-        and region._mrRelativePoint2 == relativePoint2
-        and region._mrX2 == x2
-        and region._mrY2 == y2 then
-        return
-    end
-    region:ClearAllPoints()
-    region:SetPoint(point1, relative1, relativePoint1, x1, y1)
-    region:SetPoint(point2, relative2, relativePoint2, x2, y2)
-    region._mrPoint1, region._mrRelative1, region._mrRelativePoint1 = point1, relative1, relativePoint1
-    region._mrX1, region._mrY1 = x1, y1
-    region._mrPoint2, region._mrRelative2, region._mrRelativePoint2 = point2, relative2, relativePoint2
-    region._mrX2, region._mrY2 = x2, y2
-end
+local SetTwoAnchors = ns.SetTwoAnchors
 
 local function GetMainRenderRange(self)
     local scrollTop = self.scroll and self.scroll:GetVerticalScroll() or 0
@@ -560,51 +436,13 @@ function MR:RefreshMainPanelSectionsOnly(reuseStats)
     ClearArrayContents(self._timerRows)
     self._sectionRegistryCount = 0
 
-    local allDone, allTotal = 0, 0
     local frameW = MR.db.profile.width or 260
     local usableW = frameW - 9
     local MIN_COL = 200
     local numCols = math.max(1, math.floor(usableW / MIN_COL))
     local colW = math.floor(usableW / numCols)
 
-    local visibleMods = self._visibleModsBuffer or {}
-    self._visibleModsBuffer = visibleMods
-    local visibleModCount = 0
-    local lastVisibleExpansionKey
-    for _, mod in ipairs(MR:GetOrderedMainModules()) do
-        local modVisible = not mod.isVisible or mod:isVisible()
-        if MR:IsModuleEnabled(mod.key) and modVisible and not MR:IsModuleDetached(mod.key) and not (MR.ShouldHideProfessionModuleInMain and MR:ShouldHideProfessionModuleInMain(mod)) then
-            local stats = GetModuleStats(self, mod)
-            local doneRows = stats and stats.doneRows or 0
-            local shownRows = stats and stats.shownRows or 0
-            if shownRows > 0 then
-                local expansionKey = MR:GetModuleExpansionKey(mod)
-                if mod.profSkillLine and expansionKey ~= lastVisibleExpansionKey then
-                    lastVisibleExpansionKey = expansionKey
-                    visibleModCount = visibleModCount + 1
-                    local headerEntry = visibleMods[visibleModCount] or {}
-                    headerEntry.mod = nil
-                    headerEntry.expansionKey = expansionKey
-                    headerEntry.expansionHeaderKey = nil
-                    headerEntry.h = 22
-                    visibleMods[visibleModCount] = headerEntry
-                end
-                local expansionCollapsed = mod.profSkillLine and MR.db.profile.collapsedProfessionExpansions and MR.db.profile.collapsedProfessionExpansions[expansionKey] == true
-                if not expansionCollapsed then
-                    visibleModCount = visibleModCount + 1
-                    local slot = visibleModCount
-                    local entry = visibleMods[slot] or {}
-                    entry.mod = mod
-                    entry.expansionKey = nil
-                    entry.expansionHeaderKey = nil
-                    entry.h = stats and stats.height or 0
-                    visibleMods[slot] = entry
-                end
-                allTotal = allTotal + shownRows
-                allDone = allDone + math.min(doneRows, shownRows)
-            end
-        end
-    end
+    local visibleMods, visibleModCount, allDone, allTotal = BuildVisibleMainModules(self, false)
 
     local cols = self._colsBuffer or {}
     self._colsBuffer = cols
@@ -743,128 +581,6 @@ function MR:RefreshMainPanelSectionsOnly(reuseStats)
     return true
 end
 
-function MR:FastToggleMainSection(modKey)
-    if not (self and self.frame and self.content and self.frame:IsShown()) then
-        return false
-    end
-
-    if self._refreshUIInProgress or self._refreshUIPending or self._refreshUITimer or self._refreshRequestPending or self._refreshRequestTimer then
-        return false
-    end
-
-    if self.ShouldSuspendBackgroundWorkInCurrentInstance and self:ShouldSuspendBackgroundWorkInCurrentInstance() then
-        self._refreshUIDirty = true
-        return false
-    end
-
-    if self.ShouldDeferForCombat and self:ShouldDeferForCombat("refreshUI") then
-        self._refreshUIDirty = true
-        return false
-    end
-
-    if self:IsModuleDetached(modKey) then
-        return false
-    end
-
-    local mod = self.moduleByKey and self.moduleByKey[modKey]
-    local section = self._mainSectionFrames and self._mainSectionFrames[modKey]
-    local stats = self._moduleStatsCache and self._moduleStatsCache[modKey]
-    if not (mod and section and stats and stats.shownRows and stats.shownRows > 0) then
-        return false
-    end
-
-    local registryEntry
-    for _, info in ipairs(self.sectionRegistry or {}) do
-        if info.modKey == modKey then
-            registryEntry = info
-            break
-        end
-    end
-    if not registryEntry then
-        return false
-    end
-
-    local frameW = MR.db.profile.width or 260
-    local usableW = frameW - 9
-    local MIN_COL = 200
-    local numCols = math.max(1, math.floor(usableW / MIN_COL))
-    if numCols ~= 1 then
-        return false
-    end
-
-    RecalcLayout()
-    self._mainMaterializedTop = nil
-    self._mainMaterializedBottom = nil
-    local newOpen = not MR:IsModuleOpen(modKey)
-    MR:SetModuleOpen(modKey, newOpen)
-    stats.isOpen = newOpen
-    local showCurrencyBrowserButton = mod.key == "currencies" and MR.ToggleCurrencyBrowserFrame and MR:IsRowEnabled("currencies", "currency_browser_button")
-    stats.height = stats.shownRows == 0 and 0 or (HEADER_HEIGHT + 1 + SECTION_GAP + (showCurrencyBrowserButton and CURRENCY_BROWSER_HEIGHT or 0) + (newOpen and (stats.shownRows * ROW_HEIGHT) or 0))
-
-    local colW = math.floor(usableW / numCols)
-    local xOff = ((registryEntry.col or 1) - 1) * colW
-
-    UpdateMainSectionWidget(self, mod, registryEntry.yOff or 0, xOff, colW, registryEntry.col or 1, false, registryEntry.expansionHeaderKey)
-
-    local colOffsets = self._fastToggleColOffsets or {}
-    self._fastToggleColOffsets = colOffsets
-    for i = 1, numCols do
-        colOffsets[i] = 0
-    end
-    for i = numCols + 1, #colOffsets do
-        colOffsets[i] = nil
-    end
-
-    local totalH = 0
-    for _, info in ipairs(self.sectionRegistry or {}) do
-        local curSection = self._mainSectionFrames and self._mainSectionFrames[info.modKey]
-        local curStats = self._moduleStatsCache and self._moduleStatsCache[info.modKey]
-        if curSection and curSection:IsShown() and curStats and curStats.shownRows > 0 then
-            local col = math.max(1, math.min(info.col or 1, numCols))
-            local yOff = colOffsets[col] or 0
-            local x = (col - 1) * colW
-            local expansionHeaderH = info.expansionHeaderKey and 22 or 0
-            curSection:ClearAllPoints()
-            curSection:SetPoint("TOPLEFT", self.content, "TOPLEFT", x + 3, -yOff)
-            curSection:SetSize(math.max(colW - 6, 1), math.max((curStats.height or 0) - SECTION_GAP, HEADER_HEIGHT + 1) + expansionHeaderH)
-            info.col = col
-            info.yOff = yOff
-            info.bottom = yOff + (curStats.height or 0) + expansionHeaderH
-            colOffsets[col] = yOff + (curStats.height or 0) + expansionHeaderH
-            if colOffsets[col] > totalH then
-                totalH = colOffsets[col]
-            end
-        end
-    end
-
-    for c = 2, numCols do
-        local sep = EnsureMainSeparator(self, c - 1)
-        sep:SetWidth(1)
-        sep:ClearAllPoints()
-        sep:SetPoint("TOPLEFT", self.content, "TOPLEFT", (c - 1) * colW, 0)
-        sep:SetPoint("BOTTOMLEFT", self.content, "BOTTOMLEFT", (c - 1) * colW, 0)
-    end
-    if self._mainColumnSeparators then
-        for index, sep in pairs(self._mainColumnSeparators) do
-            sep:SetShown(index <= (numCols - 1))
-        end
-    end
-
-    self.content:SetWidth(usableW)
-    self.content:SetHeight(math.max(totalH, 1))
-    if self.scroll then
-        local maxScroll = math.max(math.max(totalH, 1) - self.scroll:GetHeight(), 0)
-        local cur = self.scroll:GetVerticalScroll()
-        if cur > maxScroll then
-            self.scroll:SetVerticalScroll(maxScroll)
-        end
-    end
-    if self.UpdateScrollBar then
-        self.UpdateScrollBar()
-    end
-
-    return true
-end
 
 IsMainTextOnlyMode = function()
     if not (MR and MR.db and MR.db.profile) then

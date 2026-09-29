@@ -1,0 +1,16 @@
+<Ui xmlns="http://www.blizzard.com/wow/ui/">
+    <Script file="Bootstrap.lua"/>
+    <Script file="Helpers.lua"/>
+    <Script file="Engine/Professions.lua"/>
+    <Script file="Engine/Scanner.lua"/>
+    <Script file="Engine/Resets.lua"/>
+    <Script file="Engine/Events.lua"/>
+    <Script file="Engine/Rares.lua"/>
+    <Script file="Engine/Renown.lua"/>
+    <Script file="Engine/Currencies.lua"/>
+    <Script file="Engine/Progress.lua"/>
+    <Script file="Engine/Warband.lua"/>
+    <Script file="Engine/ProfessionKnowledge.lua"/>
+    <Script file="Data/Rares.lua"/>
+    <Script file="Data/Renown.lua"/>
+</Ui>

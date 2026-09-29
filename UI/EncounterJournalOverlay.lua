@@ -1,6 +1,5 @@
 local _, ns = ...
 
-local FONT_ROWS = ns.FONT_ROWS
 local MR = ns.MR
 
 do

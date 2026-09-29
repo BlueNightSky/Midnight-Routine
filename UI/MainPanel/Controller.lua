@@ -1,137 +1,41 @@
 local _, ns = ...
 local MR = ns.MR
 local UI = assert(ns.UIInternal, "UI/Foundation.lua must load first")
+local BuildVisibleMainModules = UI.BuildVisibleMainModules
 local L = UI.L
 local PANEL_MIN_WIDTH = UI.PANEL_MIN_WIDTH
 local PANEL_MAX_WIDTH = UI.PANEL_MAX_WIDTH
 local PANEL_MIN_HEIGHT = UI.PANEL_MIN_HEIGHT
 local PANEL_MAX_HEIGHT = UI.PANEL_MAX_HEIGHT
-local FONT_ROWS = UI.FONT_ROWS
-local FONT_HEADERS = UI.FONT_HEADERS
 local MakeBackdrop = UI.MakeBackdrop
-local StyledFrame = UI.StyledFrame
-local LeftAccent = UI.LeftAccent
 local TitleBar = UI.TitleBar
-local CloseButton = UI.CloseButton
-local RestoreFramePos = UI.RestoreFramePos
 local RestoreManagedFramePos = UI.RestoreManagedFramePos
 local CaptureManagedFrameAnchor = UI.CaptureManagedFrameAnchor
 local ApplyManagedFrameAnchor = UI.ApplyManagedFrameAnchor
 local AnimateManagedFrameHeight = UI.AnimateManagedFrameHeight
-local WrapColor = UI.WrapColor
-local SetDotColor = UI.SetDotColor
-local OptionsGap = UI.OptionsGap
-local OptionsDivider = UI.OptionsDivider
-local OptionsSectionLabel = UI.OptionsSectionLabel
-local OptionsCheckbox = UI.OptionsCheckbox
-local OptionsBtn = UI.OptionsBtn
-local OptionsSlider = UI.OptionsSlider
-local OptionsColorSwatch = UI.OptionsColorSwatch
 local ApplyBackgroundTexture = UI.ApplyBackgroundTexture
 local FONT_SIZE_MIN = UI.FONT_SIZE_MIN
 local FONT_SIZE_MAX = UI.FONT_SIZE_MAX
-local DAY_SECONDS = UI.DAY_SECONDS
-local ROW_HEIGHT = UI.ROW_HEIGHT
-local HEADER_HEIGHT = UI.HEADER_HEIGHT
-local PADDING = UI.PADDING
-local SECTION_GAP = UI.SECTION_GAP
 local BuildModuleStatsCache = UI.BuildModuleStatsCache
-local GetModuleStats = UI.GetModuleStats
-local IsMainTextOnlyMode = UI.IsMainTextOnlyMode
-local DIFF_BADGE_DEFS = UI.DIFF_BADGE_DEFS
-local DIFF_BADGE_ORDER = UI.DIFF_BADGE_ORDER
-local DIFF_BADGE_COLORS = UI.DIFF_BADGE_COLORS
 local GetWindowLayoutValue = UI.GetWindowLayoutValue
 local SetWindowLayoutValue = UI.SetWindowLayoutValue
 local countColor = UI.countColor
-local WC = UI.WC
 local GetFontSize = UI.GetFontSize
 local GetFontFlags = UI.GetFontFlags
-local GetLocaleFont = UI.GetLocaleFont
 local RefreshFonts = UI.RefreshFonts
-local SetFontForText = UI.SetFontForText
 local GetMainHeaderHeight = UI.GetMainHeaderHeight
 local GetMainCharacterBarHeight = UI.GetMainCharacterBarHeight
 local GetMainHeaderMetrics = UI.GetMainHeaderMetrics
-local PEEK_ALPHA_IDLE = UI.PEEK_ALPHA_IDLE
-local PEEK_ALPHA_HOVER = UI.PEEK_ALPHA_HOVER
-local PEEK_FADE_IN = UI.PEEK_FADE_IN
-local PEEK_FADE_OUT = UI.PEEK_FADE_OUT
-local PeekFrameList = UI.PeekFrameList
-local AnyFrameHovered = UI.AnyFrameHovered
-local GetMovableHostFrame = UI.GetMovableHostFrame
-local peekUpdater = UI.peekUpdater
-local StopPeekAnimation = UI.StopPeekAnimation
-local StartPeekAnimation = UI.StartPeekAnimation
 local RecalcLayout = UI.RecalcLayout
-local hex = UI.hex
 local COL = UI.COL
 local ApplyTheme = UI.ApplyTheme
-local CleanLabelText = UI.CleanLabelText
-local ExtractInlineLabelColor = UI.ExtractInlineLabelColor
-local MainSectionHeaderOnMouseDown = UI.MainSectionHeaderOnMouseDown
-local MainSectionHeaderOnDragStart = UI.MainSectionHeaderOnDragStart
-local MainSectionHeaderOnDragStop = UI.MainSectionHeaderOnDragStop
-local MainSectionHeaderOnMouseUp = UI.MainSectionHeaderOnMouseUp
-local MainSectionHeaderOnEnter = UI.MainSectionHeaderOnEnter
-local MainSectionHeaderOnLeave = UI.MainSectionHeaderOnLeave
-local CurrencyBrowserButtonOnClick = UI.CurrencyBrowserButtonOnClick
-local CurrencyBrowserButtonOnEnter = UI.CurrencyBrowserButtonOnEnter
-local CurrencyBrowserButtonOnLeave = UI.CurrencyBrowserButtonOnLeave
-local StyleSectionCollapseIndicator = UI.StyleSectionCollapseIndicator
-local StyleCurrencyBrowserButton = UI.StyleCurrencyBrowserButton
-local MainHeaderActionOnClick = UI.MainHeaderActionOnClick
-local MainHeaderActionOnEnter = UI.MainHeaderActionOnEnter
-local MainHeaderActionOnLeave = UI.MainHeaderActionOnLeave
-local MainRowOnEnter = UI.MainRowOnEnter
-local MainRowOnLeave = UI.MainRowOnLeave
-local MainRowOnMouseDown = UI.MainRowOnMouseDown
-local MainStatusButtonOnClick = UI.MainStatusButtonOnClick
-local MainStatusButtonOnEnter = UI.MainStatusButtonOnEnter
-local MainStatusButtonOnLeave = UI.MainStatusButtonOnLeave
-local HideMainRowWidget = UI.HideMainRowWidget
-local PoolMainRowWidget = UI.PoolMainRowWidget
 local HideMainSectionWidget = UI.HideMainSectionWidget
 local HideMainExpansionHeaderWidget = UI.HideMainExpansionHeaderWidget
-local GetTextOnlyHeaderAlpha = UI.GetTextOnlyHeaderAlpha
-local ShouldShowIcons = UI.ShouldShowIcons
-local ShouldShowSectionHeaders = UI.ShouldShowSectionHeaders
-local UIIcons = UI.UIIcons
-local GetRowIconInfo = UI.GetRowIconInfo
-local GetModuleIconInfo = UI.GetModuleIconInfo
-local ShouldShowModuleHeaderIcon = UI.ShouldShowModuleHeaderIcon
-local ApplyIconToTexture = UI.ApplyIconToTexture
-local EnsureMainRowWidget = UI.EnsureMainRowWidget
-local UpdateMainRowWidget = UI.UpdateMainRowWidget
-local GetMainRowGroupKey = UI.GetMainRowGroupKey
-local IsMainRowVisible = UI.IsMainRowVisible
-local IsMainRowInGroup = UI.IsMainRowInGroup
-local HasVisibleRowsInMainGroup = UI.HasVisibleRowsInMainGroup
-local IsMainRowGroupEnabled = UI.IsMainRowGroupEnabled
-local SetMainRowGroupEnabled = UI.SetMainRowGroupEnabled
-local BuildMainRowGroupHeader = UI.BuildMainRowGroupHeader
-local ShouldRenderMainRowGroupHeader = UI.ShouldRenderMainRowGroupHeader
-local RenderMainGroupedRows = UI.RenderMainGroupedRows
-local CountMainGroupedRows = UI.CountMainGroupedRows
 local EnsureMainSeparator = UI.EnsureMainSeparator
-local EnsureMainExpansionHeaderWidget = UI.EnsureMainExpansionHeaderWidget
 local UpdateMainExpansionHeaderWidget = UI.UpdateMainExpansionHeaderWidget
-local CreateSectionWidget = UI.CreateSectionWidget
-local EnsureMainSectionWidget = UI.EnsureMainSectionWidget
-local EnsureDetachedSectionWidget = UI.EnsureDetachedSectionWidget
-local AddSectionRegistryEntry = UI.AddSectionRegistryEntry
-local UpdateDetachedSectionWidget = UI.UpdateDetachedSectionWidget
-local EnsureMainDifficultyBadges = UI.EnsureMainDifficultyBadges
-local GetMainFrameProgressModule = UI.GetMainFrameProgressModule
-local GetMainFrameRowCount = UI.GetMainFrameRowCount
-local RegisterTimerRow = UI.RegisterTimerRow
 local UpdateMainSectionWidget = UI.UpdateMainSectionWidget
 local ClearArrayContents = UI.ClearArrayContents
 
-local function GetModuleWindowTitle(mod)
-    local cleanLabel = mod.label:gsub("|c%x%x%x%x%x%x%x%x(.-)%|r", "%1"):gsub("|[cCrR]%x*", "")
-    return cleanLabel
-end
 
 local function ApplyWidth(newW)
     newW = math.max(PANEL_MIN_WIDTH, math.min(PANEL_MAX_WIDTH, math.floor(newW)))
@@ -321,39 +225,7 @@ local function ApplyMainFrameAnchor(frame, anchorMode, preserveScreenPosition)
     SetStoredMainFrameActiveAnchor(pos)
 end
 
-local function ApplyExplicitMainFrameAnchor(frame, pos)
-    if not frame or not pos or not pos.point then
-        return
-    end
 
-    ApplyManagedFrameAnchor(frame, pos)
-end
-
-local function GetBottomHeaderCollapseTarget(frame)
-    local movedSinceExpand = MR and MR._mainFrameMovedSinceExpand == true
-    local anchor
-
-    if movedSinceExpand then
-        anchor = CaptureMainFrameAnchor(frame, "bottom")
-    else
-        anchor = (MR and MR._mainCollapsedAnchorBeforeExpand) or GetStoredMainFrameCollapsedAnchor()
-    end
-
-    if not (anchor and anchor.point) then
-        anchor = CaptureMainFrameAnchor(frame, "bottom")
-    end
-
-    if anchor and anchor.point then
-        SetStoredMainFrameCollapsedAnchor(anchor)
-    end
-
-    if MR then
-        MR._mainCollapsedAnchorBeforeExpand = nil
-        MR._mainFrameMovedSinceExpand = false
-    end
-
-    return anchor
-end
 
 local function IsMainCombatDisabled()
     return MR and MR.IsCombatUpdatesDisabled and MR:IsCombatUpdatesDisabled()
@@ -1105,22 +977,7 @@ function MR:UpdateCombatDisplayState()
     end
 end
 
-local function HasVisibleUISurface(self)
-    if self.frame and self.frame:IsShown() then
-        return true
-    end
-    if self.altBoardFrame and self.altBoardFrame:IsShown() then
-        return true
-    end
-    if self.detachedFrames then
-        for _, frame in pairs(self.detachedFrames) do
-            if frame and frame.IsShown and frame:IsShown() then
-                return true
-            end
-        end
-    end
-    return false
-end
+local HasVisibleUISurface = MR.HasVisibleMainTrackingSurface
 
 function MR:RefreshUI()
     if self.NoteRefreshSource then
@@ -1219,7 +1076,6 @@ function MR:RefreshUI()
         ClearArrayContents(self._timerRows)
         self._sectionRegistryCount = 0
 
-        local allDone, allTotal = 0, 0
 
         local frameW   = MR.db.profile.width or 260
         local usableW  = frameW - 9
@@ -1227,49 +1083,7 @@ function MR:RefreshUI()
         local numCols  = math.max(1, math.floor(usableW / MIN_COL))
         local colW     = math.floor(usableW / numCols)
 
-        local visibleMods = self._visibleModsBuffer or {}
-        self._visibleModsBuffer = visibleMods
-        local visibleModCount = 0
-        local lastVisibleExpansionKey
-        for _, mod in ipairs(MR:GetOrderedMainModules()) do
-            local modVisible = not mod.isVisible or mod:isVisible()
-            if MR:IsModuleEnabled(mod.key) and modVisible and not MR:IsModuleDetached(mod.key) and not (MR.ShouldHideProfessionModuleInMain and MR:ShouldHideProfessionModuleInMain(mod)) then
-                if MR.PrimeProfessionKnowledgeModuleLabels then
-                    MR:PrimeProfessionKnowledgeModuleLabels(mod)
-                end
-                local stats = GetModuleStats(self, mod)
-                local totalRows = stats and stats.totalRows or 0
-                local doneRows = stats and stats.doneRows or 0
-                local shownRows = stats and stats.shownRows or 0
-                if shownRows > 0 then
-                    local h = stats and stats.height or 0
-                    local expansionKey = MR:GetModuleExpansionKey(mod)
-                    if mod.profSkillLine and expansionKey ~= lastVisibleExpansionKey then
-                        lastVisibleExpansionKey = expansionKey
-                        visibleModCount = visibleModCount + 1
-                        local headerEntry = visibleMods[visibleModCount] or {}
-                        headerEntry.mod = nil
-                        headerEntry.expansionKey = expansionKey
-                        headerEntry.expansionHeaderKey = nil
-                        headerEntry.h = 22
-                        visibleMods[visibleModCount] = headerEntry
-                    end
-                    local expansionCollapsed = mod.profSkillLine and MR.db.profile.collapsedProfessionExpansions and MR.db.profile.collapsedProfessionExpansions[expansionKey] == true
-                    if not expansionCollapsed then
-                        visibleModCount = visibleModCount + 1
-                        local slot = visibleModCount
-                        local entry = visibleMods[slot] or {}
-                        entry.mod = mod
-                        entry.expansionKey = nil
-                        entry.expansionHeaderKey = nil
-                        entry.h = h
-                        visibleMods[slot] = entry
-                    end
-                    allTotal = allTotal + shownRows
-                    allDone = allDone + math.min(doneRows, shownRows)
-                end
-            end
-        end
+        local visibleMods, visibleModCount, allDone, allTotal = BuildVisibleMainModules(self, true)
 
         local cols = self._colsBuffer or {}
         self._colsBuffer = cols
@@ -1557,7 +1371,6 @@ function MR:ApplySharedMediaSettings()
 end
 
 
-UI.GetModuleWindowTitle = GetModuleWindowTitle
 UI.ApplyWidth = ApplyWidth
 UI.ApplyHeight = ApplyHeight
 UI.ApplyFontSize = ApplyFontSize
@@ -1565,20 +1378,4 @@ UI.GetWindowLayoutValue = GetWindowLayoutValue
 UI.SetWindowLayoutValue = SetWindowLayoutValue
 UI.GetMainHeaderPosition = GetMainHeaderPosition
 UI.IsAnimatedMinimizeEnabled = IsAnimatedMinimizeEnabled
-UI.IsMainHeaderAtBottom = IsMainHeaderAtBottom
-UI.GetMainFrameExpandedHeight = GetMainFrameExpandedHeight
-UI.GetMainFrameCollapsedHeight = GetMainFrameCollapsedHeight
-UI.GetStoredMainFrameCollapsedAnchor = GetStoredMainFrameCollapsedAnchor
-UI.SetStoredMainFrameCollapsedAnchor = SetStoredMainFrameCollapsedAnchor
-UI.GetStoredMainFrameActiveAnchor = GetStoredMainFrameActiveAnchor
-UI.SetStoredMainFrameActiveAnchor = SetStoredMainFrameActiveAnchor
-UI.CaptureMainFrameAnchor = CaptureMainFrameAnchor
-UI.ApplyMainFrameAnchor = ApplyMainFrameAnchor
-UI.ApplyExplicitMainFrameAnchor = ApplyExplicitMainFrameAnchor
-UI.GetBottomHeaderCollapseTarget = GetBottomHeaderCollapseTarget
 UI.ApplyMainFrameLayout = ApplyMainFrameLayout
-UI.SetMainFrameChromeVisible = SetMainFrameChromeVisible
-UI.mainFrameAnimator = mainFrameAnimator
-UI.StopMainFrameAnimation = StopMainFrameAnimation
-UI.AnimateMainFrameHeight = AnimateMainFrameHeight
-UI.HasVisibleUISurface = HasVisibleUISurface

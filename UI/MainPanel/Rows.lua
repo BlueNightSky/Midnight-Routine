@@ -2,35 +2,9 @@ local _, ns = ...
 local MR = ns.MR
 local UI = assert(ns.UIInternal, "UI/Foundation.lua must load first")
 local L = UI.L
-local PANEL_MIN_WIDTH = UI.PANEL_MIN_WIDTH
-local PANEL_MAX_WIDTH = UI.PANEL_MAX_WIDTH
-local PANEL_MIN_HEIGHT = UI.PANEL_MIN_HEIGHT
-local PANEL_MAX_HEIGHT = UI.PANEL_MAX_HEIGHT
 local FONT_ROWS = UI.FONT_ROWS
 local FONT_HEADERS = UI.FONT_HEADERS
 local MakeBackdrop = UI.MakeBackdrop
-local StyledFrame = UI.StyledFrame
-local LeftAccent = UI.LeftAccent
-local TitleBar = UI.TitleBar
-local CloseButton = UI.CloseButton
-local RestoreFramePos = UI.RestoreFramePos
-local RestoreManagedFramePos = UI.RestoreManagedFramePos
-local CaptureManagedFrameAnchor = UI.CaptureManagedFrameAnchor
-local ApplyManagedFrameAnchor = UI.ApplyManagedFrameAnchor
-local AnimateManagedFrameHeight = UI.AnimateManagedFrameHeight
-local WrapColor = UI.WrapColor
-local SetDotColor = UI.SetDotColor
-local OptionsGap = UI.OptionsGap
-local OptionsDivider = UI.OptionsDivider
-local OptionsSectionLabel = UI.OptionsSectionLabel
-local OptionsCheckbox = UI.OptionsCheckbox
-local OptionsBtn = UI.OptionsBtn
-local OptionsSlider = UI.OptionsSlider
-local OptionsColorSwatch = UI.OptionsColorSwatch
-local ApplyBackgroundTexture = UI.ApplyBackgroundTexture
-local FONT_SIZE_MIN = UI.FONT_SIZE_MIN
-local FONT_SIZE_MAX = UI.FONT_SIZE_MAX
-local DAY_SECONDS = UI.DAY_SECONDS
 local ROW_HEIGHT = UI.ROW_HEIGHT
 local HEADER_HEIGHT = UI.HEADER_HEIGHT
 local PADDING = UI.PADDING
@@ -42,33 +16,14 @@ local IsMainTextOnlyMode = UI.IsMainTextOnlyMode
 local DIFF_BADGE_DEFS = UI.DIFF_BADGE_DEFS
 local DIFF_BADGE_ORDER = UI.DIFF_BADGE_ORDER
 local DIFF_BADGE_COLORS = UI.DIFF_BADGE_COLORS
-local GetWindowLayoutValue = UI.GetWindowLayoutValue
-local SetWindowLayoutValue = UI.SetWindowLayoutValue
 local countColor = UI.countColor
 local WC = UI.WC
 local GetFontSize = UI.GetFontSize
 local GetFontFlags = UI.GetFontFlags
-local GetLocaleFont = UI.GetLocaleFont
-local RefreshFonts = UI.RefreshFonts
 local SetFontIfChanged = UI.SetFontIfChanged
 local SetFontForText = UI.SetFontForText
-local GetMainHeaderHeight = UI.GetMainHeaderHeight
-local GetMainCharacterBarHeight = UI.GetMainCharacterBarHeight
-local GetMainHeaderMetrics = UI.GetMainHeaderMetrics
-local PEEK_ALPHA_IDLE = UI.PEEK_ALPHA_IDLE
-local PEEK_ALPHA_HOVER = UI.PEEK_ALPHA_HOVER
-local PEEK_FADE_IN = UI.PEEK_FADE_IN
-local PEEK_FADE_OUT = UI.PEEK_FADE_OUT
-local PeekFrameList = UI.PeekFrameList
-local AnyFrameHovered = UI.AnyFrameHovered
-local GetMovableHostFrame = UI.GetMovableHostFrame
-local peekUpdater = UI.peekUpdater
-local StopPeekAnimation = UI.StopPeekAnimation
-local StartPeekAnimation = UI.StartPeekAnimation
-local RecalcLayout = UI.RecalcLayout
 local hex = UI.hex
 local COL = UI.COL
-local ApplyTheme = UI.ApplyTheme
 local CleanLabelText = UI.CleanLabelText
 local ExtractInlineLabelColor = UI.ExtractInlineLabelColor
 local HideOwnedTooltip = ns.HideOwnedTooltip
@@ -87,55 +42,9 @@ local MainHeaderActionOnClick = UI.MainHeaderActionOnClick
 local MainHeaderActionOnEnter = UI.MainHeaderActionOnEnter
 local MainHeaderActionOnLeave = UI.MainHeaderActionOnLeave
 
-local function SetOneAnchor(region, point, relativeTo, relativePoint, x, y)
-    if region._mrPoint1 == point
-        and region._mrRelative1 == relativeTo
-        and region._mrRelativePoint1 == relativePoint
-        and region._mrX1 == x
-        and region._mrY1 == y
-        and region._mrPoint2 == nil then
-        return
-    end
+local SetOneAnchor = ns.SetOneAnchor
 
-    region:ClearAllPoints()
-    region:SetPoint(point, relativeTo, relativePoint, x, y)
-    region._mrPoint1 = point
-    region._mrRelative1 = relativeTo
-    region._mrRelativePoint1 = relativePoint
-    region._mrX1 = x
-    region._mrY1 = y
-    region._mrPoint2 = nil
-    region._mrRelative2 = nil
-end
-
-local function SetTwoAnchors(region, point1, relative1, relativePoint1, x1, y1, point2, relative2, relativePoint2, x2, y2)
-    if region._mrPoint1 == point1
-        and region._mrRelative1 == relative1
-        and region._mrRelativePoint1 == relativePoint1
-        and region._mrX1 == x1
-        and region._mrY1 == y1
-        and region._mrPoint2 == point2
-        and region._mrRelative2 == relative2
-        and region._mrRelativePoint2 == relativePoint2
-        and region._mrX2 == x2
-        and region._mrY2 == y2 then
-        return
-    end
-
-    region:ClearAllPoints()
-    region:SetPoint(point1, relative1, relativePoint1, x1, y1)
-    region:SetPoint(point2, relative2, relativePoint2, x2, y2)
-    region._mrPoint1 = point1
-    region._mrRelative1 = relative1
-    region._mrRelativePoint1 = relativePoint1
-    region._mrX1 = x1
-    region._mrY1 = y1
-    region._mrPoint2 = point2
-    region._mrRelative2 = relative2
-    region._mrRelativePoint2 = relativePoint2
-    region._mrX2 = x2
-    region._mrY2 = y2
-end
+local SetTwoAnchors = ns.SetTwoAnchors
 
 local function SetWidthIfChanged(region, width)
     if region._mrLayoutWidth ~= width then
@@ -552,14 +461,6 @@ local function IsMainRowInGroup(mod, row, group)
     return GetMainRowGroupKey(row) == group and IsMainRowVisible(mod, row)
 end
 
-local function HasVisibleRowsInMainGroup(mod, rows, group)
-    for _, row in ipairs(rows or {}) do
-        if IsMainRowInGroup(mod, row, group) then
-            return true
-        end
-    end
-    return false
-end
 
 local function IsMainRowGroupEnabled(mod, group)
     if not (mod and mod.key and group) then
@@ -1984,29 +1885,10 @@ GetModuleStats = function(self, mod)
     return fallback[mod.key]
 end
 
-function MR:MeasureSection(mod)
-    local stats = GetModuleStats(self, mod)
-    return stats and stats.height or 0
-end
-
-function MR:GetModuleRowStats(mod)
-    local stats = GetModuleStats(self, mod)
-    if not stats then
-        return 0, 0, 0
-    end
-
-    return stats.totalRows, stats.doneRows, stats.shownRows
-end
 
 
 
-UI.MainRowOnEnter = MainRowOnEnter
-UI.MainRowOnLeave = MainRowOnLeave
-UI.MainRowOnMouseDown = MainRowOnMouseDown
-UI.MainStatusButtonOnClick = MainStatusButtonOnClick
-UI.MainStatusButtonOnEnter = MainStatusButtonOnEnter
-UI.MainStatusButtonOnLeave = MainStatusButtonOnLeave
-UI.HideMainRowWidget = HideMainRowWidget
+
 UI.PoolMainRowWidget = PoolMainRowWidget
 UI.HideMainSectionWidget = HideMainSectionWidget
 UI.HideMainExpansionHeaderWidget = HideMainExpansionHeaderWidget
@@ -2014,34 +1896,64 @@ UI.GetTextOnlyHeaderAlpha = GetTextOnlyHeaderAlpha
 UI.ShouldShowIcons = ShouldShowIcons
 UI.ShouldShowSectionHeaders = ShouldShowSectionHeaders
 UI.UIIcons = UIIcons
-UI.GetRowIconInfo = GetRowIconInfo
 UI.GetModuleIconInfo = GetModuleIconInfo
 UI.ShouldShowModuleHeaderIcon = ShouldShowModuleHeaderIcon
 UI.ApplyIconToTexture = ApplyIconToTexture
-UI.EnsureMainRowWidget = EnsureMainRowWidget
 UI.UpdateMainRowWidget = UpdateMainRowWidget
-UI.GetMainRowGroupKey = GetMainRowGroupKey
-UI.IsMainRowVisible = IsMainRowVisible
-UI.IsMainRowInGroup = IsMainRowInGroup
-UI.HasVisibleRowsInMainGroup = HasVisibleRowsInMainGroup
-UI.IsMainRowGroupEnabled = IsMainRowGroupEnabled
-UI.SetMainRowGroupEnabled = SetMainRowGroupEnabled
-UI.BuildMainRowGroupHeader = BuildMainRowGroupHeader
-UI.ShouldRenderMainRowGroupHeader = ShouldRenderMainRowGroupHeader
 UI.RenderMainGroupedRows = RenderMainGroupedRows
-UI.CountMainGroupedRows = CountMainGroupedRows
 UI.EnsureMainSeparator = EnsureMainSeparator
-UI.EnsureMainExpansionHeaderWidget = EnsureMainExpansionHeaderWidget
 UI.UpdateMainExpansionHeaderWidget = UpdateMainExpansionHeaderWidget
-UI.CreateSectionWidget = CreateSectionWidget
 UI.EnsureMainSectionWidget = EnsureMainSectionWidget
-UI.EnsureDetachedSectionWidget = EnsureDetachedSectionWidget
 UI.AddSectionRegistryEntry = AddSectionRegistryEntry
 UI.UpdateDetachedSectionWidget = UpdateDetachedSectionWidget
-UI.EnsureMainDifficultyBadges = EnsureMainDifficultyBadges
-UI.GetMainFrameProgressModule = GetMainFrameProgressModule
-UI.GetMainFrameRowCount = GetMainFrameRowCount
-UI.RegisterTimerRow = RegisterTimerRow
+local function BuildVisibleMainModules(self, primeLabels)
+    local allDone, allTotal = 0, 0
+    local visibleMods = self._visibleModsBuffer or {}
+    self._visibleModsBuffer = visibleMods
+    local visibleModCount = 0
+    local lastVisibleExpansionKey
+    for _, mod in ipairs(MR:GetOrderedMainModules()) do
+        local modVisible = not mod.isVisible or mod:isVisible()
+        if MR:IsModuleEnabled(mod.key) and modVisible and not MR:IsModuleDetached(mod.key) and not (MR.ShouldHideProfessionModuleInMain and MR:ShouldHideProfessionModuleInMain(mod)) then
+            if primeLabels and MR.PrimeProfessionKnowledgeModuleLabels then
+                MR:PrimeProfessionKnowledgeModuleLabels(mod)
+            end
+            local stats = GetModuleStats(self, mod)
+            local doneRows = stats and stats.doneRows or 0
+            local shownRows = stats and stats.shownRows or 0
+            if shownRows > 0 then
+                local h = stats and stats.height or 0
+                local expansionKey = MR:GetModuleExpansionKey(mod)
+                if mod.profSkillLine and expansionKey ~= lastVisibleExpansionKey then
+                    lastVisibleExpansionKey = expansionKey
+                    visibleModCount = visibleModCount + 1
+                    local headerEntry = visibleMods[visibleModCount] or {}
+                    headerEntry.mod = nil
+                    headerEntry.expansionKey = expansionKey
+                    headerEntry.expansionHeaderKey = nil
+                    headerEntry.h = 22
+                    visibleMods[visibleModCount] = headerEntry
+                end
+                local expansionCollapsed = mod.profSkillLine and MR.db.profile.collapsedProfessionExpansions and MR.db.profile.collapsedProfessionExpansions[expansionKey] == true
+                if not expansionCollapsed then
+                    visibleModCount = visibleModCount + 1
+                    local slot = visibleModCount
+                    local entry = visibleMods[slot] or {}
+                    entry.mod = mod
+                    entry.expansionKey = nil
+                    entry.expansionHeaderKey = nil
+                    entry.h = h
+                    visibleMods[slot] = entry
+                end
+                allTotal = allTotal + shownRows
+                allDone = allDone + math.min(doneRows, shownRows)
+            end
+        end
+    end
+    return visibleMods, visibleModCount, allDone, allTotal
+end
+
 UI.BuildModuleStatsCache = BuildModuleStatsCache
 UI.GetModuleStats = GetModuleStats
+UI.BuildVisibleMainModules = BuildVisibleMainModules
 

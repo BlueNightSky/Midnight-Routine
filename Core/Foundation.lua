@@ -281,6 +281,36 @@ local function RestoreDefaults(dst, src)
     return dst
 end
 
+local function MoveArrayItem(order, sourceKey, targetKey, afterTarget)
+    local fromIndex, targetIndex
+    for index, existingKey in ipairs(order) do
+        if existingKey == sourceKey then
+            fromIndex = index
+        elseif existingKey == targetKey then
+            targetIndex = index
+        end
+    end
+    if not fromIndex or not targetIndex or fromIndex == targetIndex then
+        return false
+    end
+
+    local insertIndex = targetIndex
+    if fromIndex < targetIndex then
+        insertIndex = insertIndex - 1
+    end
+    if afterTarget then
+        insertIndex = insertIndex + 1
+    end
+    insertIndex = math.max(1, math.min(#order, insertIndex))
+    if insertIndex == fromIndex then
+        return false
+    end
+
+    local moved = table.remove(order, fromIndex)
+    table.insert(order, insertIndex, moved)
+    return true
+end
+
 local function IsTableEmpty(t)
     return type(t) ~= "table" or next(t) == nil
 end
@@ -369,6 +399,7 @@ ns.CoreInternals = {
     MergeMissing = MergeMissing,
     RestoreDefaults = RestoreDefaults,
     IsTableEmpty = IsTableEmpty,
+    MoveArrayItem = MoveArrayItem,
     IsInRestrictedCombat = IsInRestrictedCombat,
     optionalCurrencyModules = MODULES_WITH_OPTIONAL_CURRENCY_COMPLETION,
 }

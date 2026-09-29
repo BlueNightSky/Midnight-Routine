@@ -2,10 +2,6 @@ local addonName, ns = ...
 local MR = ns.MR
 local L = LibStub("AceLocale-3.0"):GetLocale(addonName)
 local Core = assert(ns.CoreInternals, "Core/Foundation.lua must load first")
-local DeepCopy = Core.DeepCopy
-local MergeMissing = Core.MergeMissing
-local RestoreDefaults = Core.RestoreDefaults
-local IsTableEmpty = Core.IsTableEmpty
 local IsInRestrictedCombat = Core.IsInRestrictedCombat
 
 function MR:RegisterExpansion(def)
@@ -316,38 +312,6 @@ function MR:RegisterModule(def)
         end
     end
 end
-
-function MR:GetWeeklyRewardActivityBuckets()
-    local buckets = {
-        dungeon = {},
-        raid = {},
-        world = {},
-    }
-
-    if not (C_WeeklyRewards and C_WeeklyRewards.GetActivities) then
-        return buckets
-    end
-
-    local activities = C_WeeklyRewards.GetActivities()
-    if not activities then
-        return buckets
-    end
-
-    for _, activity in ipairs(activities) do
-        if activity.type == 1 then
-            table.insert(buckets.dungeon, activity)
-        elseif activity.type == 3 then
-            table.insert(buckets.raid, activity)
-        elseif activity.type == 6 then
-            table.insert(buckets.world, activity)
-        elseif activity.type == 4 and #buckets.world == 0 then
-            table.insert(buckets.world, activity)
-        end
-    end
-
-    return buckets
-end
-
 
 function MR:GetPatchInfo(key)
     key = key or "general"

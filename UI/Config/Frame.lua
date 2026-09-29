@@ -31,64 +31,17 @@ local PANEL_MIN_HEIGHT = 100
 local PANEL_MAX_HEIGHT = 800
 local FONT_SIZE_MIN = 7
 local FONT_SIZE_MAX = 20
-local DAY_SECONDS = 24 * 60 * 60
 
 local FONT_ROWS = ns.FONT_ROWS
 local FONT_HEADERS = ns.FONT_HEADERS
 local MakeBackdrop = ns.MakeBackdrop
-local StyledFrame = ns.StyledFrame
 local TitleBar = ns.TitleBar
 local CloseButton = ns.CloseButton
-local OptionsGap = ns.OptionsGap
-local OptionsDivider = ns.OptionsDivider
-local OptionsSectionLabel = ns.OptionsSectionLabel
-local OptionsCheckbox = ns.OptionsCheckbox
-local OptionsBtn = ns.OptionsBtn
-local OptionsSlider = ns.OptionsSlider
-local OptionsColorSwatch = ns.OptionsColorSwatch
-local ApplyBackgroundTexture    = ns.ApplyBackgroundTexture
-local GetMainHeaderPosition     = ns.GetMainHeaderPosition
-local IsAnimatedMinimizeEnabled = ns.IsAnimatedMinimizeEnabled
-local ApplyMainFrameLayout      = ns.ApplyMainFrameLayout
 local RestoreFramePos           = ns.RestoreManagedFramePos or ns.RestoreFramePos
 
-local function GetFontSize()
-    if type(ns.GetFontSize) == "function" then
-        return ns.GetFontSize()
-    end
-
-    if MR and MR.db and MR.db.profile and MR.db.profile.fontSize then
-        return MR.db.profile.fontSize
-    end
-
-    return 11
-end
-
-local function GetFontFlags()
-    if type(ns.GetFontFlags) == "function" then
-        local flags = ns.GetFontFlags(MR.GetActiveMediaSettings and MR:GetActiveMediaSettings() or (MR.db and MR.db.profile))
-        if flags ~= nil then
-            return flags
-        end
-    end
-
-    return "OUTLINE"
-end
-
-local function GetLocaleFont()
-    if type(STANDARD_TEXT_FONT) == "string" and STANDARD_TEXT_FONT ~= "" then
-        return STANDARD_TEXT_FONT
-    end
-    if GameFontNormal and GameFontNormal.GetFont then
-        local f = GameFontNormal:GetFont()
-        if type(f) == "string" and f ~= "" then return f end
-    end
-    if ns.GetDefaultFontTexture then
-        local f = ns.GetDefaultFontTexture()
-        if type(f) == "string" and f ~= "" then return f end
-    end
-    return "Fonts\\FRIZQT__.TTF"
-end
+local GetFontSize = ns.UIInternal.GetFontSize
+local GetFontFlags = ns.UIInternal.GetFontFlags
+local GetLocaleFont = ns.UIInternal.GetLocaleFont
 
 local function RefreshFonts()
     if ns.EnsureFonts then
@@ -157,9 +110,6 @@ function MR:ToggleConfig()
     cfgFrame:Show()
 end
 
-function MR:IsConfigShown()
-    return cfgFrame and cfgFrame:IsShown() or false
-end
 
 function MR:EnsureConfigShown()
     if not cfgFrame then
@@ -411,7 +361,6 @@ ns.ConfigInternal = {
     PANEL_MAX_HEIGHT = PANEL_MAX_HEIGHT,
     FONT_SIZE_MIN = FONT_SIZE_MIN,
     FONT_SIZE_MAX = FONT_SIZE_MAX,
-    DAY_SECONDS = DAY_SECONDS,
     GetFontSize = GetFontSize,
     GetFontFlags = GetFontFlags,
     RefreshFonts = RefreshFonts,

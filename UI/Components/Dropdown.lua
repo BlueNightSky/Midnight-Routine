@@ -51,9 +51,6 @@ local function SetBackdropBorderColor(frame, color, alpha)
     frame:SetBackdropBorderColor(color[1], color[2], color[3], (color[4] or 1) * alpha)
 end
 
-local function SetTextColor(fontString, color, alpha)
-    fontString:SetTextColor(color[1], color[2], color[3], (color[4] or 1) * alpha)
-end
 
 local function OptionLabel(option)
     return tostring(option.shortLabel or option.label or option.key or option.value or "")

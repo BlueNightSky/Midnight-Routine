@@ -4,12 +4,8 @@ local L = LibStub("AceLocale-3.0"):GetLocale("MidnightRoutine")
 local MakeBackdrop = ns.MakeBackdrop
 local FONT_ROWS = ns.FONT_ROWS
 local FONT_HEADERS = ns.FONT_HEADERS
-local function GetFontSize()
-    return (ns.GetFontSize and ns.GetFontSize()) or 11
-end
-local function GetFontFlags()
-    return (ns.GetFontFlags and ns.GetFontFlags()) or "OUTLINE"
-end
+local GetFontSize = ns.GetFontSize
+local GetFontFlags = ns.GetFontFlags
 local function GetLocaleFont()
     return (ns.GetDefaultFontTexture and ns.GetDefaultFontTexture()) or "Fonts\\FRIZQT__.TTF"
 end
@@ -824,7 +820,7 @@ local function EnsureCustomTaskDialog()
         local saved
         local savedTaskId = self.taskId
         if self.taskId then
-            saved = MR:UpdateCustomTask(self.taskId, text, self.resetType, maxValue, self.questInput:GetText() or "", self.allowManualQuestClicks, self.encounterInput and self.encounterInput:GetText() or "", self.autoUpdateInstances, encounterDifficulties, self.taskScope, self.originalTaskScope, self.accountWideComplete, self.orderedQuestSequence, category)
+            saved, savedTaskId = MR:UpdateCustomTask(self.taskId, text, self.resetType, maxValue, self.questInput:GetText() or "", self.allowManualQuestClicks, self.encounterInput and self.encounterInput:GetText() or "", self.autoUpdateInstances, encounterDifficulties, self.taskScope, self.originalTaskScope, self.accountWideComplete, self.orderedQuestSequence, category)
         else
             savedTaskId = MR:AddCustomTask(text, self.resetType, maxValue, self.questInput:GetText() or "", self.allowManualQuestClicks, self.encounterInput and self.encounterInput:GetText() or "", self.autoUpdateInstances, encounterDifficulties, self.taskScope, self.accountWideComplete, self.orderedQuestSequence, category)
             saved = savedTaskId ~= nil

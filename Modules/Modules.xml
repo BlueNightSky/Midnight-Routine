@@ -1,0 +1,15 @@
+<Ui xmlns="http://www.blizzard.com/wow/ui/">
+    <Script file="Activities.lua"/>
+    <Script file="OmniumFolio.lua"/>
+    <Script file="WeeklyTasks.lua"/>
+    <Script file="PvP.lua"/>
+    <Script file="GreatVault.lua"/>
+    <Script file="Crests.lua"/>
+    <Script file="Delves.lua"/>
+    <Script file="Prey.lua"/>
+    <Script file="StoryCampaign.lua"/>
+    <Script file="WorldEvents.lua"/>
+    <Script file="Timewalking.lua"/>
+    <Script file="DarkmoonFaire.lua"/>
+    <Script file="CustomTasks.lua"/>
+</Ui>

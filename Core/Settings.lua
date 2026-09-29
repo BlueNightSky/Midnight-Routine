@@ -1,10 +1,7 @@
 local _, ns = ...
 local MR = ns.MR
 local Core = assert(ns.CoreInternals, "Core/Foundation.lua must load first")
-local DeepCopy = Core.DeepCopy
-local MergeMissing = Core.MergeMissing
-local RestoreDefaults = Core.RestoreDefaults
-local IsTableEmpty = Core.IsTableEmpty
+local MoveArrayItem = Core.MoveArrayItem
 local MODULES_WITH_OPTIONAL_CURRENCY_COMPLETION = Core.optionalCurrencyModules
 local VALID_FRAME_STRATA = {
     BACKGROUND = true,
@@ -507,32 +504,9 @@ function MR:SetModuleRowPosition(modKey, rowKey, targetRowKey, afterTarget)
         seen[targetRowKey] = true
     end
 
-    local fromIndex, targetIndex
-    for index, existingKey in ipairs(order) do
-        if existingKey == rowKey then
-            fromIndex = index
-        elseif existingKey == targetRowKey then
-            targetIndex = index
-        end
-    end
-    if not fromIndex or not targetIndex or fromIndex == targetIndex then
+    if not MoveArrayItem(order, rowKey, targetRowKey, afterTarget) then
         return false
     end
-
-    local insertIndex = targetIndex
-    if fromIndex < targetIndex then
-        insertIndex = insertIndex - 1
-    end
-    if afterTarget then
-        insertIndex = insertIndex + 1
-    end
-    insertIndex = math.max(1, math.min(#order, insertIndex))
-    if insertIndex == fromIndex then
-        return false
-    end
-
-    local moved = table.remove(order, fromIndex)
-    table.insert(order, insertIndex, moved)
     if not self:SetModuleRowOrder(modKey, order) then
         return false
     end
@@ -928,21 +902,3 @@ function MR:ResetRowColor(modKey, rowKey)
     self:RequestVisualRefresh()
 end
 
-local STATIC_TURN_IN_COMPLETIONS = {
-    [89268] = { mod = "s1_weekly",           row = "lost_legends"        },
-    [89289] = { mod = "s1_weekly",           row = "saltherils_soiree"   },
-    [91966] = { mod = "s1_weekly",           row = "saltherils_soiree"   },
-    [90573] = { mod = "s1_weekly",           row = "fortify_runestones"  },
-    [90574] = { mod = "s1_weekly",           row = "fortify_runestones"  },
-    [90575] = { mod = "s1_weekly",           row = "fortify_runestones"  },
-    [90576] = { mod = "s1_weekly",           row = "fortify_runestones"  },
-    [93744] = { mod = "s1_weekly",           row = "unity_against_void"  },
-    [96727] = { mod = "s1_weekly",           row = "unity_against_void"  },
-    [90962] = { mod = "midnight_activities", row = "stormarion_assault"  },
-    [94835] = { mod = "pvp_weeklies",        row = "early_training"      },
-}
-
-local TURN_IN_COMPLETIONS = {}
-
-Core.staticTurnInCompletions = STATIC_TURN_IN_COMPLETIONS
-Core.turnInCompletions = TURN_IN_COMPLETIONS

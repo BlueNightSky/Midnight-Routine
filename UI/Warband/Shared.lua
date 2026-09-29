@@ -8,11 +8,6 @@ local MakeBackdrop = ns.MakeBackdrop
 local StyledFrame = ns.StyledFrame
 local TitleBar = ns.TitleBar
 local CloseButton = ns.CloseButton
-local OptionsGap = ns.OptionsGap
-local OptionsDivider = ns.OptionsDivider
-local OptionsSectionLabel = ns.OptionsSectionLabel
-local OptionsCheckbox = ns.OptionsCheckbox
-local OptionsSlider = ns.OptionsSlider
 local hex = ns.Hex
 local COL = ns.COLORS
 local GetWidgetCache = ns.GetWidgetCache
@@ -22,13 +17,9 @@ local DAY_SECONDS = 24 * 60 * 60
 local WBState = ns.WarbandBoardState or {}
 ns.WarbandBoardState = WBState
 
-local function GetFontSize()
-    return (ns.GetFontSize and ns.GetFontSize()) or 11
-end
+local GetFontSize = ns.GetFontSize
 
-local function GetFontFlags()
-    return (ns.GetFontFlags and ns.GetFontFlags(MR.GetActiveMediaSettings and MR:GetActiveMediaSettings() or (MR.db and MR.db.profile))) or "OUTLINE"
-end
+local GetFontFlags = ns.GetFontFlags
 
 local function RefreshFonts()
     if ns.EnsureFonts then
@@ -371,10 +362,6 @@ WBConcentrationColor = function(entry)
     return 1.00, 0.76, 0.28
 end
 
-local function GetExpansionDisplayInfo(forAltBoard)
-    local key = MR:GetSelectedExpansionKey(forAltBoard)
-    return MR:GetExpansionInfo(key)
-end
 
 local function BuildExpansionDropdown(parent, forAltBoard, opts)
     opts = opts or {}
@@ -418,18 +405,6 @@ local function WBConcentrationCurrent(entry)
     return math.max(0, math.floor((tonumber(entry and entry.estimatedQuantity) or tonumber(entry and entry.quantity) or 0) + 0.0001))
 end
 
-local function WBConcentrationDailyGain(entry)
-    local cycleMS = tonumber(entry and entry.rechargingCycleDurationMS) or 0
-    local amountPerCycle = tonumber(entry and entry.rechargingAmountPerCycle) or 1
-    if amountPerCycle <= 0 then
-        amountPerCycle = 1
-    end
-    if cycleMS <= 0 or amountPerCycle <= 0 then
-        return 0
-    end
-
-    return math.max(0, math.floor(((DAY_SECONDS * 1000) / cycleMS) * amountPerCycle + 0.0001))
-end
 
 local function WBConcentrationProjectedQuantity(entry, aheadSeconds)
     local current = WBConcentrationCurrent(entry)
@@ -1338,7 +1313,6 @@ end
 local Warband = {
     state = WBState,
     L = L,
-    DAY_SECONDS = DAY_SECONDS,
     GetFontSize = GetFontSize,
     GetFontFlags = GetFontFlags,
     RefreshFonts = RefreshFonts,
@@ -1355,26 +1329,16 @@ local Warband = {
     WBClassColor = WBClassColor,
     WBMythicScoreText = WBMythicScoreText,
     WBFormatGold = WBFormatGold,
-    WBEnsureDragGhost = WBEnsureDragGhost,
     WBStartDragVisual = WBStartDragVisual,
     WBStopDragVisual = WBStopDragVisual,
-    WBMarkDragTarget = WBMarkDragTarget,
     WBUpdateDragTargetFromCursor = WBUpdateDragTargetFromCursor,
-    GetExpansionDisplayInfo = GetExpansionDisplayInfo,
     BuildExpansionDropdown = BuildExpansionDropdown,
     WBConcentrationText = WBConcentrationText,
-    WBConcentrationCurrent = WBConcentrationCurrent,
-    WBConcentrationDailyGain = WBConcentrationDailyGain,
-    WBConcentrationProjectedQuantity = WBConcentrationProjectedQuantity,
-    WBConcentrationTimeToFull = WBConcentrationTimeToFull,
-    WBFormatDurationShort = WBFormatDurationShort,
-    WBFormatConcentrationFullAt = WBFormatConcentrationFullAt,
     WBConcentrationLabel = WBConcentrationLabel,
     WBGetConcentrationTrackerAlpha = WBGetConcentrationTrackerAlpha,
     WBSetConcentrationTrackerAlpha = WBSetConcentrationTrackerAlpha,
     WBIsConcentrationTrackerCompact = WBIsConcentrationTrackerCompact,
     WBSetConcentrationTrackerCompact = WBSetConcentrationTrackerCompact,
-    WBGetConcentrationTrackerHiddenCharacters = WBGetConcentrationTrackerHiddenCharacters,
     WBIsConcentrationTrackerCharacterHidden = WBIsConcentrationTrackerCharacterHidden,
     WBSetConcentrationTrackerCharacterHidden = WBSetConcentrationTrackerCharacterHidden,
     WBApplyConcentrationTrackerTheme = WBApplyConcentrationTrackerTheme,

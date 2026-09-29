@@ -723,18 +723,6 @@ function ns.LeftAccent(parent, r, g, b)
     return group
 end
 
-function ns.SaveFramePos(frame, key)
-    local addon = ns.MR
-    if not addon or not addon.db then
-        return
-    end
-
-    frame:SetScript("OnDragStop", function()
-        frame:StopMovingOrSizing()
-        local point, _, relPoint, x, y = frame:GetPoint()
-        addon.db.profile[key] = { point = point, relPoint = relPoint, x = x, y = y }
-    end)
-end
 
 function ns.GetManagedHeaderPosition()
     local addon = ns.MR
@@ -977,9 +965,6 @@ function ns.OptionsBtn(body, yOff, label, onClick, width, pad, fontSize, style)
     fs:SetJustifyH(primary and "CENTER" or "LEFT")
     fs:SetWordWrap(false)
     fs:SetText(label)
-    local normalR = primary and 0.92 or 0.70
-    local normalG = primary and 1 or 0.88
-    local normalB = primary and 0.98 or 0.85
     fs:SetTextColor(primary and 1 or 0.92, primary and 1 or 0.94, primary and 1 or 0.96)
 
     btn:SetScript("OnClick", onClick)

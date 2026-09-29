@@ -3,8 +3,6 @@ local MR = ns.MR
 
 local Config = assert(ns.ConfigInternal, "UI/Config/Frame.lua must load first")
 local L = Config.L
-local FONT_ROWS = ns.FONT_ROWS
-local FONT_HEADERS = ns.FONT_HEADERS
 local MakeBackdrop = ns.MakeBackdrop
 local OptionsColorSwatch = ns.OptionsColorSwatch
 local hex = ns.Hex

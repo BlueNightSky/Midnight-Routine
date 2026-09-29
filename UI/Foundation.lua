@@ -32,7 +32,6 @@ local ApplyBackgroundTexture = ns.ApplyBackgroundTexture
 
 local FONT_SIZE_MIN = 7
 local FONT_SIZE_MAX = 20
-local DAY_SECONDS = 24 * 60 * 60
 
 local ROW_HEIGHT    = 18
 local HEADER_HEIGHT = 18
@@ -68,28 +67,9 @@ local WC = WrapColor
 
 countColor = ns.CountColor
 
-local function GetFontSize()
-    if type(ns.GetFontSize) == "function" then
-        return ns.GetFontSize()
-    end
+local GetFontSize = ns.GetFontSize
 
-    if MR and MR.db and MR.db.profile and MR.db.profile.fontSize then
-        return MR.db.profile.fontSize
-    end
-
-    return 11
-end
-
-local function GetFontFlags()
-    if type(ns.GetFontFlags) == "function" then
-        local flags = ns.GetFontFlags(MR.GetActiveMediaSettings and MR:GetActiveMediaSettings() or (MR.db and MR.db.profile))
-        if flags ~= nil then
-            return flags
-        end
-    end
-
-    return "OUTLINE"
-end
+local GetFontFlags = ns.GetFontFlags
 
 local function GetLocaleFont()
     if type(STANDARD_TEXT_FONT) == "string" and STANDARD_TEXT_FONT ~= "" then
@@ -214,16 +194,6 @@ local function AnyFrameHovered()
     return false
 end
 
-local function GetMovableHostFrame(frame)
-    local current = frame
-    while current do
-        if current.IsMovable and current:IsMovable() then
-            return current
-        end
-        current = current.GetParent and current:GetParent() or nil
-    end
-    return nil
-end
 
 local peekUpdater = CreateFrame("Frame")
 peekUpdater:Hide()
@@ -632,7 +602,6 @@ UI.OptionsColorSwatch = OptionsColorSwatch
 UI.ApplyBackgroundTexture = ApplyBackgroundTexture
 UI.FONT_SIZE_MIN = FONT_SIZE_MIN
 UI.FONT_SIZE_MAX = FONT_SIZE_MAX
-UI.DAY_SECONDS = DAY_SECONDS
 UI.ROW_HEIGHT = ROW_HEIGHT
 UI.HEADER_HEIGHT = HEADER_HEIGHT
 UI.PADDING = PADDING
@@ -656,16 +625,6 @@ UI.SetFontForText = SetFontForText
 UI.GetMainHeaderHeight = GetMainHeaderHeight
 UI.GetMainCharacterBarHeight = GetMainCharacterBarHeight
 UI.GetMainHeaderMetrics = GetMainHeaderMetrics
-UI.PEEK_ALPHA_IDLE = PEEK_ALPHA_IDLE
-UI.PEEK_ALPHA_HOVER = PEEK_ALPHA_HOVER
-UI.PEEK_FADE_IN = PEEK_FADE_IN
-UI.PEEK_FADE_OUT = PEEK_FADE_OUT
-UI.PeekFrameList = PeekFrameList
-UI.AnyFrameHovered = AnyFrameHovered
-UI.GetMovableHostFrame = GetMovableHostFrame
-UI.peekUpdater = peekUpdater
-UI.StopPeekAnimation = StopPeekAnimation
-UI.StartPeekAnimation = StartPeekAnimation
 UI.RecalcLayout = RecalcLayout
 UI.hex = hex
 UI.COL = COL

@@ -1,71 +1,12 @@
 local _, ns = ...
 local MR = ns.MR
 
-local function CurrencyInfoHasAnyFlag(info, ...)
-    if type(info) ~= "table" then
-        return false
-    end
-
-    for i = 1, select("#", ...) do
-        local key = select(i, ...)
-        if info[key] then
-            return true
-        end
-    end
-
-    return false
-end
-
 local function IsCurrencyWarbandTransferable(currencyID, info)
-    if CurrencyInfoHasAnyFlag(
-        info,
-        "isAccountTransferable",
-        "isWarbandTransferable",
-        "isTransferable",
-        "transferable"
-    ) then
-        return true
-    end
-
-    if C_CurrencyInfo then
-        local candidates = {
-            "IsCurrencyAccountTransferable",
-            "IsCurrencyTransferable",
-            "IsAccountTransferableCurrency",
-        }
-        for _, methodName in ipairs(candidates) do
-            local method = C_CurrencyInfo[methodName]
-            if type(method) == "function" then
-                local ok, result = pcall(method, currencyID)
-                if ok and result then
-                    return true
-                end
-            end
-        end
-    end
-
-    return false
+    return MR.tracker:IsCurrencyWarbandTransferable(currencyID, info)
 end
 
 local function GetCurrencyWarbandKind(currencyID)
-    if not (currencyID and C_CurrencyInfo and C_CurrencyInfo.GetCurrencyInfo) then
-        return nil
-    end
-
-    local info = C_CurrencyInfo.GetCurrencyInfo(currencyID)
-    if not info then
-        return nil
-    end
-
-    if info.isAccountWide then
-        return "account", info
-    end
-
-    if IsCurrencyWarbandTransferable(currencyID, info) then
-        return "transfer", info
-    end
-
-    return nil, info
+    return MR.tracker:GetCurrencyWarbandKind(currencyID)
 end
 
 function MR:GetCurrencyWarbandMarkerInfo(currencyID)

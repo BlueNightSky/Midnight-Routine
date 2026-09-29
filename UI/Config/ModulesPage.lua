@@ -4,7 +4,6 @@ local Config = assert(ns.ConfigInternal, "UI/Config/Frame.lua must load first")
 local L = Config.L
 local MakeBackdrop = ns.MakeBackdrop
 local OptionsGap = ns.OptionsGap
-local OptionsCheckbox = ns.OptionsCheckbox
 local OptionsColorSwatch = ns.OptionsColorSwatch
 local hex = ns.Hex
 local GetFontFlags = Config.GetFontFlags
@@ -19,7 +18,6 @@ function Config.BuildModulesPage(ctx)
     local moduleSubFs = ctx.moduleSubFs
     local moduleHeaderH = ctx.moduleHeaderH
     local moduleRowH = ctx.moduleRowH
-    local moduleCompactH = ctx.moduleCompactH
     local contentW = ctx.contentW
     local function Gap(h) yOff = OptionsGap(body, yOff, h) end
 

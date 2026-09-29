@@ -119,3 +119,53 @@ function ns.AcquireWidget(parent, siteKey, create)
     if widget then return Recycle(widget), false end
     return Store(bucket, pool, create()), true
 end
+
+function ns.SetOneAnchor(region, point, relativeTo, relativePoint, x, y)
+    if region._mrPoint1 == point
+        and region._mrRelative1 == relativeTo
+        and region._mrRelativePoint1 == relativePoint
+        and region._mrX1 == x
+        and region._mrY1 == y
+        and region._mrPoint2 == nil then
+        return
+    end
+
+    region:ClearAllPoints()
+    region:SetPoint(point, relativeTo, relativePoint, x, y)
+    region._mrPoint1 = point
+    region._mrRelative1 = relativeTo
+    region._mrRelativePoint1 = relativePoint
+    region._mrX1 = x
+    region._mrY1 = y
+    region._mrPoint2 = nil
+    region._mrRelative2 = nil
+end
+
+function ns.SetTwoAnchors(region, point1, relative1, relativePoint1, x1, y1, point2, relative2, relativePoint2, x2, y2)
+    if region._mrPoint1 == point1
+        and region._mrRelative1 == relative1
+        and region._mrRelativePoint1 == relativePoint1
+        and region._mrX1 == x1
+        and region._mrY1 == y1
+        and region._mrPoint2 == point2
+        and region._mrRelative2 == relative2
+        and region._mrRelativePoint2 == relativePoint2
+        and region._mrX2 == x2
+        and region._mrY2 == y2 then
+        return
+    end
+
+    region:ClearAllPoints()
+    region:SetPoint(point1, relative1, relativePoint1, x1, y1)
+    region:SetPoint(point2, relative2, relativePoint2, x2, y2)
+    region._mrPoint1 = point1
+    region._mrRelative1 = relative1
+    region._mrRelativePoint1 = relativePoint1
+    region._mrX1 = x1
+    region._mrY1 = y1
+    region._mrPoint2 = point2
+    region._mrRelative2 = relative2
+    region._mrRelativePoint2 = relativePoint2
+    region._mrX2 = x2
+    region._mrY2 = y2
+end

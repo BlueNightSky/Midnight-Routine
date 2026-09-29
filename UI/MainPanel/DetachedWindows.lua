@@ -1,156 +1,15 @@
 local _, ns = ...
 local MR = ns.MR
 local UI = assert(ns.UIInternal, "UI/Foundation.lua must load first")
-local L = UI.L
-local PANEL_MIN_WIDTH = UI.PANEL_MIN_WIDTH
 local PANEL_MAX_WIDTH = UI.PANEL_MAX_WIDTH
-local PANEL_MIN_HEIGHT = UI.PANEL_MIN_HEIGHT
 local PANEL_MAX_HEIGHT = UI.PANEL_MAX_HEIGHT
-local FONT_ROWS = UI.FONT_ROWS
-local FONT_HEADERS = UI.FONT_HEADERS
 local MakeBackdrop = UI.MakeBackdrop
-local StyledFrame = UI.StyledFrame
-local LeftAccent = UI.LeftAccent
-local TitleBar = UI.TitleBar
-local CloseButton = UI.CloseButton
-local RestoreFramePos = UI.RestoreFramePos
-local RestoreManagedFramePos = UI.RestoreManagedFramePos
-local CaptureManagedFrameAnchor = UI.CaptureManagedFrameAnchor
-local ApplyManagedFrameAnchor = UI.ApplyManagedFrameAnchor
-local AnimateManagedFrameHeight = UI.AnimateManagedFrameHeight
-local WrapColor = UI.WrapColor
-local SetDotColor = UI.SetDotColor
-local OptionsGap = UI.OptionsGap
-local OptionsDivider = UI.OptionsDivider
-local OptionsSectionLabel = UI.OptionsSectionLabel
-local OptionsCheckbox = UI.OptionsCheckbox
-local OptionsBtn = UI.OptionsBtn
-local OptionsSlider = UI.OptionsSlider
-local OptionsColorSwatch = UI.OptionsColorSwatch
-local ApplyBackgroundTexture = UI.ApplyBackgroundTexture
-local FONT_SIZE_MIN = UI.FONT_SIZE_MIN
-local FONT_SIZE_MAX = UI.FONT_SIZE_MAX
-local DAY_SECONDS = UI.DAY_SECONDS
-local ROW_HEIGHT = UI.ROW_HEIGHT
 local HEADER_HEIGHT = UI.HEADER_HEIGHT
-local PADDING = UI.PADDING
-local SECTION_GAP = UI.SECTION_GAP
-local BuildModuleStatsCache = UI.BuildModuleStatsCache
 local GetModuleStats = UI.GetModuleStats
-local IsMainTextOnlyMode = UI.IsMainTextOnlyMode
-local DIFF_BADGE_DEFS = UI.DIFF_BADGE_DEFS
-local DIFF_BADGE_ORDER = UI.DIFF_BADGE_ORDER
-local DIFF_BADGE_COLORS = UI.DIFF_BADGE_COLORS
-local GetWindowLayoutValue = UI.GetWindowLayoutValue
-local SetWindowLayoutValue = UI.SetWindowLayoutValue
-local countColor = UI.countColor
-local WC = UI.WC
-local GetFontSize = UI.GetFontSize
-local GetFontFlags = UI.GetFontFlags
-local GetLocaleFont = UI.GetLocaleFont
-local RefreshFonts = UI.RefreshFonts
-local SetFontForText = UI.SetFontForText
-local GetMainHeaderHeight = UI.GetMainHeaderHeight
-local GetMainCharacterBarHeight = UI.GetMainCharacterBarHeight
-local GetMainHeaderMetrics = UI.GetMainHeaderMetrics
-local PEEK_ALPHA_IDLE = UI.PEEK_ALPHA_IDLE
-local PEEK_ALPHA_HOVER = UI.PEEK_ALPHA_HOVER
-local PEEK_FADE_IN = UI.PEEK_FADE_IN
-local PEEK_FADE_OUT = UI.PEEK_FADE_OUT
-local PeekFrameList = UI.PeekFrameList
-local AnyFrameHovered = UI.AnyFrameHovered
-local GetMovableHostFrame = UI.GetMovableHostFrame
-local peekUpdater = UI.peekUpdater
-local StopPeekAnimation = UI.StopPeekAnimation
-local StartPeekAnimation = UI.StartPeekAnimation
-local RecalcLayout = UI.RecalcLayout
-local hex = UI.hex
 local COL = UI.COL
-local ApplyTheme = UI.ApplyTheme
-local CleanLabelText = UI.CleanLabelText
-local ExtractInlineLabelColor = UI.ExtractInlineLabelColor
-local MainSectionHeaderOnMouseDown = UI.MainSectionHeaderOnMouseDown
-local MainSectionHeaderOnDragStart = UI.MainSectionHeaderOnDragStart
-local MainSectionHeaderOnDragStop = UI.MainSectionHeaderOnDragStop
-local MainSectionHeaderOnMouseUp = UI.MainSectionHeaderOnMouseUp
-local MainSectionHeaderOnEnter = UI.MainSectionHeaderOnEnter
-local MainSectionHeaderOnLeave = UI.MainSectionHeaderOnLeave
-local CurrencyBrowserButtonOnClick = UI.CurrencyBrowserButtonOnClick
-local CurrencyBrowserButtonOnEnter = UI.CurrencyBrowserButtonOnEnter
-local CurrencyBrowserButtonOnLeave = UI.CurrencyBrowserButtonOnLeave
-local StyleSectionCollapseIndicator = UI.StyleSectionCollapseIndicator
-local StyleCurrencyBrowserButton = UI.StyleCurrencyBrowserButton
-local MainHeaderActionOnClick = UI.MainHeaderActionOnClick
-local MainHeaderActionOnEnter = UI.MainHeaderActionOnEnter
-local MainHeaderActionOnLeave = UI.MainHeaderActionOnLeave
-local MainRowOnEnter = UI.MainRowOnEnter
-local MainRowOnLeave = UI.MainRowOnLeave
-local MainRowOnMouseDown = UI.MainRowOnMouseDown
-local MainStatusButtonOnClick = UI.MainStatusButtonOnClick
-local MainStatusButtonOnEnter = UI.MainStatusButtonOnEnter
-local MainStatusButtonOnLeave = UI.MainStatusButtonOnLeave
-local HideMainRowWidget = UI.HideMainRowWidget
-local PoolMainRowWidget = UI.PoolMainRowWidget
 local HideMainSectionWidget = UI.HideMainSectionWidget
-local HideMainExpansionHeaderWidget = UI.HideMainExpansionHeaderWidget
-local GetTextOnlyHeaderAlpha = UI.GetTextOnlyHeaderAlpha
-local ShouldShowIcons = UI.ShouldShowIcons
-local ShouldShowSectionHeaders = UI.ShouldShowSectionHeaders
-local UIIcons = UI.UIIcons
-local GetRowIconInfo = UI.GetRowIconInfo
-local GetModuleIconInfo = UI.GetModuleIconInfo
-local ShouldShowModuleHeaderIcon = UI.ShouldShowModuleHeaderIcon
-local ApplyIconToTexture = UI.ApplyIconToTexture
-local EnsureMainRowWidget = UI.EnsureMainRowWidget
-local UpdateMainRowWidget = UI.UpdateMainRowWidget
-local GetMainRowGroupKey = UI.GetMainRowGroupKey
-local IsMainRowVisible = UI.IsMainRowVisible
-local IsMainRowInGroup = UI.IsMainRowInGroup
-local HasVisibleRowsInMainGroup = UI.HasVisibleRowsInMainGroup
-local IsMainRowGroupEnabled = UI.IsMainRowGroupEnabled
-local SetMainRowGroupEnabled = UI.SetMainRowGroupEnabled
-local BuildMainRowGroupHeader = UI.BuildMainRowGroupHeader
-local ShouldRenderMainRowGroupHeader = UI.ShouldRenderMainRowGroupHeader
-local RenderMainGroupedRows = UI.RenderMainGroupedRows
-local CountMainGroupedRows = UI.CountMainGroupedRows
-local EnsureMainSeparator = UI.EnsureMainSeparator
-local EnsureMainExpansionHeaderWidget = UI.EnsureMainExpansionHeaderWidget
-local UpdateMainExpansionHeaderWidget = UI.UpdateMainExpansionHeaderWidget
-local CreateSectionWidget = UI.CreateSectionWidget
-local EnsureMainSectionWidget = UI.EnsureMainSectionWidget
-local EnsureDetachedSectionWidget = UI.EnsureDetachedSectionWidget
-local AddSectionRegistryEntry = UI.AddSectionRegistryEntry
 local UpdateDetachedSectionWidget = UI.UpdateDetachedSectionWidget
-local EnsureMainDifficultyBadges = UI.EnsureMainDifficultyBadges
-local GetMainFrameProgressModule = UI.GetMainFrameProgressModule
-local GetMainFrameRowCount = UI.GetMainFrameRowCount
-local RegisterTimerRow = UI.RegisterTimerRow
-local UpdateMainSectionWidget = UI.UpdateMainSectionWidget
-local ClearArrayContents = UI.ClearArrayContents
 
-local GetModuleWindowTitle = UI.GetModuleWindowTitle
-local ApplyWidth = UI.ApplyWidth
-local ApplyHeight = UI.ApplyHeight
-local ApplyFontSize = UI.ApplyFontSize
-local GetMainHeaderPosition = UI.GetMainHeaderPosition
-local IsAnimatedMinimizeEnabled = UI.IsAnimatedMinimizeEnabled
-local IsMainHeaderAtBottom = UI.IsMainHeaderAtBottom
-local GetMainFrameExpandedHeight = UI.GetMainFrameExpandedHeight
-local GetMainFrameCollapsedHeight = UI.GetMainFrameCollapsedHeight
-local GetStoredMainFrameCollapsedAnchor = UI.GetStoredMainFrameCollapsedAnchor
-local SetStoredMainFrameCollapsedAnchor = UI.SetStoredMainFrameCollapsedAnchor
-local GetStoredMainFrameActiveAnchor = UI.GetStoredMainFrameActiveAnchor
-local SetStoredMainFrameActiveAnchor = UI.SetStoredMainFrameActiveAnchor
-local CaptureMainFrameAnchor = UI.CaptureMainFrameAnchor
-local ApplyMainFrameAnchor = UI.ApplyMainFrameAnchor
-local ApplyExplicitMainFrameAnchor = UI.ApplyExplicitMainFrameAnchor
-local GetBottomHeaderCollapseTarget = UI.GetBottomHeaderCollapseTarget
-local ApplyMainFrameLayout = UI.ApplyMainFrameLayout
-local SetMainFrameChromeVisible = UI.SetMainFrameChromeVisible
-local mainFrameAnimator = UI.mainFrameAnimator
-local StopMainFrameAnimation = UI.StopMainFrameAnimation
-local AnimateMainFrameHeight = UI.AnimateMainFrameHeight
-local HasVisibleUISurface = UI.HasVisibleUISurface
 
 function MR:HideDetachedModules()
     if not self.detachedFrames then return end
@@ -159,18 +18,6 @@ function MR:HideDetachedModules()
     end
 end
 
-function MR:ShowDetachedModules()
-    if self._instanceFramesHidden then return end
-    if self:IsManagedWindowsBundleHidden() then return end
-    if not self.detachedFrames then return end
-    for key, frame in pairs(self.detachedFrames) do
-        local mod = self.moduleByKey[key]
-        local modVisible = mod and (not mod.isVisible or mod:isVisible())
-        if self:IsModuleDetached(key) and self:IsModuleEnabled(key) and modVisible then
-            frame:Show()
-        end
-    end
-end
 
 function MR:EnsureDetachedFrame(mod)
     self.detachedFrames = self.detachedFrames or {}
