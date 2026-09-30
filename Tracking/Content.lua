@@ -21,17 +21,17 @@ function tracking.API:InstallContent(owner, context)
     self:InstallComponent("Timewalking", owner, context)
     self:InstallComponent("DarkmoonFaire", owner, context)
     self:InstallComponent("CustomTasks", owner, context)
-    self:InstallComponent("ForeverFeatures", owner, context)
     if owner.isForever then
+        self:InstallComponent("ForeverFeatures", owner, context)
         local forever = context.namespace.Forever
         forever.rareLocations = tracking.Forever.rareLocations
         forever.rareZoneNames = tracking.Forever.rareZoneNames
         forever.rareCatalog = tracking.Forever.rareCatalog
+        self:InstallComponent("ForeverProfessions", owner, context)
+        self:InstallComponent("ForeverReputations", owner, context)
+        self:InstallComponent("ForeverRares", owner, context)
+        self:InstallComponent("ForeverBootstrap", owner, context)
     end
-    self:InstallComponent("ForeverProfessions", owner, context)
-    self:InstallComponent("ForeverReputations", owner, context)
-    self:InstallComponent("ForeverRares", owner, context)
-    self:InstallComponent("ForeverBootstrap", owner, context)
     self:InstallComponent("ProfessionKnowledgeCore", owner, context)
     self:InstallComponent("ProfessionKnowledgeMidnight", owner, context)
     self:InstallComponent("ProfessionKnowledgeTheWarWithin", owner, context)
