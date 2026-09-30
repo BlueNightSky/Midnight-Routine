@@ -543,7 +543,7 @@ end
 
 local function WBGetAltBoardView()
     local view = MR and MR.db and MR.db.profile and MR.db.profile.altBoardView
-    if view == "concentration" or view == "modules" then
+    if view == "concentration" or view == "modules" or view == "banks" then
         return view
     end
     return "character"
@@ -557,19 +557,22 @@ local function WBMythicScoreText(entry)
     return string.format("M+ %d", math.floor(score + 0.5))
 end
 
-local function WBFormatGold(copper)
+local function WBFormatMoney(copper)
     copper = tonumber(copper)
     if copper == nil then
         return ""
     end
+    copper = math.max(0, math.floor(copper))
     local gold = math.floor(copper / 10000)
+    local silver = math.floor(copper / 100) % 100
+    local copperRemainder = copper % 100
     local amount = tostring(gold):reverse():gsub("(%d%d%d)", "%1,"):reverse():gsub("^,", "")
-    return amount .. " |TInterface\\MoneyFrame\\UI-GoldIcon:0:0:2:0|t"
+    return string.format("|cffffd56a%s|r|TInterface\\MoneyFrame\\UI-GoldIcon:0:0:1:0|t |cffc7d0d9%02d|r|TInterface\\MoneyFrame\\UI-SilverIcon:0:0:1:0|t |cffce9467%02d|r|TInterface\\MoneyFrame\\UI-CopperIcon:0:0:1:0|t", amount, silver, copperRemainder)
 end
 
 local function WBSetAltBoardView(view)
     if MR and MR.db and MR.db.profile then
-        MR.db.profile.altBoardView = (view == "concentration" or view == "modules") and view or "character"
+        MR.db.profile.altBoardView = (view == "concentration" or view == "modules" or view == "banks") and view or "character"
     end
 end
 
@@ -1112,8 +1115,8 @@ local function WBRefreshMainAltPicker(frame)
 
         local gold = row._gold
         gold:SetFont(ns.FONT_ROWS, math.max(8, GetFontSize() - 2), GetFontFlags())
-        local goldText = WBFormatGold(entry.gold)
-        gold:SetText(goldText ~= "" and string.format(L["AltBoard_CharacterGold"] or "Gold: %s", goldText) or "")
+        local moneyText = WBFormatMoney(entry.gold)
+        gold:SetText(moneyText)
         row:Show()
     end
 
@@ -1328,7 +1331,7 @@ local Warband = {
     WBCharacterMatchesSearch = WBCharacterMatchesSearch,
     WBClassColor = WBClassColor,
     WBMythicScoreText = WBMythicScoreText,
-    WBFormatGold = WBFormatGold,
+    WBFormatMoney = WBFormatMoney,
     WBStartDragVisual = WBStartDragVisual,
     WBStopDragVisual = WBStopDragVisual,
     WBUpdateDragTargetFromCursor = WBUpdateDragTargetFromCursor,

@@ -1319,8 +1319,11 @@ function MR:ApplySharedMediaSettings()
         if frame.heroMeta then
             frame.heroMeta:SetFont(ns.FONT_ROWS, math.max(8, fontSize - 1), GetFontFlags())
         end
-        if frame.heroStatus then
-            frame.heroStatus:SetFont(ns.FONT_ROWS, math.max(10, fontSize), GetFontFlags())
+        if frame.heroNoteLabel then
+            frame.heroNoteLabel:SetFont(ns.FONT_ROWS, math.max(8, fontSize - 1), GetFontFlags())
+        end
+        if frame.heroNoteBox then
+            frame.heroNoteBox:SetFont(ns.FONT_ROWS, math.max(9, fontSize), GetFontFlags())
         end
         if frame.moduleScore then
             frame.moduleScore:SetFont(ns.FONT_ROWS, math.max(9, fontSize - 1), GetFontFlags())

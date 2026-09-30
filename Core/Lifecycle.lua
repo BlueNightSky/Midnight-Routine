@@ -1069,6 +1069,7 @@ function MR:UpdateInstanceFrameVisibility()
 end
 
 function MR:OnEnable()
+    if self.EnableAltBankTracking then self:EnableAltBankTracking() end
     if self.isForever then
         self:RegisterBucketEvent({ "QUEST_LOG_UPDATE", "SKILL_LINES_CHANGED", "UPDATE_FACTION" }, 0.5, "OnForeverProgressChanged")
         self:RegisterEvent("CURRENCY_DISPLAY_UPDATE", "OnForeverProgressChanged")

@@ -27,7 +27,7 @@ local WBStatusColor = Warband.WBStatusColor
 local WBCharacterMatchesSearch = Warband.WBCharacterMatchesSearch
 local WBClassColor = Warband.WBClassColor
 local WBMythicScoreText = Warband.WBMythicScoreText
-local WBFormatGold = Warband.WBFormatGold
+local WBFormatMoney = Warband.WBFormatMoney
 local WBStartDragVisual = Warband.WBStartDragVisual
 local WBStopDragVisual = Warband.WBStopDragVisual
 local WBUpdateDragTargetFromCursor = Warband.WBUpdateDragTargetFromCursor
@@ -785,9 +785,18 @@ function MR:RefreshWarbandBoard(reuseData)
     local activeView = WBGetAltBoardView()
 
     if frame.titleText then
-        frame.titleText:SetText(L["AltBoard_Title"] or "Alt Weekly Board")
+        frame.titleText:SetText(activeView == "banks" and (L["AltBoard_BanksTitle"] or "Alt Board | Banks") or (L["AltBoard_Title"] or "Alt Weekly Board"))
     end
     WBRefreshAltBoardTabs(frame)
+    if frame.concentrationTrackerBtn and frame.tabBar and frame.altTabs then
+        local showConcentrationAction = activeView == "concentration"
+        frame.concentrationTrackerBtn:SetShown(showConcentrationAction)
+        local availableWidth = frame.tabBar:GetWidth() - 18 - (showConcentrationAction and 133 or 0)
+        local tabWidth = math.max(80, math.floor(availableWidth / 4))
+        for _, tab in pairs(frame.altTabs) do
+            tab:SetWidth(tabWidth)
+        end
+    end
 
     if frame.summarySub then
         frame.summarySub:ClearAllPoints()
@@ -798,6 +807,12 @@ function MR:RefreshWarbandBoard(reuseData)
         frame.leftPane:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, -(GetSharedHeaderHeight() + 34))
         frame.leftPane:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 14, 14)
         frame.leftPane:SetWidth(238)
+    end
+    if frame.rightPane then
+        frame.leftPane:Show()
+        frame.rightPane:ClearAllPoints()
+        frame.rightPane:SetPoint("TOPLEFT", frame.leftPane, "TOPRIGHT", 14, 0)
+        frame.rightPane:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -14, 14)
     end
 
     local reusedData = reuseData and type(frame._data) == "table"
@@ -884,22 +899,17 @@ function MR:RefreshWarbandBoard(reuseData)
         end
     end
 
-    if activeView == "concentration" then
-        frame.summaryValue:SetText("")
-    else
-        frame.summaryValue:SetText(string.format("%d / %d", totalDone, totalRows))
-        frame.summaryValue:SetTextColor(countColor(totalDone, math.max(totalRows, 1)))
-    end
+    frame.summaryValue:SetText(string.format("%d / %d", totalDone, totalRows))
+    frame.summaryValue:SetTextColor(countColor(totalDone, math.max(totalRows, 1)))
 
-    local summaryText = #data <= 1 and WBAltLoginPrompt()
-        or string.format(L["AltBoard_CharactersTracked"] or "%d characters tracked", #data)
+    local summaryText = string.format(L["AltBoard_CharactersTracked"] or "%d chars", #data)
     local characterGold = GetTrackedCharacterGold()
-    summaryText = summaryText .. "  |  " .. string.format(L["AltBoard_CharacterGoldTotal"] or "Character gold: %s", WBFormatGold(characterGold))
+    summaryText = summaryText .. " | " .. string.format(L["AltBoard_CharacterGoldTotal"] or "Chars: %s", WBFormatMoney(characterGold))
     local warbandGold = self.db and self.db.global and self.db.global.warbandGold
-    if warbandGold ~= nil then
+    if not self.isForever and warbandGold ~= nil then
         summaryText = summaryText
-            .. "  |  " .. string.format(L["AltBoard_WarbandBankGold"] or "Warband bank: %s", WBFormatGold(warbandGold))
-            .. "  |  " .. string.format(L["AltBoard_TotalGold"] or "Total: %s", WBFormatGold(characterGold + warbandGold))
+            .. " | " .. string.format(L["AltBoard_WarbandBankGold"] or "Warband: %s", WBFormatMoney(warbandGold))
+            .. " | " .. string.format(L["AltBoard_TotalGold"] or "Total: %s", WBFormatMoney(characterGold + warbandGold))
     end
     frame.summarySub:SetText(summaryText)
 
@@ -916,13 +926,8 @@ function MR:RefreshWarbandBoard(reuseData)
     if frame.hideCompletedBtn and frame.hideCompletedBtn._label then
         frame.hideCompletedBtn._label:SetText(MR.db.profile.altBoardHideCompleted and (L["AltBoard_ShowCompleted"] or "Show Completed") or (L["AltBoard_HideCompleted"] or "Hide Completed"))
         WBStylePillButton(frame.hideCompletedBtn, MR.db.profile.altBoardHideCompleted == true)
-        if activeView == "character" then
-            frame.hideCompletedBtn:Show()
-            if frame.detailFilterBar then frame.detailFilterBar:Show() end
-        else
-            frame.hideCompletedBtn:Hide()
-            if frame.detailFilterBar then frame.detailFilterBar:Hide() end
-        end
+        frame.hideCompletedBtn:SetShown(activeView == "character")
+        if frame.detailFilterBar then frame.detailFilterBar:SetShown(activeView == "character") end
     end
     if frame.concentrationTrackerBtn then
         WBStylePillButton(frame.concentrationTrackerBtn, false)
@@ -932,9 +937,8 @@ function MR:RefreshWarbandBoard(reuseData)
     end
 
     if not selected then
-        frame.heroName:SetText(L["AltBoard_NoTrackedCharacters"] or "No tracked characters yet")
-        frame.heroMeta:SetText(WBAltLoginPrompt())
-        frame.heroStatus:SetText("")
+        if frame.hero then frame.hero:Hide() end
+        if frame.detailFilterBar then frame.detailFilterBar:Hide() end
         HideUnusedWidgets(frame.heroConcentrationWidgets, 0, ResetCachedWidget)
         for _, card in ipairs(frame._overviewCards or {}) do card:Hide() end
         HideUnusedWidgets(frame.charButtons, 0, ResetSelectableWidget)
@@ -946,11 +950,14 @@ function MR:RefreshWarbandBoard(reuseData)
             frame.concentrationStatus:SetText(WBAltLoginPrompt())
             frame.concentrationStatus:SetTextColor(0.68, 0.74, 0.84)
         end
-        if frame.hero then frame.hero:Hide() end
         if frame.concentrationPane then frame.concentrationPane:Hide() end
         if frame.detailScroll then frame.detailScroll:Hide() end
         if frame.modulePane then frame.modulePane:Hide() end
-        if frame.overviewScroll then frame.overviewScroll:Show() end
+        if frame.bankPane then frame.bankPane:SetShown(activeView == "banks") end
+        if activeView == "banks" then
+            self:RefreshAltBankPane(frame.bankPane)
+        end
+        if frame.overviewScroll then frame.overviewScroll:SetShown(activeView ~= "banks") end
         if frame.overviewEmptyLabel then
             frame.overviewEmptyLabel:SetPoint("TOPLEFT", frame.overviewContent, "TOPLEFT", 8, -6)
             frame.overviewEmptyLabel:SetPoint("TOPRIGHT", frame.overviewContent, "TOPRIGHT", -8, -6)
@@ -995,8 +1002,8 @@ function MR:RefreshWarbandBoard(reuseData)
         btn._meta:SetFont(ns.FONT_ROWS, math.max(8, GetFontSize() - 2), GetFontFlags())
         btn._meta:SetText(GetCharacterDetailsText(entry))
         btn._gold:SetFont(ns.FONT_ROWS, math.max(8, GetFontSize() - 2), GetFontFlags())
-        local goldText = WBFormatGold(entry.gold)
-        btn._gold:SetText(goldText ~= "" and string.format(L["AltBoard_CharacterGold"] or "Gold: %s", goldText) or "")
+        local moneyText = WBFormatMoney(entry.gold)
+        btn._gold:SetText(moneyText)
         btn._note:SetFont(ns.FONT_ROWS, math.max(8, GetFontSize() - 2), GetFontFlags())
         local statusText = WBStatusText(entry)
         if entry.note and entry.note ~= "" then
@@ -1032,6 +1039,18 @@ function MR:RefreshWarbandBoard(reuseData)
     if frame.leftScrollUpdate then
         frame.leftScrollUpdate()
     end
+    if activeView == "banks" then
+        if frame.hero then frame.hero:Hide() end
+        if frame.concentrationPane then frame.concentrationPane:Hide() end
+        if frame.detailScroll then frame.detailScroll:Hide() end
+        if frame.overviewScroll then frame.overviewScroll:Hide() end
+        if frame.modulePane then frame.modulePane:Hide() end
+        if frame.bankPane then frame.bankPane:Show() end
+        self:RefreshAltBankPane(frame.bankPane, selected)
+        return
+    end
+
+    if frame.bankPane then frame.bankPane:Hide() end
 
     if activeView == "modules" then
         if frame.hero then frame.hero:Hide() end
@@ -1040,10 +1059,6 @@ function MR:RefreshWarbandBoard(reuseData)
         if frame.overviewScroll then frame.overviewScroll:Hide() end
         if frame.modulePane then frame.modulePane:Show() end
         PopulateWarbandModuleView(frame, selected)
-        frame.summaryValue:SetText("")
-        frame.summarySub:SetText(MR:IsCharacterWindowLayoutEnabled()
-            and (L["AltBoard_ModuleScopeCharacter"] or "Module visibility for this character")
-            or (L["AltBoard_ModuleScopeShared"] or "Shared layout: changes apply to every character"))
         return
     end
 
@@ -1055,12 +1070,7 @@ function MR:RefreshWarbandBoard(reuseData)
         if frame.detailScroll then frame.detailScroll:Hide() end
         if frame.overviewScroll then frame.overviewScroll:Show() end
 
-        local totalCharacters, totalProfessions = WBPopulateConcentrationOverview(frame, data)
-        frame.summarySub:SetText(string.format(
-            L["AltBoard_ConcentrationOverviewSub"] or "%d professions across %d characters",
-            totalProfessions,
-            totalCharacters
-        ))
+        WBPopulateConcentrationOverview(frame, data)
         return
     end
 
@@ -1077,11 +1087,7 @@ function MR:RefreshWarbandBoard(reuseData)
     frame.heroScore:SetFont(ns.FONT_ROWS, math.max(10, GetFontSize()), GetFontFlags())
     frame.heroScore:SetText(WBMythicScoreText(selected))
     local syncAt = selected.lastSyncAt and selected.lastSyncAt > 0 and selected.lastSyncAt or selected.lastResetAt
-    local heroMeta = string.format(L["AltBoard_LastSynced"] or "%s  |  Last synced: %s", selected.realm ~= "" and selected.realm or (L["AltBoard_UnknownRealm"] or "Unknown Realm"), WBFormatTimestamp(syncAt))
-    local goldText = WBFormatGold(selected.gold)
-    frame.heroMeta:SetText(heroMeta)
-    frame.heroStatus:SetText(goldText ~= "" and string.format(L["AltBoard_CharacterGold"] or "Gold: %s", goldText) or "")
-    frame.heroStatus:SetTextColor(0.94, 0.78, 0.22)
+    frame.heroMeta:SetText(string.format(L["AltBoard_LastSynced"] or "%s  |  Last synced: %s", selected.realm ~= "" and selected.realm or (L["AltBoard_UnknownRealm"] or "Unknown Realm"), WBFormatTimestamp(syncAt)))
     if frame.heroNoteBox and not frame.heroNoteBox:HasFocus() then
         frame.heroNoteBox:SetText(selected.note or "")
     end
@@ -1474,7 +1480,7 @@ function MR:ToggleWarbandBoard()
 
         local function CreateAltBoardTab(label, viewKey)
             local btn = CreateFrame("Button", nil, tabBar, "BackdropTemplate")
-            btn:SetSize(104, 23)
+            btn:SetSize(94, 23)
             btn:SetBackdrop(MakeBackdrop())
             btn:SetScript("OnClick", function()
                 WBSetAltBoardView(viewKey)
@@ -1509,8 +1515,11 @@ function MR:ToggleWarbandBoard()
         local concentrationTab = CreateAltBoardTab(L["AltBoard_TabConcentration"] or "Concentration", "concentration")
         concentrationTab:SetPoint("LEFT", modulesTab, "RIGHT", 6, 0)
 
+        local banksTab = CreateAltBoardTab(L["AltBoard_TabBanks"] or "Banks", "banks")
+        banksTab:SetPoint("LEFT", concentrationTab, "RIGHT", 6, 0)
+
         local concentrationTrackerBtn = CreateFrame("Button", nil, tabBar, "BackdropTemplate")
-        concentrationTrackerBtn:SetSize(134, 23)
+        concentrationTrackerBtn:SetSize(125, 23)
         concentrationTrackerBtn:SetPoint("RIGHT", tabBar, "RIGHT", 0, 0)
         concentrationTrackerBtn:SetBackdrop(MakeBackdrop())
         WBStylePillButton(concentrationTrackerBtn, false)
@@ -1538,7 +1547,7 @@ function MR:ToggleWarbandBoard()
         local hero = CreateFrame("Frame", nil, rightPane, "BackdropTemplate")
         hero:SetPoint("TOPLEFT", tabBar, "BOTTOMLEFT", 0, -14)
         hero:SetPoint("TOPRIGHT", tabBar, "BOTTOMRIGHT", 0, -14)
-        hero:SetHeight(62)
+        hero:SetHeight(54)
         hero:SetBackdrop(MakeBackdrop())
         WBApplySurface(hero, "raised")
 
@@ -1550,7 +1559,7 @@ function MR:ToggleWarbandBoard()
 
         local heroName = hero:CreateFontString(nil, "OVERLAY")
         heroName:SetFont(ns.FONT_HEADERS, math.max(13, GetFontSize() + 3), GetFontFlags())
-        heroName:SetPoint("TOPLEFT", hero, "TOPLEFT", 14, -10)
+        heroName:SetPoint("TOPLEFT", hero, "TOPLEFT", 14, -9)
         heroName:SetJustifyH("LEFT")
         heroName:SetTextColor(0.96, 0.99, 1.00)
 
@@ -1566,60 +1575,6 @@ function MR:ToggleWarbandBoard()
         heroMeta:SetPoint("RIGHT", hero, "RIGHT", -244, 0)
         heroMeta:SetJustifyH("LEFT")
         heroMeta:SetTextColor(0.70, 0.78, 0.86)
-
-        local heroStatus = hero:CreateFontString(nil, "OVERLAY")
-        heroStatus:SetFont(ns.FONT_ROWS, math.max(8, GetFontSize() - 1), GetFontFlags())
-        heroStatus:SetPoint("BOTTOMLEFT", hero, "BOTTOMLEFT", 14, 8)
-
-        local heroNoteLabel = hero:CreateFontString(nil, "OVERLAY")
-        heroNoteLabel:SetFont(ns.FONT_ROWS, math.max(8, GetFontSize() - 1), GetFontFlags())
-        heroNoteLabel:SetPoint("TOPLEFT", hero, "TOPRIGHT", -226, -9)
-        heroNoteLabel:SetText(L["AltBoard_NoteLabel"] or "Note / tag")
-        heroNoteLabel:SetTextColor(0.62, 0.74, 0.80)
-
-        local heroNoteBox = CreateFrame("EditBox", nil, hero, "BackdropTemplate")
-        heroNoteBox:SetSize(210, 22)
-        heroNoteBox:SetPoint("TOPLEFT", heroNoteLabel, "BOTTOMLEFT", 0, -3)
-        heroNoteBox:SetAutoFocus(false)
-        heroNoteBox:SetFont(ns.FONT_ROWS, math.max(9, GetFontSize()), GetFontFlags())
-        heroNoteBox:SetTextColor(0.92, 0.96, 1.00)
-        heroNoteBox:SetJustifyH("LEFT")
-        heroNoteBox:SetMaxLetters(80)
-        heroNoteBox:SetBackdrop(MakeBackdrop())
-        heroNoteBox:SetBackdropColor(0.014, 0.026, 0.044, 0.94)
-        heroNoteBox:SetBackdropBorderColor(0.10, 0.18, 0.24, 0.76)
-        heroNoteBox:SetTextInsets(8, 8, 0, 0)
-
-        local function SaveHeroNote()
-            if not frame.selectedCharKey then
-                return
-            end
-
-            MR:SetAltBoardCharacterNote(frame.selectedCharKey, heroNoteBox:GetText() or "")
-            MR:RequestWarbandBoardRefresh(true)
-        end
-
-        heroNoteBox:SetScript("OnEnterPressed", function(selfBox)
-            SaveHeroNote()
-            selfBox:ClearFocus()
-        end)
-        heroNoteBox:SetScript("OnEscapePressed", function(selfBox)
-            selfBox:SetText(MR:GetAltBoardCharacterNote(frame.selectedCharKey) or "")
-            selfBox:ClearFocus()
-        end)
-        heroNoteBox:SetScript("OnEditFocusLost", function()
-            SaveHeroNote()
-            heroNoteBox:SetBackdropBorderColor(0.10, 0.18, 0.24, 0.76)
-        end)
-        heroNoteBox:SetScript("OnEditFocusGained", function()
-            heroNoteBox:SetBackdropBorderColor(0.24, 0.66, 0.60, 0.95)
-        end)
-        heroNoteBox:SetScript("OnEnter", function(selfBox)
-            ns.ShowTooltip(selfBox, { text = L["AltBoard_NoteTooltip"] or "Add a short note or tag for this character." })
-        end)
-        heroNoteBox:SetScript("OnLeave", function(selfBox)
-            ns.HideOwnedTooltip(selfBox)
-        end)
 
         local concentrationPane = CreateFrame("Frame", nil, rightPane, "BackdropTemplate")
         concentrationPane:SetPoint("TOPLEFT", hero, "BOTTOMLEFT", 0, -10)
@@ -1679,6 +1634,57 @@ function MR:ToggleWarbandBoard()
         end)
         hideCompletedBtn:SetScript("OnLeave", function(selfBtn)
             WBStylePillButton(selfBtn, MR.db.profile.altBoardHideCompleted == true)
+        end)
+
+        local heroNoteLabel = hero:CreateFontString(nil, "OVERLAY")
+        heroNoteLabel:SetFont(ns.FONT_ROWS, math.max(8, GetFontSize() - 1), GetFontFlags())
+        heroNoteLabel:SetPoint("TOPLEFT", hero, "TOPRIGHT", -226, -8)
+        heroNoteLabel:SetJustifyH("LEFT")
+        heroNoteLabel:SetText(L["AltBoard_NoteLabel"] or "Note / tag")
+        heroNoteLabel:SetTextColor(0.62, 0.74, 0.80)
+
+        local heroNoteBox = CreateFrame("EditBox", nil, hero, "BackdropTemplate")
+        heroNoteBox:SetSize(214, 22)
+        heroNoteBox:SetPoint("TOPLEFT", heroNoteLabel, "BOTTOMLEFT", 0, -3)
+        heroNoteBox:SetAutoFocus(false)
+        heroNoteBox:SetFont(ns.FONT_ROWS, math.max(9, GetFontSize()), GetFontFlags())
+        heroNoteBox:SetTextColor(0.92, 0.96, 1.00)
+        heroNoteBox:SetJustifyH("LEFT")
+        heroNoteBox:SetMaxLetters(80)
+        heroNoteBox:SetBackdrop(MakeBackdrop())
+        heroNoteBox:SetBackdropColor(0.014, 0.026, 0.044, 0.94)
+        heroNoteBox:SetBackdropBorderColor(0.10, 0.18, 0.24, 0.76)
+        heroNoteBox:SetTextInsets(8, 8, 0, 0)
+
+        local function SaveHeroNote()
+            if not frame.selectedCharKey then
+                return
+            end
+
+            MR:SetAltBoardCharacterNote(frame.selectedCharKey, heroNoteBox:GetText() or "")
+            MR:RequestWarbandBoardRefresh(true)
+        end
+
+        heroNoteBox:SetScript("OnEnterPressed", function(selfBox)
+            SaveHeroNote()
+            selfBox:ClearFocus()
+        end)
+        heroNoteBox:SetScript("OnEscapePressed", function(selfBox)
+            selfBox:SetText(MR:GetAltBoardCharacterNote(frame.selectedCharKey) or "")
+            selfBox:ClearFocus()
+        end)
+        heroNoteBox:SetScript("OnEditFocusLost", function()
+            SaveHeroNote()
+            heroNoteBox:SetBackdropBorderColor(0.10, 0.18, 0.24, 0.76)
+        end)
+        heroNoteBox:SetScript("OnEditFocusGained", function()
+            heroNoteBox:SetBackdropBorderColor(0.24, 0.66, 0.60, 0.95)
+        end)
+        heroNoteBox:SetScript("OnEnter", function(selfBox)
+            ns.ShowTooltip(selfBox, { text = L["AltBoard_NoteTooltip"] or "Add a short note or tag for this character." })
+        end)
+        heroNoteBox:SetScript("OnLeave", function(selfBox)
+            ns.HideOwnedTooltip(selfBox)
         end)
 
         local detailScroll, detailContent, detailScrollUpdate = WBCreateScrollArea(
@@ -1769,6 +1775,8 @@ function MR:ToggleWarbandBoard()
         )
         moduleContent:SetSize(520, 1)
 
+        self:CreateAltBankPane(frame, rightPane, tabBar)
+
         frame.charButtons = {}
         frame.charRail = charRail
         frame.leftScroll = leftScroll
@@ -1795,6 +1803,9 @@ function MR:ToggleWarbandBoard()
         frame.summaryValue = summaryValue
         frame.summarySub = summarySub
         frame.hero = hero
+        frame.heroName = heroName
+        frame.heroScore = heroScore
+        frame.heroMeta = heroMeta
         frame.heroConcentrationWidgets = {}
         frame.concentrationPane = concentrationPane
         frame.concentrationTitle = concentrationTitle
@@ -1805,10 +1816,6 @@ function MR:ToggleWarbandBoard()
         frame.characterSearchBox = searchBox
         frame.characterSortDropdown = sortDropdown
         frame.hideCompletedBtn = hideCompletedBtn
-        frame.heroName = heroName
-        frame.heroScore = heroScore
-        frame.heroMeta = heroMeta
-        frame.heroStatus = heroStatus
         frame.heroNoteLabel = heroNoteLabel
         frame.heroNoteBox = heroNoteBox
         frame.titleText = title
@@ -1820,6 +1827,7 @@ function MR:ToggleWarbandBoard()
             character = characterTab,
             modules = modulesTab,
             concentration = concentrationTab,
+            banks = banksTab,
         }
         frame.rightPane = rightPane
 
@@ -1858,6 +1866,7 @@ function MR:ToggleWarbandBoard()
                     ResetCachedWidget(row)
                 end
             end
+            if MR.ResetAltBankPane then MR:ResetAltBankPane(frame.bankPane) end
         end)
 
         self.altBoardFrame = frame
