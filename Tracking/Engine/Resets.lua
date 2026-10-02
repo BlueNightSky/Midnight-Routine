@@ -19,7 +19,8 @@ tracking.installers.Resets = function(MR, context)
             if type(charData) ~= "table" then
                 return
             end
-            local previousResetAt = resetType == "daily" and tonumber(charData.lastDailyAt) or tonumber(charData.lastResetAt)
+            local stampKey = resetType == "daily" and "lastDailyAt" or "lastResetAt"
+            local previousResetAt = tonumber(charData[stampKey])
             if not forceReset and resetAt and previousResetAt and previousResetAt > 0 and resetAt <= previousResetAt + 300 then
                 if charData == self.db.char then
                     currentReset = true
@@ -72,7 +73,8 @@ tracking.installers.Resets = function(MR, context)
         end
         for _, charData in pairs(characters) do
             if type(charData) == "table" then
-                local previousResetAt = resetType == "daily" and tonumber(charData.lastDailyAt) or tonumber(charData.lastResetAt)
+                local stampKey = resetType == "daily" and "lastDailyAt" or "lastResetAt"
+                local previousResetAt = tonumber(charData[stampKey])
                 if not previousResetAt or previousResetAt == 0 or resetAt > previousResetAt + 300 then
                     return true
                 end

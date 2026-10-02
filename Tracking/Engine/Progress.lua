@@ -40,6 +40,7 @@ tracking.installers["Progress"] = function(owner, context)
             return buckets
         end
 
+        local fallbackWorld = {}
         for _, activity in ipairs(activities) do
             if activity.type == 1 then
                 table.insert(buckets.dungeon, activity)
@@ -47,9 +48,13 @@ tracking.installers["Progress"] = function(owner, context)
                 table.insert(buckets.raid, activity)
             elseif activity.type == 6 then
                 table.insert(buckets.world, activity)
-            elseif activity.type == 4 and #buckets.world == 0 then
-                table.insert(buckets.world, activity)
+            elseif activity.type == 4 then
+                table.insert(fallbackWorld, activity)
             end
+        end
+
+        if #buckets.world == 0 then
+            buckets.world = fallbackWorld
         end
 
         return buckets
@@ -134,7 +139,10 @@ tracking.installers["Progress"] = function(owner, context)
         if type(charData) == "table" and self.db and charData ~= self.db.char then
             local visibility = charData.rowVisibility
             local moduleVisibility = type(visibility) == "table" and mod and visibility[mod.key] or nil
-            local savedVisible = type(moduleVisibility) == "table" and moduleVisibility[row.key] or nil
+            local savedVisible
+            if type(moduleVisibility) == "table" then
+                savedVisible = moduleVisibility[row.key]
+            end
             if savedVisible ~= nil then
                 return savedVisible == true
             end

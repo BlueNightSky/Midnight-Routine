@@ -636,7 +636,10 @@ tracking.installers.Scanner = function(MR, context)
                 self.db.char.rowVisibility[moduleKey] = self.db.char.rowVisibility[moduleKey] or {}
                 local visibilityBucket = self.db.char.rowVisibility[moduleKey]
                 for _, row in ipairs(mod.rows or {}) do
-                    local currentVisible = row.isVisible and row.isVisible() == true or nil
+                    local currentVisible
+                    if row.isVisible then
+                        currentVisible = row.isVisible() == true
+                    end
                     if visibilityBucket[row.key] ~= currentVisible then
                         moduleChanged = true
                     end
