@@ -893,7 +893,12 @@ tracking.installers["Warband"] = function(owner, context)
                             local sourceRows = GetAltBoardModuleRows(mod, charData, self.db.global)
                             local orderedRows = mod.key ~= "custom_tasks" and self.GetOrderedRows and self:GetOrderedRows(mod) or sourceRows
                             for _, row in ipairs(orderedRows) do
-                                local rowVisible = self.IsRowVisibleForCharacter and self:IsRowVisibleForCharacter(mod, row, charData) or (not row.isVisible or row.isVisible())
+                                local rowVisible
+                                if self.IsRowVisibleForCharacter then
+                                    rowVisible = self:IsRowVisibleForCharacter(mod, row, charData)
+                                else
+                                    rowVisible = not row.isVisible or row.isVisible()
+                                end
                                 local rowEnabled = not (effectiveSettings and effectiveSettings.hiddenRows and effectiveSettings.hiddenRows[row.key] == false)
 
                                 if rowVisible and rowEnabled and mod.key == "currencies" and row.key == "currency_browser_button" then

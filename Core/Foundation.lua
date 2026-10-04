@@ -39,6 +39,7 @@ local DEFAULTS = {
         transparentMode = false,
         keepIconsVisibleInTextMode = true,
         hideStatusBoxes = false,
+        hideActivitiesWhenWeeklyCompleted = false,
         keepHeadersVisibleInTextMode = true,
         autoHidePanelHeaders = false,
         width           = 260,

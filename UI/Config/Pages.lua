@@ -380,6 +380,14 @@ function MR:PopulateConfigFrame(f)
                     MR:RefreshUI()
                 end
             end)
+        if not MR.isForever then
+            Checkbox(L["Config_HideActivitiesWhenWeeklyCompleted"],
+                function() return MR.db.profile.hideActivitiesWhenWeeklyCompleted end,
+                function(v)
+                    MR.db.profile.hideActivitiesWhenWeeklyCompleted = v
+                    MR:RequestConfigRefresh()
+                end)
+        end
         Gap(4); Divider()
         SectionLabel(L["Config_SectionFrame"] or "FRAME")
         Checkbox(L["Config_LockFrame"],

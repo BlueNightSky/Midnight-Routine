@@ -104,6 +104,7 @@ L["Config_DragRowTooltip"] = "Diese Zeile anklicken und ziehen, um ihre Position
 L["RESETS"] = "RESET"
 L["Config_HideWhenCompleted"] = "Abgeschlossene ausblenden"
 L["Config_HideCurrenciesWhenCompleted"] = "Aufgaben nach Abschluss ausblenden"
+L["Config_HideActivitiesWhenWeeklyCompleted"] = "Hide Activities When Weekly Completed"
 L["Config_LockFrame"] = "Fenster sperren"
 L["Config_HideMinimap"] = "Minimap-Symbol ausblenden"
 L["Config_HideInInstances"] = "Fenster in Instanzen ausblenden"

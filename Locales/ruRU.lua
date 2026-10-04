@@ -104,6 +104,7 @@ L["Config_DragRowTooltip"] = "Нажмите и перетащите эту ст
 L["RESETS"] = "СБРОС"
 L["Config_HideWhenCompleted"] = "Скрывать по завершении"
 L["Config_HideCurrenciesWhenCompleted"] = "Скрывать валюту при завершении"
+L["Config_HideActivitiesWhenWeeklyCompleted"] = "Hide Activities When Weekly Completed"
 L["Config_LockFrame"] = "Закрепить окно"
 L["Config_HideMinimap"] = "Скрыть кнопку у миникарты"
 L["Config_HideInInstances"] = "Скрывать в подземельях"

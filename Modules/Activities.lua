@@ -420,6 +420,17 @@ tracking.installers["Activities"] = function(owner, context)
             local changed = false
             for _, row in ipairs(mod.rows) do
                 if row.key == "curse_surge" then
+                    local weeklyComplete = C_QuestLog and C_QuestLog.IsQuestFlaggedCompleted
+                        and C_QuestLog.IsQuestFlaggedCompleted(96995) == true or false
+                    if not weeklyComplete and C_QuestLog and C_QuestLog.GetQuestObjectives then
+                        local objectives = C_QuestLog.GetQuestObjectives(96995)
+                        local objective = objectives and objectives[1]
+                        weeklyComplete = (tonumber(objective and objective.numFulfilled) or 0) >= 3
+                    end
+                    if row.relatedWeeklyComplete ~= weeklyComplete then
+                        changed = true
+                        row.relatedWeeklyComplete = weeklyComplete
+                    end
                     local note = site
                         and string.format(L["Act_CurseSurge_NoteSite"] or "%s\nSite: %s (%.1f, %.1f)", L["Act_CurseSurge_Note"], site.name, site.x, site.y)
                         or L["Act_CurseSurge_Note"]
@@ -441,6 +452,7 @@ tracking.installers["Activities"] = function(owner, context)
         rows = {
             {
                 key           = "stormarion_assault",
+                relatedWeekly = { moduleKey = "midnight_activities", rowKey = "stormarion_assault", max = 1 },
                 label         = L["Act_Stormarion_Label"],
                 max           = 1,
                 note          = L["Act_Stormarion_Note"],
@@ -465,6 +477,7 @@ tracking.installers["Activities"] = function(owner, context)
             },
             {
                 key           = "curse_surge",
+                relatedWeekly = { moduleKey = "s1_weekly", rowKey = "turn_back_surge", max = 3 },
                 label         = L["Act_CurseSurge_Label"],
                 max           = 1,
                 note          = L["Act_CurseSurge_Note"],

@@ -127,6 +127,16 @@ tracking.installers["Progress"] = function(owner, context)
     end
 
     function MR:IsRowVisibleForCharacter(mod, row, charData)
+        if row and row.relatedWeekly and (self.db.profile.hideActivitiesWhenWeeklyCompleted
+            or (mod and self.IsModuleHideComplete and self:IsModuleHideComplete(mod.key))) then
+            charData = charData or (self.GetMainFrameProgressSource and self:GetMainFrameProgressSource()) or self.db.char
+            local weekly = row.relatedWeekly
+            local progress = charData and charData.progress and charData.progress[weekly.moduleKey]
+            if (tonumber(progress and progress[weekly.rowKey]) or 0) >= weekly.max
+                or (charData == self.db.char and row.relatedWeeklyComplete) then
+                return false
+            end
+        end
         if not row or not row.isVisible then
             return true
         end

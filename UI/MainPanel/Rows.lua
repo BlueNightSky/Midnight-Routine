@@ -442,7 +442,10 @@ local function IsMainRowVisible(mod, row)
     if row and row.hideInMain then
         return false
     end
-    return MR.IsRowVisibleForCharacter and MR:IsRowVisibleForCharacter(mod, row) or (not row.isVisible or row.isVisible())
+    if MR.IsRowVisibleForCharacter then
+        return MR:IsRowVisibleForCharacter(mod, row)
+    end
+    return not row.isVisible or row.isVisible()
 end
 
 local function GetRowProgressModuleKey(mod, row)

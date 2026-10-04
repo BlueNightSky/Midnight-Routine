@@ -3,7 +3,7 @@ local tracking = addonNS.Tracking
 
 tracking.installers.Events = function(MR, context)
 local SCAN_S1 = { "s1_weekly" }
-local SCAN_S1_PVP = { "s1_weekly", "pvp_weeklies", "prey" }
+local SCAN_S1_PVP = { "s1_weekly", "pvp_weeklies", "prey", "midnight_activities" }
 local SCAN_DELVES = { "delves" }
 local SCAN_VAULT_DELVES = { "great_vault", "delves" }
 local SCAN_ENCOUNTER = { "great_vault", "delves", "world_bosses", "s1_weekly" }

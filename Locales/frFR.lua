@@ -105,6 +105,7 @@ L["Config_DragRowTooltip"] = "Cliquez et faites glisser cette ligne pour la réo
 L["RESETS"] = "RÉINITIALISATIONS"
 L["Config_HideWhenCompleted"] = "Masquer une fois terminé"
 L["Config_HideCurrenciesWhenCompleted"] = "Masquer les monnaies une fois terminées"
+L["Config_HideActivitiesWhenWeeklyCompleted"] = "Hide Activities When Weekly Completed"
 L["Config_LockFrame"] = "Verrouiller la fenêtre"
 L["Config_HideMinimap"] = "Masquer l'icône de la minicarte"
 L["Config_HideInInstances"] = "Masquer les fenêtres en instance"
