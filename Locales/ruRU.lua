@@ -1,5 +1,14 @@
 local L = LibStub("AceLocale-3.0"):NewLocale("MidnightRoutine", "ruRU")
 if not L then return end
+L["DMF_Shopping_Label"] = "Darkmoon supplies (Auctionator required)"
+L["DMF_Shopping_Title"] = "Darkmoon supplies"
+L["DMF_Shopping_Required"] = "Auctionator required"
+L["DMF_Shopping_Tooltip"] = "Add missing supplies to Auctionator's Routine list.\nItems in your bags are deducted."
+L["DMF_Shopping_NoQuests"] = "Routine: No unfinished quests need supplies."
+L["DMF_Shopping_Unavailable"] = "Routine: Install and enable Auctionator first."
+L["DMF_Shopping_Added"] = "Routine: Supplies added to Auctionator's Routine list."
+L["DMF_Shopping_None"] = "Routine: You already have the required supplies."
+L["DMF_Shopping_Failed"] = "Routine: Could not update Auctionator's list."
 L["AltBoard_BankSelectCharacter"] = "Select a character"
 L["AltBoard_GuildNone"] = "No guild"
 L["AltBoard_GuildUnknown"] = "Guild not recorded"

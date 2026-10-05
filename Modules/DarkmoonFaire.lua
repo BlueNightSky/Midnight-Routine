@@ -313,6 +313,64 @@ tracking.installers["DarkmoonFaire"] = function(owner, context)
         return DARKMOON_REQUIRED_ITEMS[tonumber(questId)] or false
     end
 
+    function MR:GetDarkmoonShoppingItems()
+        local professions = {
+            [29506] = 171,
+            [29509] = 185,
+            [29515] = 773,
+            [29517] = 165,
+            [29520] = 197,
+        }
+        local counts = {}
+        local learnedProfessions = {}
+        if GetProfessions and GetProfessionInfo then
+            local indices = { GetProfessions() }
+            if indices[5] then learnedProfessions[185] = true end
+            for index = 1, 5 do
+                local professionIndex = indices[index]
+                if professionIndex then
+                    local _, _, _, _, _, _, skillLine = GetProfessionInfo(professionIndex)
+                    if skillLine then learnedProfessions[skillLine] = true end
+                end
+            end
+        end
+        if C_TradeSkillUI and C_TradeSkillUI.GetAllProfessionTradeSkillLines
+            and C_TradeSkillUI.GetProfessionInfoBySkillLineID then
+            for _, skillLine in ipairs(C_TradeSkillUI.GetAllProfessionTradeSkillLines() or {}) do
+                local info = C_TradeSkillUI.GetProfessionInfoBySkillLineID(skillLine)
+                if info and (info.skillLevel or 0) > 0 then
+                    learnedProfessions[info.parentProfessionID or skillLine] = true
+                end
+            end
+        end
+        local expansionProfessions = { [171] = 2906, [773] = 2913, [197] = 2918, [165] = 2915 }
+        for questID, skillLine in pairs(professions) do
+            local learned = learnedProfessions[skillLine]
+                or (ns.HasProfessionLearned and ns.HasProfessionLearned(skillLine))
+                or (self.playerProfessions and self.playerProfessions[skillLine])
+                or (expansionProfessions[skillLine] and self.HasProfessionForModule
+                    and self:HasProfessionForModule(expansionProfessions[skillLine]))
+                or (C_QuestLog and C_QuestLog.IsOnQuest and C_QuestLog.IsOnQuest(questID))
+            local complete = C_QuestLog and C_QuestLog.IsQuestFlaggedCompleted
+                and C_QuestLog.IsQuestFlaggedCompleted(questID)
+            if questID == 29509 and self.GetProgress then
+                learned = true
+                complete = (self:GetProgress("darkmoon_faire", "dmf_cook") or 0) >= 1
+            end
+            if learned and not complete then
+                for _, item in ipairs(DARKMOON_REQUIRED_ITEMS[questID]) do
+                    counts[item.itemID] = (counts[item.itemID] or 0) + item.count
+                end
+            end
+        end
+        local items = {}
+        for itemID, count in pairs(counts) do
+            items[#items + 1] = { itemID = itemID, count = count }
+        end
+        table.sort(items, function(a, b) return a.itemID < b.itemID end)
+        return items
+    end
+
 
     MR:RegisterModule({
         key         = "darkmoon_faire",

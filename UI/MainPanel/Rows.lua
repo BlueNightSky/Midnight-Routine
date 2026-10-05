@@ -755,6 +755,10 @@ local function CreateSectionWidget(parent, includeExpansionHeader, registerDrag)
     card._hdrFrame._icon = card._hdrFrame:CreateTexture(nil, "ARTWORK")
     card._hdrFrame._label = card._hdrFrame:CreateFontString(nil, "OVERLAY")
     card._hdrFrame._count = card._hdrFrame:CreateFontString(nil, "OVERLAY")
+    card._hdrFrame._shoppingButton = ns.CreateDarkmoonShoppingButton(card._hdrFrame)
+    card._hdrFrame._shoppingButton:SetPoint("RIGHT", card._hdrFrame, "RIGHT", -22, 0)
+    card._hdrFrame._shoppingButton:SetFrameLevel(card._hdrFrame:GetFrameLevel() + 2)
+    card._hdrFrame._shoppingButton:Hide()
     card._hdrFrame._currencyBrowserButton = CreateFrame("Button", nil, card, "BackdropTemplate")
     card._hdrFrame._currencyBrowserButton:SetHeight(20)
     card._hdrFrame._currencyBrowserButton:SetBackdrop(MakeBackdrop())
@@ -950,6 +954,12 @@ local function UpdateDetachedSectionWidget(self, hostFrame, mod, contentWidth)
         or string.format("%d / %d", secDone, secTotal))
     card._hdrFrame._count:SetTextColor(countColor(secDone, secTotal))
     card._hdrFrame._count:SetJustifyH("RIGHT")
+    local shoppingButton = card._hdrFrame._shoppingButton
+    shoppingButton:SetShown(mod.key == "darkmoon_faire")
+    if mod.key == "darkmoon_faire" then
+        card._hdrFrame._count:ClearAllPoints()
+        card._hdrFrame._count:SetPoint("RIGHT", shoppingButton, "LEFT", -6, 0)
+    end
     card._hdrFrame._label:SetPoint("RIGHT", card._hdrFrame._count, "LEFT", -8, 0)
 
     StyleSectionCollapseIndicator(card._hdrFrame._arrow, isOpen)

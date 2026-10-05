@@ -37,6 +37,7 @@ Modules/ProfessionKnowledge/ProfessionKnowledge.xml
 Tracking/Content.lua
 Core/Tracker.lua
 UI/Components/MapWaypoint.xml
+UI/Components/ShoppingList.lua
 Core/Settings.lua
 Core/Lifecycle.lua
 Core/Events.lua

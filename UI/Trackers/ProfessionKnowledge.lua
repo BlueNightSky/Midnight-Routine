@@ -1808,8 +1808,13 @@ local function BuildGatheringLocationsFrame(isRetry)
         function() MR:ToggleGatheringLocationsConfig() end
     )
     gearBtn:SetFrameLevel(titleBar:GetFrameLevel() + 2)
+    local shoppingButton = ns.CreateDarkmoonShoppingButton(titleBar)
+    shoppingButton:SetFrameLevel(titleBar:GetFrameLevel() + 2)
+    shoppingButton:SetPoint("RIGHT", gearBtn, "LEFT", -3, 0)
+    shoppingButton:SetShown(MR.IsDarkmoonVisible and MR.IsDarkmoonVisible() or false)
 
-    local expansionDropdown, selectedExpansion = CreateKnowledgeExpansionDropdown(titleBar, gearBtn)
+    local expansionDropdown, selectedExpansion = CreateKnowledgeExpansionDropdown(titleBar,
+        shoppingButton:IsShown() and shoppingButton or gearBtn)
     frame.expansionDropdown = expansionDropdown
     expansionDropdown:SetFrameLevel(titleBar:GetFrameLevel() + 2)
     expansionDropdown:ClearAllPoints()
@@ -1864,7 +1869,7 @@ local function BuildGatheringLocationsFrame(isRetry)
     minBtn:SetPoint("RIGHT", closeBtn, "LEFT", -3, 0)
     gearBtn:SetPoint("RIGHT", minBtn, "LEFT", -3, 0)
     if chromeAlpha <= 0.001 then
-        for _, headerBtn in ipairs({ closeBtn, gearBtn, minBtn }) do
+        for _, headerBtn in ipairs({ closeBtn, gearBtn, minBtn, shoppingButton }) do
             if headerBtn.SetBackdropColor then
                 headerBtn:SetBackdropColor(0, 0, 0, 0)
                 headerBtn:SetBackdropBorderColor(0, 0, 0, 0)
@@ -1973,6 +1978,7 @@ local function BuildGatheringLocationsFrame(isRetry)
     end
 
     RenderContent = function(resetScroll)
+        shoppingButton:SetShown(MR.IsDarkmoonVisible and MR.IsDarkmoonVisible() or false)
         MR._professionKnowledgeWindowRenderCount = (MR._professionKnowledgeWindowRenderCount or 0) + 1
         if MR.NoteRefreshSource then MR:NoteRefreshSource("ProfessionKnowledge:Render", true) end
         RefreshFonts()

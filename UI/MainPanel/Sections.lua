@@ -237,6 +237,11 @@ local function UpdateMainSectionWidget(self, mod, yOff, xOff, colW, col, recordR
         or string.format("%d / %d", secDone, secTotal))
     card._hdrFrame._count:SetTextColor(countColor(secDone, secTotal))
     card._hdrFrame._count:SetJustifyH("RIGHT")
+    local shoppingButton = card._hdrFrame._shoppingButton
+    shoppingButton:SetShown(mod.key == "darkmoon_faire")
+    if mod.key == "darkmoon_faire" then
+        SetOneAnchor(card._hdrFrame._count, "RIGHT", shoppingButton, "LEFT", -6, 0)
+    end
     local labelLeft = hasHeaderIcon and card._hdrFrame._iconPlate or card._hdrFrame
     SetTwoAnchors(card._hdrFrame._label,
         "LEFT", labelLeft, hasHeaderIcon and "RIGHT" or "LEFT", hasHeaderIcon and 6 or 9, 0,
