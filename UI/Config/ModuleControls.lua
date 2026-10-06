@@ -419,18 +419,41 @@ function Config.CreateTaskControl(spec)
     frame:EnableMouse(true)
     frame:SetAlpha(spec.available and 1 or 0.55)
     frame:SetScript("OnMouseDown", function(selfFrame, button)
+        if row.taskId and IsShiftKeyDown() then
+            return
+        end
         if not row.configHeader and spec.available and button == "LeftButton" and spec.onDragStart then
             spec.onDragStart(selfFrame)
         end
     end)
     frame:SetScript("OnMouseUp", function(_, button)
+        if row.taskId and IsShiftKeyDown() then
+            local onClick = button == "LeftButton" and row.onLeftClick
+                or button == "RightButton" and row.onRightClick
+            if onClick then
+                ns.HideOwnedTooltip(frame)
+                onClick(row)
+                return
+            end
+        end
         if not row.configHeader and button == "LeftButton" and spec.onDragCommit then
             spec.onDragCommit()
         end
     end)
     frame:SetScript("OnEnter", function()
         if not row.configHeader then
-            ns.ShowTooltip(frame, { text = L["Config_DragRowTooltip"] })
+            ns.ShowTooltip(frame, {
+                build = function(tooltip)
+                    if row.taskId and row.tooltipFunc then
+                        tooltip:SetText(row.label, 1, 1, 1, 1, true)
+                        row.tooltipFunc(tooltip)
+                        tooltip:AddLine(" ")
+                        tooltip:AddLine(L["Config_DragRowTooltip"], 0.7, 0.7, 0.7, true)
+                    else
+                        tooltip:SetText(L["Config_DragRowTooltip"])
+                    end
+                end,
+            })
         end
     end)
     frame:SetScript("OnLeave", function()
