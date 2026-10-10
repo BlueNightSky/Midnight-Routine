@@ -156,21 +156,16 @@ end
 if TooltipDataProcessor and TooltipDataProcessor.AddTooltipPostCall and Enum and Enum.TooltipDataType then
     TooltipDataProcessor.AddTooltipPostCall(Enum.TooltipDataType.Unit, function(tooltip, data)
         if tooltip ~= GameTooltip or IsRoutineLoaded() then return end
+        if issecretvalue and issecretvalue(data) then return end
+        local guid = data and data.guid
+        if issecretvalue and issecretvalue(guid) then return end
         pcall(function()
-            local npcID = data and NpcIDFromGUID(data.guid)
+            local npcID = NpcIDFromGUID(guid)
             local rare = npcID and GetRare(npcID)
             if rare and (rare[2] or isForever) then AddRareLines(tooltip, npcID, rare) end
         end)
     end)
 end
-
-local shiftWatcher = CreateFrame("Frame")
-shiftWatcher:RegisterEvent("MODIFIER_STATE_CHANGED")
-shiftWatcher:SetScript("OnEvent", function()
-    if not IsRoutineLoaded() and GameTooltip:IsShown() and GameTooltip.RefreshData and select(2, GameTooltip:GetUnit()) then
-        GameTooltip:RefreshData()
-    end
-end)
 
 local function RecordRareDeath(guid)
     local npcID = NpcIDFromGUID(guid)
