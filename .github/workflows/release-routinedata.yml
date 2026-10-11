@@ -64,6 +64,11 @@ jobs:
               raise SystemExit("Add RoutineData's addon-site project IDs to RoutineData.toc")
           PY
 
+      - name: Install Subversion
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y subversion
+
       - name: Fetch libraries and stage RoutineData
         uses: BigWigsMods/packager@master
         with:
