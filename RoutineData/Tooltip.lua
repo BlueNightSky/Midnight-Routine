@@ -49,18 +49,13 @@ local INVENTORY_TOOLTIP_ADDONS = {
     "Syndicator", "Baganator", "Bagnon", "BagSync", "ArkInventory", "DataStore", "Altoholic",
 }
 
-local otherAddonLoaded
 local function OtherInventoryAddonLoaded()
-    if otherAddonLoaded == nil then
-        otherAddonLoaded = false
-        for _, name in ipairs(INVENTORY_TOOLTIP_ADDONS) do
-            if C_AddOns.IsAddOnLoaded(name) then
-                otherAddonLoaded = true
-                break
-            end
+    for _, name in ipairs(INVENTORY_TOOLTIP_ADDONS) do
+        if C_AddOns.IsAddOnLoaded(name) then
+            return true
         end
     end
-    return otherAddonLoaded
+    return false
 end
 
 function RoutineData:IsYieldingItemTooltips()
@@ -100,9 +95,14 @@ local function AddCurrencyLines(tooltip, currencyID)
     end
 end
 
+function RoutineData:IsYieldingCurrencyTooltips()
+    return self.db.settings.tooltipYield and OtherInventoryAddonLoaded()
+end
+
 local function OnCurrencyTooltip(tooltip, data)
     if tooltip ~= GameTooltip and tooltip ~= ItemRefTooltip then return end
     if not (RoutineData.db and RoutineData.db.settings.tooltipCurrency) then return end
+    if RoutineData:IsYieldingCurrencyTooltips() then return end
     local currencyID = data and data.id
     if type(currencyID) ~= "number" or (issecretvalue and issecretvalue(currencyID)) then return end
     pcall(AddCurrencyLines, tooltip, currencyID)

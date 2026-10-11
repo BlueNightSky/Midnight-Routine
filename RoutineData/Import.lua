@@ -3,9 +3,6 @@ local RoutineData = ns.RoutineData
 if not RoutineData then return end
 local L = LibStub("AceLocale-3.0"):GetLocale("RoutineData")
 
--- One-time import of the bank/bag snapshots Routine collected before RoutineData existed.
--- Only fills gaps; never overwrites anything RoutineData has captured itself.
-
 local function CountTab(tab)
     local counts = {}
     for _, item in pairs(tab and tab.items or {}) do
