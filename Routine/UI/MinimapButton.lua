@@ -132,12 +132,14 @@ local minimapObject = LDB:NewDataObject("MidnightRoutine", {
 
 local shiftWatcher = CreateFrame("Frame")
 shiftWatcher:RegisterEvent("MODIFIER_STATE_CHANGED")
-shiftWatcher:SetScript("OnEvent", function()
+shiftWatcher:SetScript("OnEvent", function(_, _, key)
+    if key ~= "LSHIFT" and key ~= "RSHIFT" then return end
     local button = LDBIcon:GetMinimapButton(LDB_NAME)
-    if button and GameTooltip:IsShown() and GameTooltip:GetOwner() == button then
-        GameTooltip:ClearLines()
-        minimapObject.OnTooltipShow(GameTooltip)
-        GameTooltip:Show()
+    local tooltip = LDBIcon.tooltip
+    if button and tooltip and tooltip:IsShown() and tooltip:GetOwner() == button then
+        tooltip:ClearLines()
+        minimapObject.OnTooltipShow(tooltip)
+        tooltip:Show()
     end
 end)
 
