@@ -13,6 +13,14 @@ local DEFAULT_FONT_FLAGS = "OUTLINE"
 local GetActiveMediaProfile
 local GetResolvedMediaSetting
 local ResolveSelectedFontPath
+local fontsReady = false
+local fontValidationCache = {}
+local fontValidationObject
+
+function ns.GetSharedMedia()
+    LSM = LibStub and LibStub:GetLibrary("LibSharedMedia-3.0", true)
+    return LSM
+end
 
 local function NormalizeFontFlags(flags)
     if flags == nil then
@@ -145,12 +153,13 @@ function ns.GetDefaultBackgroundTexture()
 end
 
 local function FetchSharedMedia(kind, name, fallback)
-    if not LSM or type(name) ~= "string" or name == "" then
+    local sharedMedia = ns.GetSharedMedia()
+    if not sharedMedia or type(name) ~= "string" or name == "" then
         return fallback
     end
 
     local mediaType = MEDIA_KIND_TO_LSM[kind]
-    local path = mediaType and LSM:Fetch(mediaType, name, true)
+    local path = mediaType and sharedMedia:Fetch(mediaType, name, true)
     if type(path) == "string" then
         return path
     end
@@ -182,12 +191,9 @@ local function HasCustomBackground(profile)
         and profile.backgroundMedia ~= ns.MEDIA_DEFAULT_TOKEN
 end
 
-function ns.GetSharedMedia()
-    return LSM
-end
-
 function ns.GetSharedMediaList(kind)
-    if not LSM then
+    local sharedMedia = ns.GetSharedMedia()
+    if not sharedMedia then
         return {}
     end
 
@@ -196,7 +202,7 @@ function ns.GetSharedMediaList(kind)
         return {}
     end
 
-    return LSM:List(mediaType) or {}
+    return sharedMedia:List(mediaType) or {}
 end
 
 GetActiveMediaProfile = function()
@@ -218,16 +224,83 @@ GetResolvedMediaSetting = function(key)
     return profile and profile[key]
 end
 
+local function ResolveRegisteredFont(name)
+    local sharedMedia = ns.GetSharedMedia()
+    if type(name) ~= "string" or name == "" or not sharedMedia
+        or not sharedMedia:IsValid(MEDIA_KIND_TO_LSM.font, name) then
+        return nil
+    end
+
+    local path = FetchSharedMedia("font", name, nil)
+    if type(path) ~= "string" or path == "" then
+        return nil
+    end
+
+    if fontValidationCache[path] == nil then
+        fontValidationObject = fontValidationObject or CreateFont("MidnightRoutineMediaValidationFont")
+        local ok, loaded = pcall(fontValidationObject.SetFont, fontValidationObject, path, 12, "")
+        fontValidationCache[path] = ok and loaded == true
+    end
+
+    return fontValidationCache[path] and path or nil
+end
+
+local function NormalizeSavedFonts(settings)
+    if type(settings) ~= "table" then return end
+
+    for _, key in ipairs({ "fontMedia", "rowFontMedia", "headerFontMedia" }) do
+        local name = settings[key]
+        local pathKey = key .. "Path"
+        if name ~= nil and name ~= ns.MEDIA_DEFAULT_TOKEN then
+            local path = ResolveRegisteredFont(name)
+            if path then
+                settings[pathKey] = path
+            else
+                settings[key] = ns.MEDIA_DEFAULT_TOKEN
+                settings[pathKey] = nil
+            end
+        else
+            if name == nil and settings[pathKey] ~= nil then
+                settings[key] = ns.MEDIA_DEFAULT_TOKEN
+            end
+            settings[pathKey] = nil
+        end
+    end
+end
+
+function ns.ValidateSavedFonts()
+    fontsReady = true
+    local addon = ns.MR
+    local db = addon and addon.db
+    if not db then return end
+
+    NormalizeSavedFonts(db.profile)
+    NormalizeSavedFonts(db.char and db.char.mediaSettings)
+    local saved = db.sv
+    if type(saved) ~= "table" then return end
+
+    for _, settings in pairs(type(saved.profiles) == "table" and saved.profiles or {}) do
+        NormalizeSavedFonts(settings)
+    end
+    for _, character in pairs(type(saved.char) == "table" and saved.char or {}) do
+        if type(character) == "table" then
+            NormalizeSavedFonts(character.mediaSettings)
+        end
+    end
+end
+
 ResolveSelectedFontPath = function(profile)
     profile = profile or GetActiveMediaProfile()
+
+    if fontsReady then
+        NormalizeSavedFonts(profile)
+    end
 
     local defaultFont = ResolveDefaultFont()
     local sharedFont = (profile and profile.fontMedia) or GetResolvedMediaSetting("fontMedia")
         or (profile and profile.rowFontMedia) or GetResolvedMediaSetting("rowFontMedia")
         or (profile and profile.headerFontMedia) or GetResolvedMediaSetting("headerFontMedia")
-    local fontPath = (profile and profile.fontMediaPath) or GetResolvedMediaSetting("fontMediaPath")
-
-    local resolved = ResolveMediaPath("font", sharedFont, fontPath, defaultFont)
+    local resolved = ResolveRegisteredFont(sharedFont)
     if type(resolved) ~= "string" or resolved == "" then
         return defaultFont
     end
