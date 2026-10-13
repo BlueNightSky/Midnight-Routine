@@ -1,6 +1,7 @@
 ## Interface: 120007, 120100, 16001
 ## Title: |cff2ae7c6Routine|r Data
 ## Notes: Tracks items across your characters and shows who owns what in tooltips. Data layer for Routine.
+## Notes-zhCN: 在你的所有角色间追踪物品，并在鼠标提示中展示物品持有者。Routine 的数据底层模块。
 ## Author: Azro
 ## Version: @project-version@
 ## SavedVariables: RoutineDataDB
