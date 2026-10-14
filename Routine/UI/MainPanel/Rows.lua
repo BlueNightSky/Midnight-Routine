@@ -276,7 +276,7 @@ local function MainStatusButtonOnClick(selfBtn)
     end
 
 
-    if row.encounterIds then return end
+    if row.encounterIds and not row.allowManualOverride then return end
 
     local max = tonumber(row.max)
     if not max then return end

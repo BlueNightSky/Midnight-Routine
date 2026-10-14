@@ -515,6 +515,32 @@ tracking.installers["WeeklyTasks"] = function(owner, context)
         return state.name, state.poiName, state.mapId
     end
 
+    local function MoveKithixProgress(character, preserve)
+        if type(character) ~= "table" then return false end
+        local changed = false
+        for _, field in ipairs({ "progress", "manualOverrides" }) do
+            local store = character[field]
+            local old = type(store) == "table" and store.kithix
+            local value = type(old) == "table" and tonumber(old.kithix_kill)
+            if value then
+                if preserve and value > 0 then
+                    if type(store.s1_weekly) ~= "table" then store.s1_weekly = {} end
+                    store.s1_weekly.kithix_kill = math.max(tonumber(store.s1_weekly.kithix_kill) or 0, math.min(value, 1))
+                end
+                old.kithix_kill = nil
+                changed = true
+            end
+        end
+        return changed
+    end
+
+    tracking.RegisterCallback(MR, "CustomTasksResetDue", function(_, resetType, _, characters)
+        if resetType ~= "weekly" then return end
+        for _, character in ipairs(type(characters) == "table" and characters or {}) do
+            MoveKithixProgress(character, false)
+        end
+    end)
+
     MR:RegisterModule({
         key         = "s1_weekly",
         label       = L["Weekly_SeasonTitle"],
@@ -524,6 +550,15 @@ tracking.installers["WeeklyTasks"] = function(owner, context)
         scanReturnsChanged = true,
 
         onScan = function(mod)
+            local migrated = false
+            local resetAt = MR:GetLastResetTimestamp()
+            for _, character in pairs(MR:GetCharacters() or {}) do
+                if type(character) == "table" then
+                    local currentWeek = not resetAt or resetAt <= (tonumber(character.lastResetAt) or 0) + 300
+                    migrated = MoveKithixProgress(character, currentWeek) or migrated
+                end
+            end
+            migrated = MoveKithixProgress(MR.db.char, not resetAt or resetAt <= (tonumber(MR.db.char.lastResetAt) or 0) + 300) or migrated
             local db = MR.db.char.progress
             if not db[mod.key] then db[mod.key] = {} end
             local previousRitualActiveName = db[mod.key]["ritual_site_active_name"]
@@ -1041,7 +1076,7 @@ tracking.installers["WeeklyTasks"] = function(owner, context)
                     end
                 end
             end
-            return false
+            return migrated
         end,
 
         rows = {
@@ -1560,6 +1595,75 @@ tracking.installers["WeeklyTasks"] = function(owner, context)
                 y = 66.3,
                 waypointTitle = L["Weekly_Nymrissa_Waypoint"] or "The Tidebound Grotto Lair Entrance",
             },
+            {
+                key = "aqir_research_satchel",
+                label = "|cff58c9d4" .. L["Weekly_AqirSatchel_Label"] .. "|r",
+                max = 1,
+                note = L["Weekly_AqirSatchel_Note"],
+                patchKey = "12.1.5",
+                itemId = 277283,
+                noItemProgress = true,
+                noBlizzardTooltip = true,
+                autoTracked = true,
+            },
+            {
+                key = "orin_voidcore",
+                label = "|cff58c9d4" .. L["Weekly_OrinVoidcore_Label"] .. "|r",
+                max = 1,
+                note = L["Weekly_OrinVoidcore_Note"],
+                patchKey = "12.1.5",
+                questIds = { 98012, 98015, 98016 },
+                preserveCompletion = true,
+                zone = 2393,
+                x = 40.0,
+                y = 64.8,
+                waypointTitle = L["Weekly_OrinVoidcore_Waypoint"],
+                isVisible = function()
+                    return IsAnyQuestCompleted({ 97981 })
+                        or (C_QuestLog.IsQuestFlaggedCompletedOnAccount and C_QuestLog.IsQuestFlaggedCompletedOnAccount(97981))
+                        or IsAnyQuestActive({ 98012, 98015, 98016 })
+                        or IsAnyQuestCompleted({ 98012, 98015, 98016 })
+                        or (tonumber(MR:GetProgress("s1_weekly", "orin_voidcore")) or 0) >= 1
+                end,
+            },
+            {
+                key = "kithix_kill",
+                label = "|cff58c9d4" .. L["Weekly_Kithix_Label"] .. "|r",
+                note = L["Weekly_Kithix_Note"],
+                patchKey = "12.1.5",
+                max = 1,
+                encounterIds = { 3513 },
+                encounterDifficulties = { [14] = true, [15] = true, [16] = true, [17] = true },
+                autoUpdateInstances = true,
+                autoTracked = true,
+                allowManualOverride = true,
+            },
         },
     })
+
+    if MR:IsPatchAvailable("12.1.5") then
+        local selfLootPatterns = {}
+        for _, formatKey in ipairs({ "LOOT_ITEM_SELF", "LOOT_ITEM_SELF_MULTIPLE", "LOOT_ITEM_PUSHED_SELF", "LOOT_ITEM_PUSHED_SELF_MULTIPLE" }) do
+            local formatText = _G[formatKey]
+            if type(formatText) == "string" and formatText ~= "" then
+                local pattern = formatText:gsub("([%^%$%(%)%%%.%[%]%*%+%-%?])", "%%%1")
+                pattern = pattern:gsub("%%%%s", ".+"):gsub("%%%%d", "%%d+")
+                selfLootPatterns[#selfLootPatterns + 1] = "^" .. pattern .. "$"
+            end
+        end
+        MR:RegisterEvent("CHAT_MSG_LOOT", function(_, message)
+            if type(message) ~= "string" or (issecretvalue and issecretvalue(message)) then return end
+            if tonumber(message:match("|Hitem:(%d+):")) ~= 277283 then return end
+            for _, pattern in ipairs(selfLootPatterns) do
+                if message:match(pattern) then
+                    if MR:WriteScanProgress("s1_weekly", "aqir_research_satchel", 1) then
+                        tracking:Fire("StatsInvalidated")
+                        tracking:Fire("DataRefreshRequested")
+                    end
+                    return
+                end
+            end
+        end)
+    end
+
 end

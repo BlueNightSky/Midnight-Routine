@@ -11,6 +11,47 @@ tracking.installers["StoryCampaign"] = function(owner, context)
 
     local registeredCampaigns = {}
     local L = context.labels
+
+    local function IsVenomstoneResearchComplete()
+        return (C_QuestLog and C_QuestLog.IsQuestFlaggedCompleted and C_QuestLog.IsQuestFlaggedCompleted(98379))
+            or (C_QuestLog and C_QuestLog.IsQuestFlaggedCompletedOnAccount and C_QuestLog.IsQuestFlaggedCompletedOnAccount(98379))
+    end
+
+    MR:RegisterModule({
+        key = "venomstone_research",
+        label = L["Venomstone_Research_Title"],
+        labelColor = "#ffff99",
+        configGroup = "story",
+        patchKey = "12.1.5",
+        resetType = "never",
+        defaultOpen = true,
+        defaultEnabled = MR:GetStoryCampaignsEnabledPreference("midnight") ~= false,
+        scanReturnsChanged = true,
+        onScan = function(mod)
+            if IsVenomstoneResearchComplete() then
+                return MR:WriteScanProgress(mod.key, "ancient_depths_ancient_venom", 1)
+            end
+            return false
+        end,
+        isVisible = function()
+            return not IsVenomstoneResearchComplete()
+                and (tonumber(MR:GetProgress("venomstone_research", "ancient_depths_ancient_venom")) or 0) < 1
+        end,
+        rows = {
+            {
+                key = "ancient_depths_ancient_venom",
+                label = "|cffffff88" .. L["Venomstone_Research_Label"] .. "|r",
+                note = L["Venomstone_Research_Note"],
+                max = 1,
+                questIds = { 98379 },
+                preserveCompletion = true,
+                zone = 2393,
+                x = 40.0,
+                y = 64.8,
+                waypointTitle = L["Weekly_OrinVoidcore_Waypoint"],
+            },
+        },
+    })
     local retryAttempts = 0
     local retryScheduled = false
 

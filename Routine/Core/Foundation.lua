@@ -241,6 +241,13 @@ MR.patches = {
         shortLabel = "12.1",
         order = 120100,
     },
+    ["12.1.5"] = {
+        key = "12.1.5",
+        label = L["Patch_1215"],
+        shortLabel = "12.1.5",
+        order = 120105,
+        minInterface = 120105,
+    },
 }
 
 local function DeepCopy(value)

@@ -1078,7 +1078,7 @@ function Config.BuildModulesPage(ctx)
         for _, row in ipairs(rows) do
             local currentRow = row
             local rowPatchKey = MR:GetRowPatchKey(mod, row)
-            if rowPatchKey and rowPatchKey ~= MR:GetModulePatchKey(mod) and rowPatchKey ~= lastRowPatchKey then
+            if rowPatchKey and (rowPatchKey ~= MR:GetModulePatchKey(mod) or IsStoryConfigModule(mod)) and rowPatchKey ~= lastRowPatchKey then
                 BuildRowPatchHeader(rowPatchKey, mod.key)
                 lastRowPatchKey = rowPatchKey
             end
