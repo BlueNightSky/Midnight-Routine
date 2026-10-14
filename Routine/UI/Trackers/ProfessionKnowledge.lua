@@ -184,13 +184,6 @@ local function GetEntryIcon(entry)
         end
     end
 
-    if entry.itemID then
-        local icon = GetItemIcon(entry.itemID)
-        if icon then
-            return icon
-        end
-    end
-
     return ENTRY_FALLBACK_ICONS[entry.kind] or "Interface\\Icons\\INV_Misc_QuestionMark"
 end
 

@@ -158,6 +158,14 @@ local function EnsureCell(pane, index)
                 if item.link then tooltip:SetHyperlink(item.link)
                 elseif item.id then tooltip:SetItemByID(item.id)
                 else tooltip:SetText(item.name or "") end
+                tooltip:AddLine(" ")
+                tooltip:AddLine(L["AltBoard_ItemStorage"] or "Stored item", 0.35, 0.88, 0.78)
+                tooltip:AddDoubleLine(selfCell.sourceLabel or "", selfCell.storageOwner or "", 0.60, 0.68, 0.74, 0.90, 0.93, 0.96)
+                tooltip:AddDoubleLine(selfCell.tabName or "", string.format(L["AltBoard_ItemSlot"] or "Slot %d", selfCell.slot or 1), 0.90, 0.93, 0.96, 0.60, 0.68, 0.74)
+                tooltip:AddDoubleLine(L["AltBoard_ItemStack"] or "This stack", BreakUpLargeNumbers and BreakUpLargeNumbers(item.count or 1) or tostring(item.count or 1), 0.60, 0.68, 0.74, 0.95, 0.85, 0.55)
+                if selfCell.snapshotUpdated then
+                    tooltip:AddLine(string.format(L["AltBoard_ItemRecorded"] or "Recorded: %s", Warband.WBFormatTimestamp(selfCell.snapshotUpdated)), 0.48, 0.55, 0.62, true)
+                end
             end,
         })
     end)
@@ -219,13 +227,17 @@ function MR:RefreshAltBankPane(pane, selected)
         local tab = snapshot.tabs[tabIndex]
         if tab then
             local items = {}
+            local itemSlots = {}
             local occupied = 0
             for slot = 1, tab.slots or 0 do
                 local item = tab.items and tab.items[slot]
                 if item then
                     occupied = occupied + 1
-                    local itemName = (item.name or (item.id and GetItemInfo and GetItemInfo(item.id)) or ""):lower()
-                    if query == "" or itemName:find(query, 1, true) then items[#items + 1] = item end
+                    local itemName = (item.name or (item.id and C_Item and C_Item.GetItemNameByID and C_Item.GetItemNameByID(item.id)) or ""):lower()
+                    if query == "" or itemName:find(query, 1, true) then
+                        items[#items + 1] = item
+                        itemSlots[item] = slot
+                    end
                 end
             end
             if query == "" or #items > 0 then
@@ -244,6 +256,11 @@ function MR:RefreshAltBankPane(pane, selected)
                     local cell = EnsureCell(pane, cellIndex)
                     SetOneAnchor(cell, "TOPLEFT", pane.content, "TOPLEFT", ((index - 1) % columns) * BANK_CELL_STRIDE + 2, -y - math.floor((index - 1) / columns) * BANK_CELL_STRIDE)
                     cell.item = item
+                    cell.slot = itemSlots[item]
+                    cell.tabName = tab.name
+                    cell.sourceLabel = pane.sourceButtons[pane.bankSource]._label:GetText()
+                    cell.storageOwner = pane.bankSource == "warband" and "" or pane.bankSource == "guild" and guildName or selected and selected.name or ""
+                    cell.snapshotUpdated = snapshot.updatedAt
                     cell.icon:SetTexture(item.icon or "Interface\\Icons\\INV_Misc_QuestionMark")
                     cell.count:SetText((item.count or 1) > 1 and item.count or "")
                     local color = item.quality and ITEM_QUALITY_COLORS and ITEM_QUALITY_COLORS[item.quality]

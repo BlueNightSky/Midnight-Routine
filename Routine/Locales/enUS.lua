@@ -1087,3 +1087,7 @@ L["Forever_RareDiscoveryNote"] = "Discovered rare. Kills are tracked by the rare
 L["Forever_RareRecordedLocation"] = "Location recorded from where you targeted this rare."
 L["Forever_RareLocationCount"] = "Known locations: %d. Click to cycle waypoints."
 L["Forever_RareLocationUnknown"] = "Location not yet documented."
+L["AltBoard_ItemStorage"] = "Stored item"
+L["AltBoard_ItemSlot"] = "Slot %d"
+L["AltBoard_ItemStack"] = "This stack"
+L["AltBoard_ItemRecorded"] = "Recorded: %s"

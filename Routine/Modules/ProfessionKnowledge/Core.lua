@@ -8,6 +8,13 @@ tracking.installers["ProfessionKnowledgeCore"] = function(owner, context)
     local MR = ns.MR
     local L = context.labels
 
+    local function GetProfessionItemName(itemID)
+        local getItemInfo = C_Item and C_Item.GetItemInfo or GetItemInfo
+        if type(getItemInfo) == "function" then
+            return getItemInfo(itemID)
+        end
+    end
+
     local ENTRY_FIELDS = {
         "kind", "mode", "itemID", "questID", "questIDs", "kp", "zone", "x", "y",
         "altZone", "altX", "altY", "note", "rowKey", "mainMenuLabel", "mainMenuOrder",
@@ -341,7 +348,7 @@ tracking.installers["ProfessionKnowledgeCore"] = function(owner, context)
                 changed = title and title ~= "" or false
                 local rewardItemID = GetQuestRewardItemID(loadedQuestID, true)
                 if rewardItemID then
-                    local rewardName = GetItemInfo(rewardItemID)
+                    local rewardName = GetProfessionItemName(rewardItemID)
                     if rewardName and rewardName ~= "" then
                         changed = true
                     else
@@ -382,7 +389,7 @@ tracking.installers["ProfessionKnowledgeCore"] = function(owner, context)
 
     function ns.ResolveProfessionEntryLabel(entry, fallback, preferFallback)
         if entry and entry.itemID then
-            local itemName = GetItemInfo(entry.itemID)
+            local itemName = GetProfessionItemName(entry.itemID)
             if itemName and itemName ~= "" then
                 itemLabelFailed[entry.itemID] = nil
                 return itemName
@@ -404,7 +411,7 @@ tracking.installers["ProfessionKnowledgeCore"] = function(owner, context)
             local questID = entry.questID or (entry.questIDs and entry.questIDs[1])
             local rewardItemID = GetQuestRewardItemID(questID)
             if rewardItemID then
-                local rewardName = GetItemInfo(rewardItemID)
+                local rewardName = GetProfessionItemName(rewardItemID)
                 if rewardName and rewardName ~= "" then
                     itemLabelFailed[rewardItemID] = nil
                     return rewardName
@@ -479,7 +486,7 @@ tracking.installers["ProfessionKnowledgeCore"] = function(owner, context)
             itemLabelWatchFrame:SetScript("OnEvent", function(self, event, resolvedItemID, success)
                 if not (pendingLabelRows and pendingLabelRows[resolvedItemID]) then return end
                 pendingLabelRows[resolvedItemID] = nil
-                local name = success ~= false and GetItemInfo(resolvedItemID)
+                local name = success ~= false and GetProfessionItemName(resolvedItemID)
                 if name and name ~= "" then
                     itemLabelFailed[resolvedItemID] = nil
                     labelGeneration = labelGeneration + 1
