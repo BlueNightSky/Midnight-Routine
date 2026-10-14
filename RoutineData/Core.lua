@@ -306,19 +306,16 @@ frame:RegisterEvent("PLAYER_LOGIN")
 frame:SetScript("OnEvent", function(_, event, loadedName)
     if event == "ADDON_LOADED" then
         if loadedName ~= addonName then return end
-        RoutineDataDB = RoutineDataDB or {}
+        if type(RoutineDataDB) ~= "table" then RoutineDataDB = {} end
         local db = RoutineDataDB
         db.version = db.version or DB_VERSION
-        db.characters = db.characters or {}
-        db.warband = db.warband or { tabs = {} }
-        db.guilds = db.guilds or {}
-        db.characterGuilds = db.characterGuilds or {}
-        db.snapshots = db.snapshots or {}
-        db.snapshots.characters = db.snapshots.characters or {}
-        db.snapshots.bags = db.snapshots.bags or {}
-        db.snapshots.guildBanks = db.snapshots.guildBanks or {}
-        db.imported = db.imported or {}
-        db.settings = db.settings or {}
+        for _, key in ipairs({ "characters", "warband", "guilds", "characterGuilds", "snapshots", "imported", "settings" }) do
+            if type(db[key]) ~= "table" then db[key] = {} end
+        end
+        if type(db.warband.tabs) ~= "table" then db.warband.tabs = {} end
+        for _, key in ipairs({ "characters", "bags", "guildBanks" }) do
+            if type(db.snapshots[key]) ~= "table" then db.snapshots[key] = {} end
+        end
         MergeMissing(db, DEFAULTS)
         RoutineData.db = db
     elseif event == "PLAYER_LOGIN" then
