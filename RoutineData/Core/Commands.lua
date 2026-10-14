@@ -20,6 +20,7 @@ local function PrintHelp()
     print("  " .. L["Cmd_Help_Options"])
     print("  " .. L["Cmd_Help_Forget"])
     print("  " .. L["Cmd_Help_Chars"])
+    print("  " .. L["Cmd_Help_Roster"])
     print("  " .. L["Cmd_Help_Item"])
     print("  " .. L["Cmd_Help_Toggle"])
     print("  " .. L["Cmd_Help_ToggleMinimap"])
@@ -94,6 +95,8 @@ SlashCmdList["ROUTINEDATA"] = function(message)
     command = command:lower()
     if command == "chars" then
         PrintCharacters()
+    elseif command == "roster" or command == "alts" then
+        RoutineData:OpenRoster()
     elseif command == "item" then
         PrintItem(rest)
     elseif command == "toggle" then

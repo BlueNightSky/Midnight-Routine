@@ -26,6 +26,16 @@ local function FormatMoney(copper)
     return GetMoneyString and GetMoneyString(copper, true) or tostring(copper)
 end
 
+local function VisibleGold()
+    local entries, total = {}, 0
+    for _, entry in ipairs(API.GetGoldRanking()) do
+        if not RoutineData:IsCharacterHidden(entry.key) then
+            entries[#entries + 1] = entry
+            total = total + entry.gold
+        end
+    end
+    return entries, total
+end
 local MAX_LISTED = 5
 
 local broker = LDB:NewDataObject(OBJECT_NAME, {
@@ -38,7 +48,7 @@ local broker = LDB:NewDataObject(OBJECT_NAME, {
     end,
     OnTooltipShow = function(tooltip)
         tooltip:AddLine("Routine Data")
-        local entries = API.GetGoldRanking()
+        local entries, total = VisibleGold()
         if #entries == 0 then
             tooltip:AddLine(L["Broker_NoCharacters"], 0.7, 0.7, 0.7)
             tooltip:AddLine(L["Broker_ClickHint"], 0.55, 0.55, 0.60)
@@ -53,14 +63,14 @@ local broker = LDB:NewDataObject(OBJECT_NAME, {
             tooltip:AddLine(string.format(L["Broker_MoreCharacters"], #entries - limit), 0.55, 0.55, 0.60)
         end
         tooltip:AddLine(" ")
-        tooltip:AddDoubleLine(L["Tooltip_Total"], FormatMoney(API.GetTotalGold()), 0.7, 0.7, 0.7, 1, 1, 1)
+        tooltip:AddDoubleLine(L["Tooltip_Total"], FormatMoney(total), 0.7, 0.7, 0.7, 1, 1, 1)
         tooltip:AddLine(" ")
         tooltip:AddLine(L["Broker_ClickHint"], 0.55, 0.55, 0.60)
     end,
 })
 
 local function RefreshText()
-    broker.text = FormatMoney(API.GetTotalGold())
+    broker.text = FormatMoney(select(2, VisibleGold()))
 end
 
 local routineLoaded = false
@@ -99,4 +109,5 @@ RoutineData:OnLogin(function(self)
     StyleMinimapButton()
     RefreshText()
     self.RegisterCallback(broker, "GoldUpdated", RefreshText)
+    self.RegisterCallback(broker, "CharacterVisibilityChanged", RefreshText)
 end)

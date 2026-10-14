@@ -29,5 +29,6 @@ Core/Import.lua
 UI/Tooltip.lua
 Modules/Rares.lua
 UI/Broker.lua
+UI/Characters.lua
 UI/Options.lua
 Core/Commands.lua

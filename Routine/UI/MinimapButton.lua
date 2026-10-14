@@ -74,7 +74,13 @@ end
 
 local function AddGoldLines(tt)
     local api = _G.RoutineData and _G.RoutineData.API
-    local entries = api and api.GetGoldRanking and api.GetGoldRanking() or {}
+    local entries = {}
+    local data = _G.RoutineData
+    for _, entry in ipairs(api and api.GetGoldRanking and api.GetGoldRanking() or {}) do
+        if not (data and data.IsCharacterHidden and data:IsCharacterHidden(entry.key)) then
+            entries[#entries + 1] = entry
+        end
+    end
     if #entries == 0 then
         return
     end

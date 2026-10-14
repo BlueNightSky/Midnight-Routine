@@ -94,9 +94,11 @@ local function GetWarbandRareStatuses(rare, expanded)
     local showHidden = MR.db and MR.db.profile and MR.db.profile.altBoardShowHidden == true
     local weeklyReset = MR.GetLastResetTimestamp and MR:GetLastResetTimestamp() or 0
     local rows, killed = {}, 0
+    local data = _G.RoutineData
 
     for charKey, charData in pairs(svChars) do
-        if type(charData) == "table" and (showHidden or not hiddenChars[charKey]) then
+        if type(charData) == "table" and (showHidden or not hiddenChars[charKey])
+            and not (data and data.IsCharacterHidden and data:IsCharacterHidden(charKey)) then
             local status = BetterKillStatus(
                 GetStoredRareKillStatus(charData, questKey, weekKey, dayKey),
                 GetStoredRareKillStatus(charData, npcKey, weekKey, dayKey)

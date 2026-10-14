@@ -42,7 +42,7 @@ local function AddOwnerLines(tooltip, itemID)
         entry.visibleBags = settings.tooltipBags and entry.bags or 0
         entry.visibleBank = settings.tooltipBank and entry.bank or 0
         entry.total = entry.visibleBags + entry.visibleBank
-        if entry.total > 0 then
+        if entry.total > 0 and not RoutineData:IsCharacterHidden(entry.key) then
             entries[#entries + 1] = entry
             bagTotal = bagTotal + entry.visibleBags
             bankTotal = bankTotal + entry.visibleBank
@@ -125,14 +125,17 @@ local function AddCurrencyLines(tooltip, currencyID)
         return
     end
 
-    local entries = API.GetCurrencyCounts(currencyID)
+    local entries = {}
+    for _, entry in ipairs(API.GetCurrencyCounts(currencyID)) do
+        if not RoutineData:IsCharacterHidden(entry.key) then entries[#entries + 1] = entry end
+    end
     local current = API.GetCurrentCharacterKey()
     local currentEntry
     for _, entry in ipairs(entries) do
         if entry.key == current then currentEntry = entry break end
     end
     local quantity = info and SafeNumber(info.quantity)
-    if quantity then
+    if quantity and current and not RoutineData:IsCharacterHidden(current) then
         if not currentEntry then
             currentEntry = { key = current, classFile = API.GetCharacterClass(current) }
             entries[#entries + 1] = currentEntry

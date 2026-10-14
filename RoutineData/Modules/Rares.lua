@@ -121,9 +121,11 @@ local function AddRareLines(tooltip, npcID, rare)
     local lastReset = RoutineData:GetLastWeeklyReset()
     local rows, killed = {}, 0
     for charKey, record in pairs(RoutineData.db.characters) do
-        local status = CharacterStatus(charKey, record, npcID, rare, currentKey, lastReset)
-        if status == "killed" then killed = killed + 1 end
-        rows[#rows + 1] = { key = charKey, classFile = record.classFile, status = status, current = charKey == currentKey }
+        if not RoutineData:IsCharacterHidden(charKey) then
+            local status = CharacterStatus(charKey, record, npcID, rare, currentKey, lastReset)
+            if status == "killed" then killed = killed + 1 end
+            rows[#rows + 1] = { key = charKey, classFile = record.classFile, status = status, current = charKey == currentKey }
+        end
     end
     if #rows == 0 then return end
 

@@ -57,5 +57,6 @@ RoutineData:OnLogin(function(self)
         self:SetMinimapButtonShown(not value)
     end)
 
+    self:RegisterRosterOptions(category)
     Settings.RegisterAddOnCategory(category)
 end)
