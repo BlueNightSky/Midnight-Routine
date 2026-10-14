@@ -20,14 +20,14 @@ Locales/Localization.xml
 
 Tracking/Tracking.xml
 
-Core.lua
-API.lua
-Gold.lua
-Capture.lua
-Currencies.lua
-Import.lua
-Tooltip.lua
-Rares.lua
-Broker.lua
-Options.lua
-Commands.lua
+Core/Core.lua
+Core/API.lua
+Modules/Gold.lua
+Modules/Capture.lua
+Modules/Currencies.lua
+Core/Import.lua
+UI/Tooltip.lua
+Modules/Rares.lua
+UI/Broker.lua
+UI/Options.lua
+Core/Commands.lua
