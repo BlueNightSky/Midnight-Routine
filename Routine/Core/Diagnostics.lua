@@ -62,6 +62,145 @@ local function SelfTestCheck(fn)
     return "fail", "test returned an unexpected value"
 end
 
+local function TestCustomTaskReset(self, resetType)
+    local saved = {}
+    local fields = {
+        "db", "GetCharacters", "GetLastDailyTimestamp", "GetLastResetTimestamp",
+        "ShouldDeferForCombat", "RefreshUI", "RequestScan", "OnTrackingWeeklyReset",
+        "_scanSuppressedUntil", "_manualWeeklyResetPending",
+    }
+    for _, key in ipairs(fields) do saved[key] = rawget(self, key) end
+
+    local ok, err = pcall(function()
+        assert(type(self.ResetCustomTasksByType) == "function", "custom task reset handler is unavailable")
+        local boundary = 1800000000
+        local stamp = resetType == "daily" and "lastDailyAt" or "lastResetAt"
+        local region = (GetCurrentRegion and GetCurrentRegion()) or 1
+        local globalStamp = (resetType == "daily" and "lastCustomTaskDailyResetAt_" or "lastCustomTaskWeeklyResetAt_") .. tostring(region)
+        local tasks = {}
+        for group = 0, 2 do
+            for index, kind in ipairs({ "daily", "weekly", "none" }) do
+                local id = group * 3 + index
+                tasks[#tasks + 1] = {
+                    id = id, resetType = kind, questIds = { 900000 + id },
+                    scope = group == 0 and "character" or "shared",
+                    accountWideComplete = group == 2,
+                }
+            end
+        end
+        local function rowKey(task)
+            return (task.scope == "shared" and "shared_task_" or "task_") .. task.id
+        end
+        local function seedCharacter()
+            local data = {
+                customTasks = {}, progress = { custom_tasks = {} },
+                manualOverrides = { custom_tasks = {} }, customTaskDiffProgress = {},
+                questTurnInCompletions = { custom_tasks = {}, custom_task_category_module_1 = {} },
+                lastDailyAt = boundary, lastResetAt = boundary,
+            }
+            for _, task in ipairs(tasks) do
+                if task.scope == "character" then data.customTasks[#data.customTasks + 1] = task end
+                local key = rowKey(task)
+                data.progress.custom_tasks[key] = 2
+                data.manualOverrides.custom_tasks[key] = 2
+                data.customTaskDiffProgress[key] = { [14] = 1 }
+                data.customTaskDiffProgress[tostring(task.id)] = { [14] = 1 }
+                for _, confirmed in pairs(data.questTurnInCompletions) do
+                    confirmed[task.questIds[1]] = true
+                end
+            end
+            return data
+        end
+        local function verify(data, due, label)
+            assert(data[stamp] == boundary, label .. " reset timestamp was not updated")
+            for _, task in ipairs(tasks) do
+                local key = rowKey(task)
+                local cleared = due and task.resetType == resetType
+                local function check(value, field)
+                    assert((value == nil) == cleared, label .. " " .. key .. " " .. field .. (cleared and " did not clear" or " changed unexpectedly"))
+                end
+                check(data.progress.custom_tasks[key], "progress")
+                check(data.manualOverrides.custom_tasks[key], "manual override")
+                check(data.customTaskDiffProgress[key], "difficulty progress")
+                check(data.customTaskDiffProgress[tostring(task.id)], "legacy difficulty progress")
+                for moduleKey, confirmed in pairs(data.questTurnInCompletions) do
+                    check(confirmed[task.questIds[1]], moduleKey .. " quest completion")
+                end
+            end
+        end
+        self.GetLastDailyTimestamp = function() return boundary end
+        self.GetLastResetTimestamp = function() return boundary end
+        self.ShouldDeferForCombat = function() return false end
+        self.RefreshUI = function() end
+        self.RequestScan = function() end
+        self.OnTrackingWeeklyReset = function() end
+        self._manualWeeklyResetPending = nil
+
+        for _, scenario in ipairs({ "before reset", "reset due", "offline alt due", "repeat check" }) do
+            local current, alt = seedCharacter(), seedCharacter()
+            local global = {
+                customTasks = {}, customTaskProgress = { custom_tasks = {} },
+                customTaskManualOverrides = { custom_tasks = {} }, customTaskDiffProgress = {},
+            }
+            for _, task in ipairs(tasks) do
+                if task.scope == "shared" then
+                    global.customTasks[#global.customTasks + 1] = task
+                    if task.accountWideComplete then
+                        local key = rowKey(task)
+                        global.customTaskProgress.custom_tasks[key] = 2
+                        global.customTaskManualOverrides.custom_tasks[key] = 2
+                        global.customTaskDiffProgress[key] = { [14] = 1 }
+                        global.customTaskDiffProgress[tostring(task.id)] = { [14] = 1 }
+                    end
+                end
+            end
+            local currentDue = scenario == "reset due"
+            local altDue = currentDue or scenario == "offline alt due"
+            if currentDue then current[stamp] = boundary - 604800 end
+            if altDue then alt[stamp] = boundary - 604800 end
+            global[globalStamp] = currentDue and boundary - 604800 or boundary
+            self.db = { char = current, global = global }
+            self.GetCharacters = function() return { current = current, offline = alt } end
+            local checkReset = resetType == "daily" and self.CheckDailyReset or self.CheckWeeklyReset
+            checkReset(self)
+            verify(current, currentDue, scenario .. " current character")
+            verify(alt, altDue, scenario .. " offline character")
+            for _, task in ipairs(tasks) do
+                if task.accountWideComplete then
+                    local key = rowKey(task)
+                    local cleared = currentDue and task.resetType == resetType
+                    for _, storage in ipairs({ global.customTaskProgress.custom_tasks, global.customTaskManualOverrides.custom_tasks, global.customTaskDiffProgress }) do
+                        assert((storage[key] == nil) == cleared, scenario .. " " .. key .. " account-wide progress incorrect")
+                    end
+                    assert((global.customTaskDiffProgress[tostring(task.id)] == nil) == cleared, scenario .. " legacy account-wide progress incorrect")
+                end
+            end
+            assert(global[globalStamp] == boundary, scenario .. " account-wide reset timestamp incorrect")
+            if currentDue then
+                local completedAgain = seedCharacter()
+                current.progress = completedAgain.progress
+                current.manualOverrides = completedAgain.manualOverrides
+                current.customTaskDiffProgress = completedAgain.customTaskDiffProgress
+                current.questTurnInCompletions = completedAgain.questTurnInCompletions
+                checkReset(self)
+                verify(current, false, "second check after reset")
+            end
+        end
+    end)
+
+    for _, key in ipairs(fields) do self[key] = saved[key] end
+    if not ok then return false, tostring(err) end
+    return true, "character, shared, account-wide, offline alts, overrides, quest and boss progress; no-reset and repeat checks preserved"
+end
+
+function MR:RunCustomTaskResetTest()
+    print("|cff2ae7c6MidnightRoutine:|r Testing custom task resets with temporary data...")
+    for _, resetType in ipairs({ "daily", "weekly" }) do
+        local ok, detail = TestCustomTaskReset(self, resetType)
+        print(("  %s Custom %s reset - %s"):format(ok and "|cff00ff96PASS|r" or "|cffff5555FAIL|r", resetType, detail))
+    end
+end
+
 function MR:RunSelfTest()
     local PASS, FAIL, WARN = "|cff00ff96PASS|r", "|cffff5555FAIL|r", "|cffffd27aWARN|r"
     local counts = { pass = 0, fail = 0, warn = 0 }
@@ -99,6 +238,12 @@ function MR:RunSelfTest()
         end
         return true
     end)
+
+    for _, resetType in ipairs({ "daily", "weekly" }) do
+        run("Custom task " .. resetType .. " reset", function()
+            return TestCustomTaskReset(self, resetType)
+        end)
+    end
 
     run("Window visibility controls", function()
         local required = {
@@ -495,6 +640,7 @@ SlashCmdList["MIDROUTE"] = function(msg)
             collectgarbage("collect")
         end
         print("|cff2ae7c6MidnightRoutine:|r Memory debug counters cleared.")
+    elseif msg == "test resets" or msg == "test reset" then MR:RunCustomTaskResetTest()
     elseif msg == "test" or msg == "selftest" then MR:RunSelfTest()
     else
         print(L["Chat_Commands"])
