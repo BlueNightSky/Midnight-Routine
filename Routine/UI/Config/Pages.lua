@@ -1005,6 +1005,16 @@ function MR:PopulateConfigFrame(f)
             function() return MR.db.profile.showWarbandTooltips ~= false end,
             function(v) MR.db.profile.showWarbandTooltips = v end,
             0.24, 0.82, 0.70, 8, nil, cfgFs, true)
+        Gap(4)
+        local characterLimitChoices = { { label = L["Config_TooltipAllCharacters"], value = 0 } }
+        for count = 1, 70 do
+            characterLimitChoices[#characterLimitChoices + 1] = { label = tostring(count), value = count }
+        end
+        ChoiceDropdown(L["Config_TooltipCharacterLimit"], characterLimitChoices,
+            function() return MR:GetTooltipCharacterCount() end,
+            function(value) MR:SetTooltipCharacterCount(value) end,
+            function() return 5 end)
+
     end
 
     if activePage == "modules" then

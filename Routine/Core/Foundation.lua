@@ -13,6 +13,39 @@ local MR = {
 }
 ns.MR = MR
 MR.ns = ns
+local function NormalizeCharacterLimit(value)
+    value = tonumber(value)
+    if not value or value ~= value or value < 0 or value == math.huge then return 5 end
+    return value == 0 and 0 or math.min(70, math.max(1, math.floor(value)))
+end
+
+function MR:GetTooltipCharacterCount()
+    local data = _G.RoutineData
+    local settings = data and data.db and data.db.settings
+    return NormalizeCharacterLimit(settings and settings.tooltipCharacterLimit
+        or (self.db and self.db.profile and self.db.profile.tooltipCharacterLimit))
+end
+
+function MR:SetTooltipCharacterCount(value)
+    value = NormalizeCharacterLimit(value)
+    self.db.profile.tooltipCharacterLimit = value
+    local data = _G.RoutineData
+    if data and data.db and data.db.settings then
+        local setting = Settings and Settings.GetSetting and Settings.GetSetting("RoutineData_tooltipCharacterLimit")
+        if setting and setting.SetValue then
+            setting:SetValue(value)
+        end
+        data.db.settings.tooltipCharacterLimit = value
+    end
+end
+
+function MR:GetTooltipCharacterLimit(total)
+    local limit = self:GetTooltipCharacterCount()
+    if IsShiftKeyDown() or limit == 0 then return total end
+    return math.min(total, limit)
+end
+
+
 local interfaceVersion = GetBuildInfo and tonumber((select(4, GetBuildInfo()))) or 0
 MR.isForever = interfaceVersion >= 16000 and interfaceVersion < 17000
 MR._eventController = Foundry:RequireModule("Events", 2):New(addonName)

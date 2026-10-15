@@ -50,7 +50,6 @@ function MR:DismissFirstTimeGlow()
     StopGlow()
 end
 
-local MAX_LISTED_CHARACTERS = 5
 
 local function FormatMoney(copper)
     return GetMoneyString and GetMoneyString(copper, true) or tostring(copper)
@@ -86,7 +85,7 @@ local function AddGoldLines(tt)
     end
 
     local currentKey = MR:GetCurrentCharacterKey()
-    local limit = IsShiftKeyDown() and #entries or MAX_LISTED_CHARACTERS
+    local limit = MR:GetTooltipCharacterLimit(#entries)
     local total = 0
     for _, entry in ipairs(entries) do
         total = total + entry.gold
