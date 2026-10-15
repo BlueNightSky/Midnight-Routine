@@ -54,15 +54,16 @@ local function AddOwnerLines(tooltip, itemID)
         tooltip:AddLine(" ")
         tooltip:AddDoubleLine(L["Tooltip_Inventory"], L["Tooltip_Total"] .. ": " .. FormatCount(total), 0.35, 0.88, 0.78, 0.95, 0.85, 0.55)
         local current = SortOwners(entries)
-        for index = 1, math.min(#entries, 8) do
+        local shown = RoutineData:GetTooltipCharacterLimit(#entries)
+        for index = 1, shown do
             local entry = entries[index]
             local detail = {}
             if entry.visibleBags > 0 then detail[#detail + 1] = "|cffb5d7f3" .. L["Tooltip_Bags"] .. ": " .. FormatCount(entry.visibleBags) .. "|r" end
             if entry.visibleBank > 0 then detail[#detail + 1] = "|cffffd17a" .. L["Tooltip_Bank"] .. ": " .. FormatCount(entry.visibleBank) .. "|r" end
             tooltip:AddDoubleLine(OwnerLabel(entry, current), table.concat(detail, "  |cff687582·|r  "), 0.90, 0.93, 0.96, 0.90, 0.93, 0.96)
         end
-        if #entries > 8 then
-            tooltip:AddLine(string.format(L["Tooltip_MoreOwners"], #entries - 8), 0.60, 0.68, 0.74, true)
+        if #entries > shown then
+            tooltip:AddLine(string.format(L["Tooltip_MoreCharactersShift"], #entries - shown), 0.60, 0.68, 0.74, true)
         end
         if warband > 0 then
             tooltip:AddDoubleLine(L["Tooltip_WarbandBank"], FormatCount(warband), 0.35, 0.88, 0.78, 0.35, 0.88, 0.78)
@@ -154,7 +155,8 @@ local function AddCurrencyLines(tooltip, currencyID)
     SortOwners(entries)
     AddSection(tooltip, L["Tooltip_CurrencyBalances"], total)
     local lastReset = RoutineData:GetLastWeeklyReset()
-    for index = 1, math.min(#entries, 8) do
+    local shown = RoutineData:GetTooltipCharacterLimit(#entries)
+    for index = 1, shown do
         local entry = entries[index]
         tooltip:AddDoubleLine(OwnerLabel(entry, current), FormatCount(entry.total), 0.90, 0.93, 0.96, 0.90, 0.93, 0.96)
         if entry.maxWeekly > 0 then
@@ -169,8 +171,8 @@ local function AddCurrencyLines(tooltip, currencyID)
             end
         end
     end
-    if #entries > 8 then
-        tooltip:AddLine(string.format(L["Tooltip_MoreOwners"], #entries - 8), 0.60, 0.68, 0.74, true)
+    if #entries > shown then
+        tooltip:AddLine(string.format(L["Tooltip_MoreCharactersShift"], #entries - shown), 0.60, 0.68, 0.74, true)
     end
     local maximum = info and SafeNumber(info.maxQuantity)
     local capProgress = info and info.useTotalEarnedForMaxQty and SafeNumber(info.totalEarned) or quantity
@@ -199,3 +201,17 @@ if TooltipDataProcessor and TooltipDataProcessor.AddTooltipPostCall and Enum and
         TooltipDataProcessor.AddTooltipPostCall(Enum.TooltipDataType.Currency, OnCurrencyTooltip)
     end
 end
+
+local shiftWatcher = CreateFrame("Frame")
+shiftWatcher:RegisterEvent("MODIFIER_STATE_CHANGED")
+shiftWatcher:SetScript("OnEvent", function(_, _, key)
+    if key ~= "LSHIFT" and key ~= "RSHIFT" then return end
+    for _, tooltip in ipairs({ GameTooltip, ItemRefTooltip }) do
+        local data = tooltip:IsShown() and tooltip.GetTooltipData and tooltip:GetTooltipData()
+        if data and Enum and Enum.TooltipDataType
+            and (data.type == Enum.TooltipDataType.Item or data.type == Enum.TooltipDataType.Currency)
+            and tooltip.RefreshData then
+            tooltip:RefreshData()
+        end
+    end
+end)

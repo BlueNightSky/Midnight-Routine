@@ -95,3 +95,8 @@ L["Roster_NoMatches"] = "No matching characters. Clear the search or switch list
 L["Roster_HideHint"] = "Click + to move an alt to Hidden; X to move it back to Visible."
 L["Roster_Score"] = "Mythic+ score"
 L["Cmd_Help_Roster"] = "/rdata roster - open the character list"
+
+L["Options_CharacterLimit"] = "Characters shown in tooltips"
+L["Options_CharacterLimitDesc"] = "Choose how many visible characters appear in item, currency, rare and minimap tooltips. Hold Shift to show all. Select All to always show everyone. Hidden characters stay excluded."
+L["Options_AllCharacters"] = "All"
+L["Tooltip_MoreCharactersShift"] = "+%d more characters included in total (hold Shift to show all)"

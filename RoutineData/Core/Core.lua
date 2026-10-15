@@ -24,6 +24,7 @@ local DB_VERSION = 1
 local DEFAULTS = {
     settings = {
         tooltipItems = true,
+        tooltipCharacterLimit = 5,
         tooltipYield = true,
         tooltipCurrency = true,
         tooltipRares = true,
@@ -44,6 +45,18 @@ local function MergeMissing(target, defaults)
             target[key] = value
         end
     end
+end
+
+function RoutineData:GetTooltipCharacterCount()
+    local limit = self.db and self.db.settings and tonumber(self.db.settings.tooltipCharacterLimit) or 5
+    if not limit or limit ~= limit or limit < 0 or limit == math.huge then return 5 end
+    return limit == 0 and 0 or math.min(70, math.max(1, math.floor(limit)))
+end
+
+function RoutineData:GetTooltipCharacterLimit(total)
+    local limit = self:GetTooltipCharacterCount()
+    if IsShiftKeyDown() or limit == 0 then return total end
+    return math.min(total, limit)
 end
 
 function RoutineData:GetDB()

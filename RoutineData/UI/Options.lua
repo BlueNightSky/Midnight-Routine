@@ -29,8 +29,19 @@ end
 RoutineData:OnLogin(function(self)
     if not (Settings and Settings.RegisterVerticalLayoutCategory and Settings.RegisterAddOnSetting) then return end
     local settings = self.db.settings
+    settings.tooltipCharacterLimit = self:GetTooltipCharacterCount()
 
     category, layout = Settings.RegisterVerticalLayoutCategory("Routine Data")
+
+    local limitSetting = Settings.RegisterAddOnSetting(
+        category, VARIABLE_PREFIX .. "tooltipCharacterLimit", "tooltipCharacterLimit", settings,
+        Settings.VarType.Number, L["Options_CharacterLimit"], 5)
+    Settings.CreateDropdown(category, limitSetting, function()
+        local options = Settings.CreateControlTextContainer()
+        options:Add(0, L["Options_AllCharacters"])
+        for count = 1, 70 do options:Add(count, tostring(count)) end
+        return options:GetData()
+    end, L["Options_CharacterLimitDesc"])
 
     AddHeader(L["Options_ItemTooltips"])
     AddCheckbox(settings, "tooltipItems", L["Options_ItemOwners"],

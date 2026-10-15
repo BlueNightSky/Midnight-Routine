@@ -36,7 +36,6 @@ local function VisibleGold()
     end
     return entries, total
 end
-local MAX_LISTED = 5
 
 local broker = LDB:NewDataObject(OBJECT_NAME, {
     type = "data source",
@@ -54,7 +53,7 @@ local broker = LDB:NewDataObject(OBJECT_NAME, {
             tooltip:AddLine(L["Broker_ClickHint"], 0.55, 0.55, 0.60)
             return
         end
-        local limit = IsShiftKeyDown() and #entries or MAX_LISTED
+        local limit = RoutineData:GetTooltipCharacterLimit(#entries)
         for index, entry in ipairs(entries) do
             if index > limit then break end
             tooltip:AddDoubleLine(RoutineData.CharacterLabel(entry.key, entry.classFile), FormatMoney(entry.gold), 1, 1, 1, 1, 1, 1)

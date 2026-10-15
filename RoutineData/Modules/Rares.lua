@@ -6,7 +6,6 @@ local tracking = RoutineData.Tracking
 local isForever = RoutineData.isForever
 
 local SCAN_DEBOUNCE = 3
-local SHORT_LIST_COUNT = 4
 
 local rareByNpcID
 
@@ -143,8 +142,7 @@ local function AddRareLines(tooltip, npcID, rare)
     end
     tooltip:AddLine(string.format(L["Rares_Tooltip_WarbandHeader"], killed, #rows), 0.65, 0.90, 1)
 
-    local expanded = IsShiftKeyDown()
-    local shown = expanded and #rows or math.min(#rows, SHORT_LIST_COUNT)
+    local shown = RoutineData:GetTooltipCharacterLimit(#rows)
     for index = 1, shown do
         local row = rows[index]
         local text = STATUS_TEXT[row.status]
