@@ -1106,4 +1106,7 @@ L["Weekly_Kithix_Label"] = "击败基希克斯："
 L["Weekly_Kithix_Note"] = "本周在随机团队、普通、英雄或史诗难度击败基希克斯。剧情模式不计入。如果你在启用此追踪器前已完成击杀，请手动标记该行完成。"
 L["Venomstone_Research_Title"] = "毒液石研究"
 L["Venomstone_Research_Label"] = "古老深渊，远古剧毒："
-L["Venomstone_Research_Note"] = "前往银月城化生台附近的奥林·迷光处，从阿塔乌特克地窟的远古宿敌或烈毒之渊团队副本（随机团队及以上难度）的首领身上收集3枚原始毒液微粒。该一次性任务将开启毒液石研究。研究将在10月22日当周维护后完成并开放任务“晋升毒液石”，届时毒液石开始掉落。"
+L["Venomstone_Research_Note"] = "在银月城化生台旁的奥林·迷光处接取任务。从阿塔乌特克地窟的远古宿敌或烈毒之渊团队副本（随机团队及以上难度）的首领身上收集3枚原始毒液微粒。"
+
+L["Config_TooltipCharacterLimit"] = "Characters shown in tooltips"
+L["Config_TooltipAllCharacters"] = "All"

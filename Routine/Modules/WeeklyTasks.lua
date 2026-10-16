@@ -534,7 +534,7 @@ tracking.installers["WeeklyTasks"] = function(owner, context)
         return changed
     end
 
-    tracking.RegisterCallback(MR, "CustomTasksResetDue", function(_, resetType, _, characters)
+    tracking.RegisterCallback({}, "CustomTasksResetDue", function(_, resetType, _, characters)
         if resetType ~= "weekly" then return end
         for _, character in ipairs(type(characters) == "table" and characters or {}) do
             MoveKithixProgress(character, false)

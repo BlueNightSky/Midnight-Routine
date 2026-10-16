@@ -238,8 +238,11 @@ local function ResolveRegisteredFont(name)
 
     if fontValidationCache[path] == nil then
         fontValidationObject = fontValidationObject or CreateFont("MidnightRoutineMediaValidationFont")
-        local ok, loaded = pcall(fontValidationObject.SetFont, fontValidationObject, path, 12, "")
-        fontValidationCache[path] = ok and loaded == true
+        local ok = pcall(fontValidationObject.SetFont, fontValidationObject, path, 12, "")
+        local loadedPath = ok and fontValidationObject:GetFont()
+        if type(loadedPath) == "string" and loadedPath:lower():gsub("/", "\\") == path:lower():gsub("/", "\\") then
+            fontValidationCache[path] = true
+        end
     end
 
     return fontValidationCache[path] and path or nil

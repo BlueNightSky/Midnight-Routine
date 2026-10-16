@@ -50,7 +50,6 @@ function MR:DismissFirstTimeGlow()
     StopGlow()
 end
 
-local MAX_LISTED_CHARACTERS = 5
 
 local function FormatMoney(copper)
     return GetMoneyString and GetMoneyString(copper, true) or tostring(copper)
@@ -74,13 +73,19 @@ end
 
 local function AddGoldLines(tt)
     local api = _G.RoutineData and _G.RoutineData.API
-    local entries = api and api.GetGoldRanking and api.GetGoldRanking() or {}
+    local entries = {}
+    local data = _G.RoutineData
+    for _, entry in ipairs(api and api.GetGoldRanking and api.GetGoldRanking() or {}) do
+        if not (data and data.IsCharacterHidden and data:IsCharacterHidden(entry.key)) then
+            entries[#entries + 1] = entry
+        end
+    end
     if #entries == 0 then
         return
     end
 
     local currentKey = MR:GetCurrentCharacterKey()
-    local limit = IsShiftKeyDown() and #entries or MAX_LISTED_CHARACTERS
+    local limit = MR:GetTooltipCharacterLimit(#entries)
     local total = 0
     for _, entry in ipairs(entries) do
         total = total + entry.gold

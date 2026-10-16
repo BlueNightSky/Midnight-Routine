@@ -159,7 +159,7 @@ local function MainRowOnEnter(selfRow)
 
             tip:AddLine(L["Tooltip_WarbandHeader"], 0.65, 0.90, 1)
 
-            local shown = expanded and total or math.min(total, 4)
+            local shown = MR:GetTooltipCharacterLimit(total)
             for i = 1, shown do
                 local charRow = rows[i]
                 local progress = row.noMax and tostring(charRow.value) or string.format("%d/%d", charRow.value, charRow.max)

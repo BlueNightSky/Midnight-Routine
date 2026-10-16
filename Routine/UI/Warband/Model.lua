@@ -105,10 +105,12 @@ function MR:GetRowWarbandStatuses(modKey, rowKey, rowMax, expanded, row)
         and self.GetCustomTaskById and self:GetCustomTaskById(row.taskId, "character") or nil
     local localIdentity = CustomTaskIdentity(localTask)
     local rows = {}
+    local data = _G.RoutineData
 
     for charKey, charData in pairs(self:GetCharacters()) do
         if type(charData) == "table" and type(charData.progress) == "table"
-            and (charKey == currentKey or showHidden or not hiddenChars[charKey]) then
+            and (charKey == currentKey or showHidden or not hiddenChars[charKey])
+            and not (data and data.IsCharacterHidden and data:IsCharacterHidden(charKey)) then
             local characterRowKey = rowKey
             if localIdentity and charKey ~= currentKey then
                 characterRowKey = FindMatchingCharacterTaskKey(charData, localIdentity)
@@ -136,7 +138,7 @@ function MR:GetRowWarbandStatuses(modKey, rowKey, rowMax, expanded, row)
         end
     end
 
-    local orderIndex = expanded and self:GetAltBoardCharacterOrderIndex() or nil
+    local orderIndex = self:GetAltBoardCharacterOrderIndex()
     table.sort(rows, function(a, b)
         if a.current ~= b.current then return a.current end
         if orderIndex then

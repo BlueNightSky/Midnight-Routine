@@ -1417,8 +1417,20 @@ tracking.installers["CustomTasks"] = function(owner, context)
             local progress = type(charData.progress) == "table" and charData.progress[CUSTOM_MODULE_KEY] or nil
             local overrides = type(charData.manualOverrides) == "table" and charData.manualOverrides[CUSTOM_MODULE_KEY] or nil
             local diffProg = charData.customTaskDiffProgress
+            local completions = charData.questTurnInCompletions
             for _, task in ipairs(tasks or {}) do
                 if type(task) == "table" and NormalizeResetType(task.resetType) == resetType then
+                    local questIds = NormalizeQuestIds(task.questIds or task.questId, task.orderedQuestSequence)
+                    if type(completions) == "table" and questIds then
+                        for moduleKey, confirmed in pairs(completions) do
+                            if type(confirmed) == "table" and (moduleKey == CUSTOM_MODULE_KEY
+                                or (type(moduleKey) == "string" and moduleKey:match("^custom_task_category_module_%d+$"))) then
+                                for _, questId in ipairs(questIds) do
+                                    confirmed[questId] = nil
+                                end
+                            end
+                        end
+                    end
                     local taskId = tonumber(task.id)
                     if taskId then
                         local rowKey = GetTaskRowKey(taskId, scope)
