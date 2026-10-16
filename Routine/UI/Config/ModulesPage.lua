@@ -184,7 +184,7 @@ function Config.BuildModulesPage(ctx)
         local rows = {}
         for _, row in ipairs(orderedRows) do
             local visible = not row.isVisible or row.isVisible()
-            if (not row.control or (mod.key == "custom_tasks" and row.configGroup)) and visible then
+            if (not row.control or row.configurable or (mod.key == "custom_tasks" and row.configGroup)) and visible then
                 rows[#rows + 1] = row
             end
         end
@@ -1100,7 +1100,7 @@ function Config.BuildModulesPage(ctx)
                 else
                     categoryExpanded = false
                 end
-            elseif not row.control and (not row.configGroup or (configGroupExpanded and categoryExpanded)) then
+            elseif (not row.control or row.configurable) and (not row.configGroup or (configGroupExpanded and categoryExpanded)) then
                 local rowAvailable = moduleAvailable and MR:IsPatchAvailable(rowPatchKey)
                 local nestedCategory = currentRow.category and not mod.customTaskCategoryModule
                 local rowX = nestedCategory and 30 or 18

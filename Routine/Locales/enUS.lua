@@ -1107,3 +1107,7 @@ L["Venomstone_Research_Note"] = "Start the quest with Orin Straylight by the Cat
 
 L["Config_TooltipCharacterLimit"] = "Characters shown in tooltips"
 L["Config_TooltipAllCharacters"] = "All"
+
+L["Labyrinth_Weekly_Label"] = "Wah'du's weekly quest:"
+L["Labyrinth_Fragments_Label"] = "Fragments toward Myth gear:"
+L["Labyrinth_Weekly_Note"] = "Complete Wah'du's chamber objective on Tier 8 or higher and turn in the quest for one Mythical Soul Fragment. This row resets weekly. If you turned it in before enabling this tracker, mark it complete manually."

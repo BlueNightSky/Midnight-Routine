@@ -1,5 +1,8 @@
 local L = LibStub("AceLocale-3.0"):NewLocale("MidnightRoutine", "zhCN")
 if not L then return end
+L["Labyrinth_Weekly_Label"] = "Wah'du's weekly quest:"
+L["Labyrinth_Fragments_Label"] = "Fragments toward Myth gear:"
+L["Labyrinth_Weekly_Note"] = "Complete Wah'du's chamber objective on Tier 8 or higher and turn in the quest for one Mythical Soul Fragment. This row resets weekly. If you turned it in before enabling this tracker, mark it complete manually."
 L["DMF_Shopping_Label"] = "暗月所需材料（需要Auctionator插件）"
 L["DMF_Shopping_Title"] = "暗月所需材料"
 L["DMF_Shopping_Required"] = "需要Auctionator插件"

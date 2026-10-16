@@ -141,6 +141,7 @@ tracking.installers["WeeklyTasks"] = function(owner, context)
     }
 
     local ABYSS_ANGLERS_WEEKLY_QUEST_ID = 92447
+    local LABYRINTH_QUEST_IDS = { 98951, 98963, 98962, 98961 }
     local ABYSS_ANGLERS_INTRO_QUEST_ID = 96388
 
     local LOST_LEGENDS_FIRST_TIME_RELICS = {
@@ -556,8 +557,23 @@ tracking.installers["WeeklyTasks"] = function(owner, context)
                 if type(character) == "table" then
                     local currentWeek = not resetAt or resetAt <= (tonumber(character.lastResetAt) or 0) + 300
                     migrated = MoveKithixProgress(character, currentWeek) or migrated
+                    for _, field in ipairs({ "progress", "manualOverrides" }) do
+                        local store = character[field]
+                        local old = type(store) == "table" and store.labyrinth
+                        if type(old) == "table" and old.wahdu_weekly ~= nil then
+                            if currentWeek then
+                                store.s1_weekly = store.s1_weekly or {}
+                                store.s1_weekly.wahdu_weekly = math.max(tonumber(store.s1_weekly.wahdu_weekly) or 0, tonumber(old.wahdu_weekly) or 0)
+                            end
+                            old.wahdu_weekly = nil
+                            old.active_quest_name = nil
+                            migrated = true
+                        end
+                    end
                 end
             end
+            local fragments = C_Item.GetItemCount(285065, false, false, true) or 0
+            migrated = MR:WriteScanProgress("labyrinth", "mythical_soul_fragments", math.min(fragments, 3)) or migrated
             migrated = MoveKithixProgress(MR.db.char, not resetAt or resetAt <= (tonumber(MR.db.char.lastResetAt) or 0) + 300) or migrated
             local db = MR.db.char.progress
             if not db[mod.key] then db[mod.key] = {} end
@@ -1080,6 +1096,37 @@ tracking.installers["WeeklyTasks"] = function(owner, context)
         end,
 
         rows = {
+            {
+                key = "wahdu_weekly",
+                label = "|cff58c9d4" .. L["Labyrinth_Weekly_Label"] .. "|r",
+                note = L["Labyrinth_Weekly_Note"],
+                patchKey = "12.1.5",
+                max = 1,
+                questIds = LABYRINTH_QUEST_IDS,
+                turnInTracked = true,
+                allowManualOverride = true,
+                tooltipFunc = function(tip)
+                    for _, questId in ipairs(LABYRINTH_QUEST_IDS) do
+                        if C_QuestLog.IsOnQuest(questId) then
+                            tip:AddLine(" ")
+                            tip:AddLine(MR:GetQuestName(questId), 1, 0.9, 0.3, true)
+                            break
+                        end
+                    end
+                end,
+            },
+            {
+                key = "mythical_soul_fragments",
+                label = "|cff58c9d4" .. L["Labyrinth_Fragments_Label"] .. "|r",
+                patchKey = "12.1.5",
+                max = 3,
+                itemId = 285065,
+                noItemProgress = true,
+                progressModuleKey = "labyrinth",
+                hideStatus = true,
+                control = true,
+                configurable = true,
+            },
             {
                 key      = "void_assaults",
                 label    = L["Weekly_VoidAssaults_Label"] or "|cff2ae7c6Void Assaults:|r",
