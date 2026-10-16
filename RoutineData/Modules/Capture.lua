@@ -19,7 +19,9 @@ end
 
 local function SnapshotContainer(bagID, name, icon)
     if not (C_Container and C_Container.GetContainerNumSlots and C_Container.GetContainerItemInfo) then return nil end
-    local ok, slots = pcall(C_Container.GetContainerNumSlots, bagID)
+    local bagIndex = Enum and Enum.BagIndex or {}
+    local getSlots = GetKeyRingSize and bagID == (bagIndex.Keyring or -2) and GetKeyRingSize or C_Container.GetContainerNumSlots
+    local ok, slots = pcall(getSlots, bagID)
     if not ok or type(slots) ~= "number" or slots <= 0 then return nil end
     local tab = { name = name, icon = icon, slots = slots, items = {} }
     for slot = 1, slots do
@@ -76,6 +78,9 @@ local function CollectBags()
     for index = 1, 5 do
         local bagID = bagIndex["Bag_" .. index] or index
         AddTab(tabs, SnapshotContainer(bagID, string.format(Label("AltBoard_BagSlot", "Bag %d"), index)))
+    end
+    if GetKeyRingSize then
+        AddTab(tabs, SnapshotContainer(bagIndex.Keyring or -2, KEYRING or "Keyring"))
     end
     return #tabs > 0 and tabs or nil
 end
