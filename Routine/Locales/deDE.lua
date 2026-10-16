@@ -1105,7 +1105,7 @@ L["Weekly_Kithix_Label"] = "Defeat Kith'ix:"
 L["Weekly_Kithix_Note"] = "Defeat Kith'ix on Raid Finder, Normal, Heroic or Mythic this week. Story Mode does not count. If you defeated him before enabling this tracker, mark the row complete manually."
 L["Venomstone_Research_Title"] = "Venomstone Research"
 L["Venomstone_Research_Label"] = "Ancient Depths, Ancient Venom:"
-L["Venomstone_Research_Note"] = "Visit Orin Straylight near the Catalyst in Silvermoon and collect 3 Primordial Venom Motes from Ancient Foes in the Vaults of Atal'Utek or Venomous Abyss raid bosses on Raid Finder or higher. This one-time quest starts Venomstone research. Return for Ascending with Venomstones after research finishes; drops become available from the October 20 weekly maintenance."
+L["Venomstone_Research_Note"] = "Start the quest with Orin Straylight by the Catalyst in Silvermoon. Collect 3 Primordial Venom Motes from Ancient Foes in the Vaults of Atal'Utek or Venomous Abyss raid bosses (Raid Finder or higher)."
 
 L["Config_TooltipCharacterLimit"] = "Characters shown in tooltips"
 L["Config_TooltipAllCharacters"] = "All"
