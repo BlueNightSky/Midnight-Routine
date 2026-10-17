@@ -32,6 +32,7 @@ Locales/Localization.xml
 Core/Foundation.lua
 Core/Runtime.lua
 Core/Registry.lua
+Core/RareNames.lua
 Tracking/Tracking.xml
 Modules/Modules.xml
 Clients/Forever/Forever.xml

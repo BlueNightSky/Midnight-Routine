@@ -39,6 +39,15 @@ end
 local GetFontFlags = ns.GetFontFlags
 
 local ZONES = MR.tracker:CreateRareCatalog(MR, L)
+for _, zone in ipairs(ZONES) do
+    for index, rare in ipairs(zone.rares) do
+        if rare[6] then
+            local localized = {}
+            for key, value in pairs(rare) do localized[key] = value end
+            zone.rares[index] = localized
+        end
+    end
+end
 
 local ZONE_BY_KEY = {}
 for _, z in ipairs(ZONES) do ZONE_BY_KEY[z.key] = z end
@@ -372,6 +381,9 @@ local function GetVisibleZones()
     local db  = MR.db and MR.db.profile or {}
     local key = GetCurrentZoneKey()
     local function zoneVisible(z)
+        for _, rare in ipairs(z.rares) do
+            rare[1] = MR:GetLocalizedRareName(rare[6], rare[1])
+        end
         return not (db.raresHiddenZones and db.raresHiddenZones[z.key])
     end
     if not db.raresShowAllZones then
@@ -395,7 +407,7 @@ local function GetRaresLayoutKey()
             local flagged = IsRareQuestCompleted(rare)
             local killStat = GetRareTrackedKillStatus(rare) or (flagged and "today") or nil
             if not (db.raresHideKilled and killStat == "today") then
-                parts[#parts + 1] = tostring(questId or (MR.isForever and rare[6]) or rare[1]) .. (MR.isForever and (":" .. rare[1]) or "")
+                parts[#parts + 1] = tostring(questId or rare[6] or rare[1]) .. ":" .. rare[1]
             end
         end
     end

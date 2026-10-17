@@ -11,12 +11,16 @@ tracking.installers["ForeverRares"] = function(owner, context)
     local revision = 0
     local localizedNames = {}
     local waypointIndices = {}
+    function F.InvalidateRareNames()
+        revision = revision + 1
+    end
     function F.GetRareZones()
         local char = ns.MR.db and ns.MR.db.char
         if cachedZones and cachedChar == char and cachedRevision == revision then return cachedZones end
         local zones, byKey = {}, {}
         local saved = char and char.foreverRares or {}
         local function AddRare(mapID, npcID, name, points, observed)
+            name = localizedNames[npcID] or ns.MR:GetLocalizedRareName(npcID, name)
             local key = tostring(mapID or 0)
             local zone = byKey[key]
             if not zone then
@@ -47,7 +51,7 @@ tracking.installers["ForeverRares"] = function(owner, context)
             local unknownLocation = known and F.rareLocations[0] and F.rareLocations[0][npcID]
             if npcID and (not known or (unknownLocation and data.mapID)) then
                 local points = data.x and data.y and { { data.x, data.y } } or {}
-                AddRare(data.mapID or 0, npcID, data.name or (known and known.name) or tostring(npcID), points, true)
+                AddRare(data.mapID or 0, npcID, localizedNames[npcID] or data.name or (known and known.name) or tostring(npcID), points, true)
             end
         end
         table.sort(zones, function(a, b) return a.label < b.label end)
