@@ -257,6 +257,7 @@ function MR:PopulateConfigFrame(f)
         local tabW = math.floor((contentW - 6) / #tabs)
         local tabFs = math.min(cfgFs, 10)
         local tabY = yOff
+        if MR.isForever then f._foreverControllerTabs = {} end
         for i, tab in ipairs(tabs) do
             local btn = ns.AcquireFrame(body, "pagesFrame2", "Button", "BackdropTemplate")
             btn:SetSize(tabW, 18)
@@ -278,6 +279,9 @@ function MR:PopulateConfigFrame(f)
                 MR._cfgPage = tab.key
                 MR:PopulateConfigFrame(f)
             end)
+            if MR.isForever then
+                f._foreverControllerTabs[i] = { key = tab.key, frame = btn }
+            end
             btn:SetScript("OnEnter", function()
                 if activePage ~= tab.key then
                     ApplyThemeChoiceHover(btn, lbl)
@@ -346,6 +350,21 @@ function MR:PopulateConfigFrame(f)
         Btn(bindingLabel, function()
             MR:ShowToggleWindowsKeybindDialog()
         end, "primary")
+
+        if MR.isForever then
+            Checkbox(L["Controller_Enable"],
+                function() return MR.db.profile.foreverControllerEnabled == true end,
+                function(v)
+                    MR.db.profile.foreverControllerEnabled = v and true or false
+                    if MR.RefreshForeverControllerSupport then MR:RefreshForeverControllerSupport() end
+                end, "#2ae7c6", true)
+            Checkbox(L["Controller_ShowHints"],
+                function() return MR.db.profile.showForeverControllerHints ~= false end,
+                function(v)
+                    MR.db.profile.showForeverControllerHints = v and true or false
+                    if MR.RefreshForeverControllerHints then MR:RefreshForeverControllerHints() end
+                end, "#2ae7c6", true)
+        end
 
         Gap(4); Divider()
         SectionLabel(L["Config_SectionCompletion"] or "COMPLETION")

@@ -1861,6 +1861,7 @@ BuildModuleStatsCache = function(self, requestedMod)
 
             local rows = MR.GetOrderedRows and MR:GetOrderedRows(mod) or mod.rows
             local totalRows, doneRows, shownRows, extraHeight, groupHeaders = CountMainGroupedRows(self, mod, rows, hideComplete, isOpen)
+            if showCurrencyBrowserButton then shownRows = math.max(shownRows, 1) end
             height = height + extraHeight
 
             if shownRows == 0 then

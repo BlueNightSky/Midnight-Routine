@@ -206,23 +206,6 @@ tracking.installers["Crests"] = function(owner, context)
             end
         end
 
-        if MR.isForever and C_CurrencyInfo and C_CurrencyInfo.GetCurrencyListSize and C_CurrencyInfo.GetCurrencyListInfo then
-            local seen = {}
-            for index = 1, C_CurrencyInfo.GetCurrencyListSize() do
-                local entry = C_CurrencyInfo.GetCurrencyListInfo(index)
-                local currencyID = entry and tonumber(entry.currencyID or entry.currencyId)
-                if currencyID and not seen[currencyID] and not (custom and custom[currencyID]) then
-                    seen[currencyID] = true
-                    local row = BuildCustomCurrencyRow(currencyID, entry)
-                    row.removableCurrency = false
-                    row.onRightClick = nil
-                    row.tooltipFunc = nil
-                    row.note = "From the character's currency list."
-                    crestRows[#crestRows + 1] = row
-                end
-            end
-        end
-
         if custom and customOrder then
             local seen = {}
             for index = #customOrder, 1, -1 do
@@ -261,7 +244,7 @@ tracking.installers["Crests"] = function(owner, context)
             return false
         end
 
-        for _, row in ipairs(defaultCrestRows or {}) do
+        for _, row in ipairs(MR.isForever and { defaultCrestRows and defaultCrestRows[1] } or (defaultCrestRows or {})) do
             if tonumber(row.currencyId) == currencyID then
                 hiddenDefaults[currencyID] = nil
                 self:RefreshCurrenciesModule(false)

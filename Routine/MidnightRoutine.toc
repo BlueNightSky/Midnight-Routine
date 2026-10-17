@@ -75,6 +75,7 @@ UI/Config/ModulesPage.lua
 UI/Config/Pages.lua
 UI/WelcomeScreen.lua
 UI/MinimapButton.lua
+UI/ForeverController.lua
 Core/CompletionSounds.lua
 Core/Bootstrap.lua
 

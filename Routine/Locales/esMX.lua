@@ -1,5 +1,10 @@
 local L = LibStub("AceLocale-3.0"):NewLocale("MidnightRoutine", "esMX")
 if not L then return end
+L["CurrencyBrowser_Empty"] = "Aún no hay monedas sin seguimiento disponibles en la lista de tu personaje. Las monedas ya agregadas aparecen en el seguimiento."
+L["CurrencyBrowser_EmptyFiltered"] = "Ninguna moneda coincide con la búsqueda o el filtro actual."
+L["Controller_Enable"] = "Activar la compatibilidad automática con el control"
+L["Controller_ShowHints"] = "Mostrar indicaciones del control"
+L["Controller_Hints"] = "Cruceta: mover   %s: abrir   %s: completar\n%s: acción secundaria   %s: volver\nLB/RB: botones superiores / pestañas"
 L["Labyrinth_Weekly_Label"] = "Wah'du's weekly quest:"
 L["Labyrinth_Fragments_Label"] = "Fragments toward Myth gear:"
 L["Labyrinth_Weekly_Note"] = "Complete Wah'du's chamber objective on Tier 8 or higher and turn in the quest for one Mythical Soul Fragment. This row resets weekly. If you turned it in before enabling this tracker, mark it complete manually."

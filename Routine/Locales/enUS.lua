@@ -1,5 +1,10 @@
 local L = LibStub("AceLocale-3.0"):NewLocale("MidnightRoutine", "enUS", true)
 if not L then return end
+L["CurrencyBrowser_Empty"] = "No untracked currencies are available in your character's currency list yet. Currencies already added are shown in the tracker."
+L["CurrencyBrowser_EmptyFiltered"] = "No currencies match the current search or filter."
+L["Controller_Enable"] = "Enable automatic controller support"
+L["Controller_ShowHints"] = "Show controller hints"
+L["Controller_Hints"] = "D-pad: move   %s: open   %s: complete\n%s: secondary   %s: back\nLB/RB: top controls / tabs"
 L["DMF_Shopping_Label"] = "Darkmoon supplies (Auctionator required)"
 L["DMF_Shopping_Title"] = "Darkmoon supplies"
 L["DMF_Shopping_Required"] = "Auctionator required"

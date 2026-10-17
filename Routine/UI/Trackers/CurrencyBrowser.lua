@@ -147,6 +147,7 @@ local browserQuery = MR.tracker:CreateCurrencyBrowserQuery(MR, {
     getWarbandMarker = GetCurrencyWarbandMarkerInfo,
 })
 local BuildCurrencyEntries = browserQuery.BuildEntries
+local currencyQueryInProgress
 
 local function PositionBrowser(frame, anchor)
     frame:ClearAllPoints()
@@ -409,6 +410,7 @@ local function ClampScroll(frame)
 end
 
 function MR:RefreshCurrencyBrowserFrame(keepScroll)
+    if currencyQueryInProgress then return end
     local frame = self.currencyBrowserFrame
     if not frame then
         return
@@ -426,7 +428,10 @@ function MR:RefreshCurrencyBrowserFrame(keepScroll)
     end
 
     SetWarbandFilterButtonState(frame)
-    local entries = BuildCurrencyEntries(frame.searchInput and frame.searchInput:GetText() or "", frame.showWarbandOnly)
+    currencyQueryInProgress = true
+    local ok, entries = pcall(BuildCurrencyEntries, frame.searchInput and frame.searchInput:GetText() or "", frame.showWarbandOnly)
+    currencyQueryInProgress = nil
+    if not ok then error(entries, 0) end
     local currencyCount = 0
     local y = 0
     for index, entry in ipairs(entries) do
@@ -441,6 +446,12 @@ function MR:RefreshCurrencyBrowserFrame(keepScroll)
 
     for index = #entries + 1, #(frame.rows or {}) do
         frame.rows[index]:Hide()
+    end
+
+    if frame.emptyText then
+        local filtered = NormalizeSearch(frame.searchInput and frame.searchInput:GetText() or "") ~= "" or frame.showWarbandOnly
+        frame.emptyText:SetText(filtered and L["CurrencyBrowser_EmptyFiltered"] or L["CurrencyBrowser_Empty"])
+        frame.emptyText:SetShown(#entries == 0)
     end
 
     frame.content:SetHeight(math.max(y, frame.scroll:GetHeight()))
@@ -692,6 +703,13 @@ function MR:ShowCurrencyBrowserFrame(anchor)
         end)
 
         frame.content = CreateFrame("Frame", nil, frame.scroll)
+        frame.emptyText = frame.content:CreateFontString(nil, "OVERLAY")
+        frame.emptyText:SetFont(GetRowFont(), math.max(9, GetFontSize() - 1), GetFontFlags())
+        frame.emptyText:SetPoint("TOPLEFT", frame.content, "TOPLEFT", 10, -16)
+        frame.emptyText:SetPoint("TOPRIGHT", frame.content, "TOPRIGHT", -10, -16)
+        frame.emptyText:SetTextColor(0.65, 0.72, 0.80)
+        frame.emptyText:SetWordWrap(true)
+        frame.emptyText:Hide()
         frame.content:SetSize(FRAME_WIDTH - 32, FRAME_HEIGHT - 76)
         frame.content:EnableMouseWheel(true)
         frame.content:SetScript("OnMouseWheel", function(_, delta)
