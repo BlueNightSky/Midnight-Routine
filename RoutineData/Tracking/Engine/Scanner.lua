@@ -365,13 +365,60 @@ tracking.installers.Scanner = function(MR, context)
         return false
     end
 
+    function MR:GetCurrentEncounterDifficulty()
+        if type(GetInstanceInfo) ~= "function" then return nil end
+        local _, instanceType, difficultyId = GetInstanceInfo()
+        if instanceType ~= "raid" and instanceType ~= "party" then return nil end
+        difficultyId = tonumber(difficultyId)
+        if not difficultyId or difficultyId == 0 then return nil end
+        return difficultyId
+    end
+
+    function MR:NoteEncounterKill(encounterId)
+        encounterId = tonumber(encounterId)
+        if not (encounterId and self.db and self.db.char) then return end
+        local now = (GetServerTime and GetServerTime()) or time()
+        local kills = self.db.char.encounterKillsAt or {}
+        self.db.char.encounterKillsAt = kills
+        local resetAt = self.GetLastResetTimestamp and self:GetLastResetTimestamp()
+        if resetAt then
+            for id, killedAt in pairs(kills) do
+                if (tonumber(killedAt) or 0) < resetAt then kills[id] = nil end
+            end
+        end
+        kills[encounterId] = now
+        if type(GetInstanceInfo) == "function" and self.db.global then
+            local instanceMapId = select(8, GetInstanceInfo())
+            instanceMapId = tonumber(instanceMapId)
+            if instanceMapId and instanceMapId > 0 then
+                self.db.global.encounterInstanceMaps = self.db.global.encounterInstanceMaps or {}
+                self.db.global.encounterInstanceMaps[encounterId] = instanceMapId
+            end
+        end
+    end
+
+    function MR:WasEncounterKilledThisWeek(encounterId)
+        encounterId = tonumber(encounterId)
+        local kills = encounterId and self.db and self.db.char and self.db.char.encounterKillsAt
+        local killedAt = kills and tonumber(kills[encounterId])
+        if not killedAt then return false end
+        local resetAt = self.GetLastResetTimestamp and self:GetLastResetTimestamp()
+        return resetAt ~= nil and killedAt >= resetAt
+    end
+
     function MR:ScanAutoUpdateInstanceRows(changedQuestId, changedEncounterId, difficultyId)
         if not (self and self.db and self.db.char and self.db.char.progress) then
             return
         end
 
+        if changedEncounterId and not difficultyId then
+            difficultyId = self:GetCurrentEncounterDifficulty()
+        end
         if difficultyId and MR.CANONICAL_DIFFICULTY then
             difficultyId = MR.CANONICAL_DIFFICULTY[difficultyId] or difficultyId
+        end
+        if changedEncounterId then
+            self:NoteEncounterKill(changedEncounterId)
         end
         local progress = self.db.char.progress
         for _, mod in ipairs(self.modules) do
@@ -392,10 +439,10 @@ tracking.installers.Scanner = function(MR, context)
                         end
                     end
 
-                    if row.encounterIds
-                        and (changedEncounterId == nil or ListContains(row.encounterIds, changedEncounterId)) then
+                    if row.encounterIds and changedEncounterId
+                        and ListContains(row.encounterIds, changedEncounterId) then
 
-                        local diffOk = (not difficultyId) or (not row.encounterDifficulties) or (row.encounterDifficulties[difficultyId] == true)
+                        local diffOk = (not row.encounterDifficulties) or (difficultyId ~= nil and row.encounterDifficulties[difficultyId] == true)
                         if diffOk then
                             local progressModuleKey = row.progressModuleKey or mod.key
                             local progressBucket = (self.GetProgressBucket and self:GetProgressBucket(progressModuleKey, row.key)) or progress

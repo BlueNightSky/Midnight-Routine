@@ -312,15 +312,16 @@ function MR:OnEncounterEnd(_, encounterId, encounterName, difficultyID, _, succe
 end
 
 function MR:OnBossKill(_, bossId, bossName)
+    local difficultyId = self.GetCurrentEncounterDifficulty and self:GetCurrentEncounterDifficulty() or nil
     if env.shouldSuspend() then
-        self:ScanAutoUpdateInstanceRows(nil, tonumber(bossId))
+        self:ScanAutoUpdateInstanceRows(nil, tonumber(bossId), difficultyId)
         return
     end
     local nameForSync = (type(bossName) == "string" and bossName ~= "") and bossName or tostring(bossId or "")
     if nameForSync ~= "" then
         env.syncWorldBossKillByName(nameForSync)
     end
-    local dirty = env.refreshEncounterProgress(tonumber(bossId), false)
+    local dirty = env.refreshEncounterProgress(tonumber(bossId), false, difficultyId)
     if self:RefreshModuleScans(SCAN_BOSS, false) then
         dirty = true
     end
