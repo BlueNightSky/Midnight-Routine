@@ -1706,8 +1706,17 @@ tracking.installers["CustomTasks"] = function(owner, context)
             return false
         end
 
+        if not encounterId then
+            return false
+        end
+        if not difficultyId and self.GetCurrentEncounterDifficulty then
+            difficultyId = self:GetCurrentEncounterDifficulty()
+        end
         if difficultyId then
             difficultyId = CANONICAL_DIFFICULTY[difficultyId] or difficultyId
+        end
+        if self.NoteEncounterKill then
+            self:NoteEncounterKill(encounterId)
         end
 
         local progress = self.db.char.progress
@@ -1717,18 +1726,16 @@ tracking.installers["CustomTasks"] = function(owner, context)
             if self:IsModuleEnabled(mod.key) or mod.customTaskCategoryModule then
                 for _, row in ipairs(mod.rows) do
                     if row.encounterIds then
-                        local shouldMark = encounterId == nil
-                        if not shouldMark then
-                            for _, eid in ipairs(row.encounterIds) do
-                                if eid == encounterId then
-                                    shouldMark = true
-                                    break
-                                end
+                        local shouldMark = false
+                        for _, eid in ipairs(row.encounterIds) do
+                            if eid == encounterId then
+                                shouldMark = true
+                                break
                             end
                         end
 
-                        if shouldMark and difficultyId and row.encounterDifficulties then
-                            shouldMark = row.encounterDifficulties[difficultyId] == true
+                        if shouldMark and row.encounterDifficulties then
+                            shouldMark = difficultyId ~= nil and row.encounterDifficulties[difficultyId] == true
                         end
 
                         if shouldMark then

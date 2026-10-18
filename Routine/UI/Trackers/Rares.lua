@@ -308,9 +308,7 @@ local raresFrame
 local raresCfgFrame
 local raresFrameCache = {}
 local collapsed   = {}
-for _, zone in ipairs(ZONES) do
-    if zone.defaultCollapsed then collapsed[zone.key] = true end
-end
+for _, zone in ipairs(ZONES) do collapsed[zone.key] = true end
 local lastZoneKey = nil
 local lastVisibleZoneMode = nil
 local hoveredWarbandHit
@@ -372,6 +370,7 @@ local function RefreshForeverRareZones()
     wipe(ZONE_BY_KEY)
     rareTracker.SetZones(ZONES)
     for _, zone in ipairs(ZONES) do
+        if collapsed[zone.key] == nil then collapsed[zone.key] = true end
         ZONE_BY_KEY[zone.key] = zone
     end
 end
@@ -381,9 +380,6 @@ local function GetVisibleZones()
     local db  = MR.db and MR.db.profile or {}
     local key = GetCurrentZoneKey()
     local function zoneVisible(z)
-        for _, rare in ipairs(z.rares) do
-            rare[1] = MR:GetLocalizedRareName(rare[6], rare[1])
-        end
         return not (db.raresHiddenZones and db.raresHiddenZones[z.key])
     end
     if not db.raresShowAllZones then
@@ -397,21 +393,339 @@ local function GetVisibleZones()
     return result
 end
 
-local function GetRaresLayoutKey()
-    local db = MR.db and MR.db.profile or {}
-    local parts = { IsManagedHeaderBottom() and "bottom" or "top" }
-    for _, zone in ipairs(GetVisibleZones()) do
-        parts[#parts + 1] = zone.key
-        for _, rare in ipairs(zone.rares) do
-            local questId = rare[2]
-            local flagged = IsRareQuestCompleted(rare)
-            local killStat = GetRareTrackedKillStatus(rare) or (flagged and "today") or nil
-            if not (db.raresHideKilled and killStat == "today") then
-                parts[#parts + 1] = tostring(questId or rare[6] or rare[1]) .. ":" .. rare[1]
+local function QueueZoneRareNames(zone)
+    for _, rare in ipairs(zone.rares) do
+        rare[1] = MR:GetLocalizedRareName(rare[6], rare[1])
+    end
+end
+
+function MR:OnLocalizedRareNamesChanged()
+    if self.isForever then
+        RefreshForeverRareZones()
+        if raresFrame and raresFrame:IsShown() then RebuildRaresFrame() end
+        return
+    end
+    if not (raresFrame and raresFrame:IsShown()) then return end
+    for _, zone in ipairs(raresFrame.visibleZones or {}) do
+        local body = raresFrame.zoneData[zone.key] and raresFrame.zoneData[zone.key].body
+        if body and body:IsShown() then
+            QueueZoneRareNames(zone)
+            for index, rare in ipairs(body.visibleRares or {}) do
+                local label = body.nameLbls[index]
+                if label then label:SetText(rare[1]) end
             end
         end
     end
-    return table.concat(parts, ":")
+end
+
+local function GetRaresShellKey()
+    return IsManagedHeaderBottom() and "bottom" or "top"
+end
+
+local function GetVisibleZonesKey(visible)
+    local parts = {}
+    for _, zone in ipairs(visible or GetVisibleZones()) do
+        parts[#parts + 1] = zone.key
+    end
+    return table.concat(parts, ",")
+end
+
+local function GetRaresAlpha()
+    local db = MR.db and MR.db.profile or {}
+    return math.max(0, math.min(db.raresAlpha or 1.0, 1.0))
+end
+
+local function GetRareKillState(rare)
+    local flagged = IsRareQuestCompleted(rare)
+    if flagged then SyncRareKillRecord(rare[2]) end
+    return GetRareTrackedKillStatus(rare) or (flagged and "today") or nil
+end
+
+local function UpdateRareRowVisual(hit, hover)
+    local rare, zone = hit._rare, hit._zone
+    if not (rare and zone) then return end
+    local killStat = GetRareKillState(rare)
+    local achieved = IsAchievementCriteriaCompleted(zone.achievId, hit._zoneIdx, rare)
+    local cr, cg, cb = GetZoneColor(zone)
+    SetRareRowVisual(hit, hit._dot, hit._lbl, killStat, achieved, cr, cg, cb, GetRaresAlpha(), hover)
+    return killStat, achieved
+end
+
+local function StyleZoneSection(data)
+    local zone = data.zone
+    local alpha = GetRaresAlpha()
+    local cr, cg, cb = GetZoneColor(zone)
+    data.header:SetBackdropColor(0.020 + cr * 0.040, 0.025 + cg * 0.040, 0.032 + cb * 0.040, 0.94 * alpha)
+    data.header:SetBackdropBorderColor(cr * 0.34, cg * 0.34, cb * 0.34, 0.76 * alpha)
+    data.count:SetTextColor(cr, cg, cb)
+    data.barBg:SetBackdropColor(0.010, 0.012, 0.016, 0.82 * alpha)
+    data.barFill:SetColorTexture(cr, cg, cb, 0.80)
+    data.body:SetBackdropColor(0.012 + cr * 0.020, 0.016 + cg * 0.020, 0.022 + cb * 0.020, 0.66 * alpha)
+    data.body:SetBackdropBorderColor(cr * 0.18, cg * 0.18, cb * 0.18, 0.42 * alpha)
+end
+
+local function CreateRareRow(body)
+    local db = MR.db and MR.db.profile or {}
+    local hit = CreateFrame("Button", nil, body, "BackdropTemplate")
+    hit:SetBackdrop(MakeBackdrop())
+    hit:EnableMouse(true)
+
+    local dot = CreateFrame("Frame", nil, hit, "BackdropTemplate")
+    dot:SetSize(DOT_SIZE, DOT_SIZE)
+    dot:SetPoint("LEFT", hit, "LEFT", 4, 0)
+    dot:SetBackdrop(MakeBackdrop())
+
+    local lbl = hit:CreateFontString(nil, "OVERLAY")
+    lbl:SetFont(ns.FONT_ROWS, db.raresFontSize or 9, GetFontFlags())
+    lbl:SetPoint("LEFT", dot, "RIGHT", 5, 0)
+    lbl:SetPoint("RIGHT", hit, "RIGHT", -4, 0)
+    lbl:SetJustifyH("LEFT")
+    lbl:SetJustifyV("MIDDLE")
+
+    hit._dot = dot
+    hit._lbl = lbl
+
+    hit:SetScript("OnEnter", function()
+        local rare = hit._rare
+        if not rare then return end
+        hit._mrHover = true
+        hoveredWarbandHit = hit
+        lastWarbandShiftState = IsShiftKeyDown()
+        local killStat, achieved = UpdateRareRowVisual(hit, true)
+        ns.ShowTooltip(hit, {
+            build = function(tooltip)
+                tooltip:AddLine(rare[1], 1, 1, 1)
+                if killStat == "today" then
+                    tooltip:AddLine(L["Rares_Tooltip_KilledToday"], 0.20, 0.85, 0.45)
+                elseif killStat == "week" then
+                    tooltip:AddLine(L["Rares_Tooltip_KilledWeek"], 0.85, 0.65, 0.10)
+                elseif achieved then
+                    tooltip:AddLine(L["Rares_Tooltip_EverKilled"], 0.88, 0.70, 0.12)
+                else
+                    tooltip:AddLine(L["Rares_Tooltip_NotKilled"], 0.50, 0.50, 0.50)
+                end
+                AddWarbandRareTooltipLines(tooltip, rare)
+                if MR.isForever then ns.Forever.AddRareLocationTooltip(tooltip, rare) end
+                if rare[3] and rare[4] and rare[5] then
+                    tooltip:AddLine(" ")
+                    tooltip:AddLine(L["Gathering_ClickWaypoint"], 0.45, 0.85, 1)
+                end
+            end,
+        })
+    end)
+    hit:SetScript("OnLeave", function()
+        hit._mrHover = nil
+        if hoveredWarbandHit == hit then hoveredWarbandHit = nil end
+        UpdateRareRowVisual(hit, false)
+        ns.HideOwnedTooltip(hit)
+    end)
+    hit:SetScript("OnMouseUp", function(_, button)
+        local rare = hit._rare
+        if button ~= "LeftButton" or not (rare and rare[3] and rare[4] and rare[5]) then return end
+
+        local target = MR.isForever and ns.Forever.GetRareWaypoint(rare) or {
+            label = rare[1],
+            waypointTitle = rare[1],
+            zone = rare[3],
+            x = rare[4],
+            y = rare[5],
+        }
+        if not target then return end
+        local ok, source = MR:SetWaypoint(target)
+        if ok then
+            print(string.format(L["Waypoint_Set"], source, rare[1], target.x, target.y))
+            if MR.isForever then ns.Forever.AdvanceRareWaypoint(rare) end
+        else
+            print(L["Waypoint_Unavailable"])
+        end
+    end)
+
+    return hit
+end
+
+local function PopulateZoneRows(data)
+    local db = MR.db and MR.db.profile or {}
+    local zone = data.zone
+    local body = data.body
+    local visibleRares, zoneIdxList = body.visibleRares, body.zoneIdxList
+    wipe(visibleRares)
+    wipe(zoneIdxList)
+
+    for zIdx, rare in ipairs(zone.rares) do
+        if not (db.raresHideKilled and GetRareKillState(rare) == "today") then
+            visibleRares[#visibleRares + 1] = rare
+            zoneIdxList[#zoneIdxList + 1] = zIdx
+        end
+    end
+
+    for i, rare in ipairs(visibleRares) do
+        local hit = body.rowBtns[i]
+        if not hit then
+            hit = CreateRareRow(body)
+            body.rowBtns[i] = hit
+            body.dotList[i] = hit._dot
+            body.nameLbls[i] = hit._lbl
+        end
+        hit._rare = rare
+        hit._zone = zone
+        hit._zoneIdx = zoneIdxList[i]
+        hit._lbl:SetText(rare[1])
+        UpdateRareRowVisual(hit, hit._mrHover)
+        hit:Show()
+    end
+
+    for i = #visibleRares + 1, #body.rowBtns do
+        local hit = body.rowBtns[i]
+        if hoveredWarbandHit == hit then
+            hoveredWarbandHit = nil
+            ns.HideOwnedTooltip(hit)
+        end
+        hit._rare = nil
+        hit._zone = nil
+        hit._zoneIdx = nil
+        hit._mrHover = nil
+        hit:Hide()
+    end
+end
+
+local ToggleZoneCollapsed
+
+local function EnsureZoneSection(f, zone)
+    local data = f.zoneData[zone.key]
+    if data then
+        data.zone = zone
+        data.name:SetText(zone.label)
+        return data
+    end
+
+    local db = MR.db and MR.db.profile or {}
+    local content = f._content
+    local zoneHeaderFontSize = math.max(8, db.raresFontSize or 9)
+    data = { zone = zone, bodyHeight = 0 }
+
+    local zHdr = CreateFrame("Button", nil, content, "BackdropTemplate")
+    zHdr:SetHeight(ZONE_HDR_H)
+    zHdr:SetBackdrop(MakeBackdrop())
+
+    local arrow = zHdr:CreateFontString(nil, "OVERLAY")
+    arrow:SetFont(ns.FONT_ROWS, zoneHeaderFontSize, GetFontFlags())
+    arrow:SetPoint("LEFT", zHdr, "LEFT", 9, 1)
+
+    local zName = zHdr:CreateFontString(nil, "OVERLAY")
+    zName:SetFont(ns.FONT_HEADERS, math.max(9, zoneHeaderFontSize + 1), GetFontFlags())
+    zName:SetPoint("LEFT", arrow, "RIGHT", 5, 0)
+    zName:SetPoint("RIGHT", zHdr, "RIGHT", -50, 0)
+    zName:SetTextColor(0.90, 0.92, 0.90)
+    zName:SetJustifyH("LEFT")
+    zName:SetWordWrap(false)
+    zName:SetText(zone.label)
+
+    local zCount = zHdr:CreateFontString(nil, "OVERLAY")
+    zCount:SetFont(ns.FONT_ROWS, zoneHeaderFontSize, GetFontFlags())
+    zCount:SetPoint("RIGHT", zHdr, "RIGHT", -9, 0)
+    zCount:SetJustifyH("RIGHT")
+
+    zHdr:SetScript("OnClick", function()
+        ToggleZoneCollapsed(f, data.zone.key)
+    end)
+    zHdr:SetScript("OnEnter", function()
+        local cr, cg, cb = GetZoneColor(data.zone)
+        zHdr:SetBackdropColor(0.030 + cr * 0.070, 0.035 + cg * 0.070, 0.045 + cb * 0.070, 0.98)
+        zHdr:SetBackdropBorderColor(cr * 0.68, cg * 0.68, cb * 0.68, 0.95)
+    end)
+    zHdr:SetScript("OnLeave", function()
+        local cr, cg, cb = GetZoneColor(data.zone)
+        local alpha = GetRaresAlpha()
+        zHdr:SetBackdropColor(0.020 + cr * 0.040, 0.025 + cg * 0.040, 0.032 + cb * 0.040, 0.94 * alpha)
+        zHdr:SetBackdropBorderColor(cr * 0.34, cg * 0.34, cb * 0.34, 0.76 * alpha)
+    end)
+
+    local barBg = CreateFrame("Frame", nil, content, "BackdropTemplate")
+    barBg:SetHeight(BAR_H)
+    barBg:SetBackdrop(MakeBackdrop(false))
+
+    local barFill = barBg:CreateTexture(nil, "ARTWORK")
+    barFill:SetPoint("TOPLEFT", barBg, "TOPLEFT", 0, 0)
+    barFill:SetPoint("BOTTOMLEFT", barBg, "BOTTOMLEFT", 0, 0)
+    barFill:SetWidth(1)
+
+    local shimmer = barBg:CreateTexture(nil, "OVERLAY")
+    shimmer:SetAllPoints(barFill)
+    shimmer:SetColorTexture(1, 1, 1, 0)
+    f.shimmerTextures[#f.shimmerTextures + 1] = shimmer
+
+    local body = CreateFrame("Frame", nil, content, "BackdropTemplate")
+    body:SetHeight(1)
+    body:SetBackdrop(MakeBackdrop())
+    body:Hide()
+    body.dotList = {}
+    body.nameLbls = {}
+    body.rowBtns = {}
+    body.visibleRares = {}
+    body.zoneIdxList = {}
+
+    data.header = zHdr
+    data.arrow = arrow
+    data.name = zName
+    data.count = zCount
+    data.barFill = barFill
+    data.barBg = barBg
+    data.body = body
+
+    f.zoneData[zone.key] = data
+    StyleZoneSection(data)
+    return data
+end
+
+local function ApplyRaresZones(f)
+    local visible = GetVisibleZones()
+    local singleZone = #visible == 1
+    local shown = {}
+
+    for _, zone in ipairs(visible) do
+        local data = EnsureZoneSection(f, zone)
+        shown[zone.key] = true
+        local isCollapsed = (not singleZone) and collapsed[zone.key]
+        if not isCollapsed then
+            QueueZoneRareNames(zone)
+            PopulateZoneRows(data)
+        end
+    end
+
+    for key, data in pairs(f.zoneData) do
+        if not shown[key] then
+            data.header:Hide()
+            data.barBg:Hide()
+            data.body:Hide()
+        end
+    end
+
+    f.visibleZones = visible
+    f.zonesKey = GetVisibleZonesKey(visible)
+    if f.titleText then
+        if singleZone then
+            f.titleText:SetText("Rares  -  " .. visible[1].label)
+        else
+            f.titleText:SetText("Rares  -  Midnight")
+        end
+    end
+
+    if LayoutRaresFrame then LayoutRaresFrame(f) end
+end
+
+ToggleZoneCollapsed = function(f, zoneKey)
+    collapsed[zoneKey] = not collapsed[zoneKey]
+    if MR.db then
+        if not MR.db.profile.raresCollapsed then MR.db.profile.raresCollapsed = {} end
+        MR.db.profile.raresCollapsed[zoneKey] = collapsed[zoneKey]
+    end
+    local data = f.zoneData[zoneKey]
+    if data and not collapsed[zoneKey] then
+        QueueZoneRareNames(data.zone)
+        PopulateZoneRows(data)
+    end
+    LayoutRaresFrame(f)
+    RefreshRaresFrame()
 end
 
 local function RebuildRaresFrame()
@@ -419,26 +733,39 @@ local function RebuildRaresFrame()
     if MR.NoteRefreshSource then MR:NoteRefreshSource("Rares:Rebuild", true) end
     RefreshFonts()
     local wasShown = raresFrame and raresFrame:IsShown()
-    if raresFrame then
-        raresFrameCache[raresFrame.layoutKey or GetRaresLayoutKey()] = raresFrame
-        raresFrame:Hide()
-    end
     if MR.db and MR.db.profile.raresCollapsed then
         for k, v in pairs(MR.db.profile.raresCollapsed) do collapsed[k] = v end
     end
-    local layoutKey = GetRaresLayoutKey()
-    raresFrame = raresFrameCache[layoutKey]
-    if not raresFrame then
-        raresFrame = BuildRaresFrame()
-        raresFrameCache[layoutKey] = raresFrame
+
+    local shellKey = GetRaresShellKey()
+    if raresFrame and raresFrame.layoutKey ~= shellKey then
+        raresFrameCache[raresFrame.layoutKey] = raresFrame
+        raresFrame:Hide()
+        raresFrame = nil
     end
+    if not raresFrame then
+        raresFrame = raresFrameCache[shellKey]
+        if not raresFrame then
+            raresFrame = BuildRaresFrame()
+            raresFrameCache[shellKey] = raresFrame
+        end
+    end
+
+    local alpha = GetRaresAlpha()
+    raresFrame:SetBackdropColor(0.018, 0.024, 0.034, 0.97 * alpha)
+    raresFrame:SetBackdropBorderColor(0.13, 0.28, 0.34, alpha)
+    if raresFrame.topAccent then raresFrame.topAccent:SetAlpha(alpha) end
+    for _, data in pairs(raresFrame.zoneData) do
+        StyleZoneSection(data)
+    end
+
     RestoreManagedFramePos(raresFrame, "raresPos", 580, 0)
     MR.raresFrame = raresFrame
     if wasShown then
         raresFrame:Show()
     end
     raresFrame:SetScale((MR.db and MR.db.profile.raresScale) or 1.0)
-    if LayoutRaresFrame then LayoutRaresFrame(raresFrame) end
+    ApplyRaresZones(raresFrame)
     RefreshRaresFrame()
 end
 
@@ -451,10 +778,6 @@ BuildRaresFrame = function()
     local H          = db.raresHeight or DEFAULT_H
     local alpha      = math.max(0, math.min(db.raresAlpha or 1.0, 1.0))
     local minimized  = db.raresMinimized or false
-    local visible    = GetVisibleZones()
-    local singleZone = #visible == 1
-    local cols       = (W >= 220) and COLS or 1
-    local ROW_H      = GetRowH()
     local headerBottom = IsManagedHeaderBottom()
 
     local function ApplyFrameHeight(frame, targetHeight)
@@ -465,7 +788,7 @@ BuildRaresFrame = function()
 
     local f = StyledFrame(UIParent, nil, "MEDIUM", 10)
     MR:RegisterPriorityFrame(f)
-    f.layoutKey = GetRaresLayoutKey()
+    f.layoutKey = GetRaresShellKey()
     f:SetSize(W, minimized and TITLE_H or H)
     f:SetBackdropColor(0.018, 0.024, 0.034, 0.97 * alpha)
     f:SetBackdropBorderColor(0.13, 0.28, 0.34, alpha)
@@ -532,11 +855,7 @@ BuildRaresFrame = function()
     titleTxt:SetPoint("RIGHT", gearBtn, "LEFT", -6, 0)
     titleTxt:SetJustifyH("LEFT")
     titleTxt:SetWordWrap(false)
-    if singleZone then
-        titleTxt:SetText("Rares  -  " .. visible[1].label)
-    else
-        titleTxt:SetText("Rares  -  Midnight")
-    end
+    titleTxt:SetText("Rares  -  Midnight")
     ns.RegisterThemedFontString(titleTxt, 0.85, 0.90, 0.89)
 
     ApplyMinimized = function(isMin)
@@ -593,255 +912,8 @@ BuildRaresFrame = function()
     ApplyRaresFrameUpdater(f)
 
     f.zoneData = {}
-    f.visibleZones = visible
-    local yOff = 2
-    local innerW = W - 8 - (OUTER_PAD * 2)
-    local colW   = innerW / cols
-
-    for _, zone in ipairs(visible) do
-        local cr, cg, cb  = GetZoneColor(zone)
-        local isCollapsed = (not singleZone) and collapsed[zone.key]
-        local zHdr
-        local arrow
-        local zName
-        local zCount
-
-        if not singleZone then
-            local zoneHeaderFontSize = math.max(8, db.raresFontSize or 9)
-            zHdr = CreateFrame("Button", nil, content, "BackdropTemplate")
-            zHdr:SetPoint("TOPLEFT",  content, "TOPLEFT",  OUTER_PAD, -yOff)
-            zHdr:SetPoint("TOPRIGHT", content, "TOPRIGHT", -OUTER_PAD, -yOff)
-            zHdr:SetHeight(ZONE_HDR_H)
-            zHdr:SetBackdrop(MakeBackdrop())
-            zHdr:SetBackdropColor(0.020 + cr * 0.040, 0.025 + cg * 0.040, 0.032 + cb * 0.040, 0.94 * alpha)
-            zHdr:SetBackdropBorderColor(cr*0.34, cg*0.34, cb*0.34, 0.76 * alpha)
-
-            arrow = zHdr:CreateFontString(nil, "OVERLAY")
-            arrow:SetFont(ns.FONT_ROWS, zoneHeaderFontSize, GetFontFlags())
-            arrow:SetPoint("LEFT", zHdr, "LEFT", 9, 1)
-            arrow:SetText(isCollapsed and "|cff889095+|r" or "|cff889095-|r")
-
-            zName = zHdr:CreateFontString(nil, "OVERLAY")
-            zName:SetFont(ns.FONT_HEADERS, math.max(9, zoneHeaderFontSize + 1), GetFontFlags())
-            zName:SetPoint("LEFT", arrow, "RIGHT", 5, 0)
-            zName:SetTextColor(0.90, 0.92, 0.90)
-            zName:SetText(zone.label)
-            zName:SetPoint("RIGHT", zHdr, "RIGHT", -50, 0)
-            zName:SetJustifyH("LEFT")
-            zName:SetWordWrap(false)
-
-            local zDone, zTotal = GetZoneStatus(zone)
-            zCount = zHdr:CreateFontString(nil, "OVERLAY")
-            zCount:SetFont(ns.FONT_ROWS, zoneHeaderFontSize, GetFontFlags())
-            zCount:SetPoint("RIGHT", zHdr, "RIGHT", -9, 0)
-            zCount:SetJustifyH("RIGHT")
-            zCount:SetTextColor(cr, cg, cb)
-            zCount:SetText(string.format("%d/%d", zDone, zTotal))
-
-            yOff = yOff + ZONE_HDR_H
-
-            zHdr:SetScript("OnClick", function()
-                collapsed[zone.key] = not collapsed[zone.key]
-                if MR.db then
-                    if not MR.db.profile.raresCollapsed then MR.db.profile.raresCollapsed = {} end
-                    MR.db.profile.raresCollapsed[zone.key] = collapsed[zone.key]
-                end
-                LayoutRaresFrame(f)
-                RefreshRaresFrame()
-            end)
-            zHdr:SetScript("OnEnter", function()
-                zHdr:SetBackdropColor(0.030 + cr * 0.070, 0.035 + cg * 0.070, 0.045 + cb * 0.070, 0.98)
-                zHdr:SetBackdropBorderColor(cr*0.68, cg*0.68, cb*0.68, 0.95)
-            end)
-            zHdr:SetScript("OnLeave", function()
-                zHdr:SetBackdropColor(0.020 + cr * 0.040, 0.025 + cg * 0.040, 0.032 + cb * 0.040, 0.94 * alpha)
-                zHdr:SetBackdropBorderColor(cr*0.34, cg*0.34, cb*0.34, 0.76 * alpha)
-            end)
-        end
-
-        local barBg = CreateFrame("Frame", nil, content, "BackdropTemplate")
-        barBg:SetPoint("TOPLEFT",  content, "TOPLEFT",  OUTER_PAD,  -yOff)
-        barBg:SetPoint("TOPRIGHT", content, "TOPRIGHT", -OUTER_PAD, -yOff)
-        barBg:SetHeight(BAR_H)
-        barBg:SetBackdrop(MakeBackdrop(false))
-        barBg:SetBackdropColor(0.010, 0.012, 0.016, 0.82 * alpha)
-
-        local barFill = barBg:CreateTexture(nil, "ARTWORK")
-        barFill:SetPoint("TOPLEFT",    barBg, "TOPLEFT",    0, 0)
-        barFill:SetPoint("BOTTOMLEFT", barBg, "BOTTOMLEFT", 0, 0)
-        barFill:SetWidth(1)
-        barFill:SetColorTexture(cr, cg, cb, 0.80)
-
-        local shimmer = barBg:CreateTexture(nil, "OVERLAY")
-        shimmer:SetAllPoints(barFill)
-        shimmer:SetColorTexture(1, 1, 1, 0)
-        f.shimmerTextures[#f.shimmerTextures + 1] = shimmer
-
-        yOff = yOff + BAR_H
-
-        local visibleRares = {}
-        local zoneIdxList  = {}
-        for zIdx, rare in ipairs(zone.rares) do
-            local questId = rare[2]
-            local flagged = IsRareQuestCompleted(rare)
-            if flagged then SyncRareKillRecord(questId) end
-            local killStat = GetRareTrackedKillStatus(rare)
-                             or (flagged and "today")
-                             or nil
-            if not (db.raresHideKilled and killStat == "today") then
-                visibleRares[#visibleRares + 1] = rare
-                zoneIdxList[#zoneIdxList + 1]   = zIdx
-            end
-        end
-
-        local bodyH = 0
-        if not isCollapsed and #visibleRares > 0 then
-            bodyH = math.ceil(#visibleRares / cols) * ROW_H + 10
-        end
-
-        local body = CreateFrame("Frame", nil, content, "BackdropTemplate")
-        body:SetPoint("TOPLEFT",  content, "TOPLEFT",  OUTER_PAD,  -yOff)
-        body:SetPoint("TOPRIGHT", content, "TOPRIGHT", -OUTER_PAD, -yOff)
-        body:SetHeight(math.max(bodyH, 1))
-        body:SetBackdrop(MakeBackdrop())
-        body:SetBackdropColor(0.012 + cr * 0.020, 0.016 + cg * 0.020, 0.022 + cb * 0.020, 0.66 * alpha)
-        body:SetBackdropBorderColor(cr*0.18, cg*0.18, cb*0.18, 0.42 * alpha)
-        if isCollapsed then body:Hide() end
-
-        body.dotList      = {}
-        body.nameLbls     = {}
-        body.rowBtns      = {}
-        body.visibleRares = visibleRares
-        body.zoneIdxList  = zoneIdxList
-
-        for i, rare in ipairs(visibleRares) do
-            local col      = (i - 1) % cols
-            local row      = math.floor((i - 1) / cols)
-            local xPos     = ROW_PAD + col * colW
-            local yPos     = -(row * ROW_H) - 5
-            local zoneIdx  = zoneIdxList[i]
-
-            local hit = CreateFrame("Button", nil, body, "BackdropTemplate")
-            hit:SetPoint("TOPLEFT",  body, "TOPLEFT",  xPos, yPos)
-            hit:SetWidth(colW - 5)
-            hit:SetHeight(ROW_H)
-            hit:SetBackdrop(MakeBackdrop())
-            hit:EnableMouse(true)
-
-            local dot = CreateFrame("Frame", nil, hit, "BackdropTemplate")
-            dot:SetSize(DOT_SIZE, DOT_SIZE)
-            dot:SetPoint("LEFT", hit, "LEFT", 4, 0)
-            dot:SetBackdrop(MakeBackdrop())
-
-            local lbl = hit:CreateFontString(nil, "OVERLAY")
-            lbl:SetFont(ns.FONT_ROWS, db.raresFontSize or 9, GetFontFlags())
-            lbl:SetPoint("LEFT", dot, "RIGHT", 5, 0)
-            lbl:SetPoint("RIGHT", hit, "RIGHT", -4, 0)
-            lbl:SetHeight(ROW_H)
-            lbl:SetJustifyH("LEFT")
-            lbl:SetJustifyV("MIDDLE")
-            lbl:SetText(rare[1])
-
-            local questId = rare[2]
-            local flagged = IsRareQuestCompleted(rare)
-            if flagged then SyncRareKillRecord(questId) end
-            local killStat = GetRareTrackedKillStatus(rare)
-                             or (flagged and "today") or nil
-            local achieved = IsAchievementCriteriaCompleted(zone.achievId, zoneIdx, rare)
-            SetRareRowVisual(hit, dot, lbl, killStat, achieved, cr, cg, cb, alpha, false)
-
-            hit:SetScript("OnEnter", function()
-                hit._mrHover = true
-                hoveredWarbandHit = hit
-                lastWarbandShiftState = IsShiftKeyDown()
-                local questId = rare[2]
-                local flagged = IsRareQuestCompleted(rare)
-                if flagged then SyncRareKillRecord(questId) end
-                local killStat = GetRareTrackedKillStatus(rare)
-                                 or (flagged and "today") or nil
-                local achieved = IsAchievementCriteriaCompleted(zone.achievId, zoneIdx, rare)
-                SetRareRowVisual(hit, dot, lbl, killStat, achieved, cr, cg, cb, alpha, true)
-                ns.ShowTooltip(hit, {
-                    build = function(tooltip)
-                        tooltip:AddLine(rare[1], 1, 1, 1)
-                        if killStat == "today" then
-                            tooltip:AddLine(L["Rares_Tooltip_KilledToday"], 0.20, 0.85, 0.45)
-                        elseif killStat == "week" then
-                            tooltip:AddLine(L["Rares_Tooltip_KilledWeek"], 0.85, 0.65, 0.10)
-                        elseif achieved then
-                            tooltip:AddLine(L["Rares_Tooltip_EverKilled"], 0.88, 0.70, 0.12)
-                        else
-                            tooltip:AddLine(L["Rares_Tooltip_NotKilled"], 0.50, 0.50, 0.50)
-                        end
-                        AddWarbandRareTooltipLines(tooltip, rare)
-                        if MR.isForever then ns.Forever.AddRareLocationTooltip(tooltip, rare) end
-                        if rare[3] and rare[4] and rare[5] then
-                            tooltip:AddLine(" ")
-                            tooltip:AddLine(L["Gathering_ClickWaypoint"], 0.45, 0.85, 1)
-                        end
-                    end,
-                })
-            end)
-            hit:SetScript("OnLeave", function()
-                hit._mrHover = nil
-                if hoveredWarbandHit == hit then hoveredWarbandHit = nil end
-                local questId = rare[2]
-                local flagged = IsRareQuestCompleted(rare)
-                if flagged then SyncRareKillRecord(questId) end
-                local killStat = GetRareTrackedKillStatus(rare)
-                                 or (flagged and "today") or nil
-                local achieved = IsAchievementCriteriaCompleted(zone.achievId, zoneIdx, rare)
-                SetRareRowVisual(hit, dot, lbl, killStat, achieved, cr, cg, cb, alpha, false)
-                ns.HideOwnedTooltip(hit)
-            end)
-            hit:SetScript("OnMouseUp", function(_, button)
-                if button ~= "LeftButton" or not (rare[3] and rare[4] and rare[5]) then return end
-
-                local target = MR.isForever and ns.Forever.GetRareWaypoint(rare) or {
-                    label = rare[1],
-                    waypointTitle = rare[1],
-                    zone = rare[3],
-                    x = rare[4],
-                    y = rare[5],
-                }
-                if not target then return end
-                local ok, source = MR:SetWaypoint(target)
-                if ok then
-                    print(string.format(L["Waypoint_Set"], source, rare[1], target.x, target.y))
-                    if MR.isForever then ns.Forever.AdvanceRareWaypoint(rare) end
-                else
-                    print(L["Waypoint_Unavailable"])
-                end
-            end)
-
-            body.dotList[i]  = dot
-            body.nameLbls[i] = lbl
-            body.rowBtns[i]  = hit
-        end
-
-        f.zoneData[zone.key] = {
-            zone    = zone,
-            header  = zHdr,
-            arrow   = arrow,
-            name    = zName,
-            count   = zCount,
-            barFill = barFill,
-            barBg   = barBg,
-            body    = body,
-            bodyHeight = bodyH,
-        }
-
-        yOff = yOff + bodyH + 4
-    end
-
-    local contentH = math.max(yOff, 1)
-    content:SetHeight(contentH)
-
-    if not minimized then
-        local savedH  = db.raresHeight or DEFAULT_H
-        local naturalH = TITLE_H + 1 + contentH + 6
-        f:SetHeight(math.min(savedH, naturalH))
-    end
+    f.visibleZones = {}
+    content:SetHeight(1)
 
     local dragger = CreateFrame("Frame", nil, f)
     dragger:SetSize(12, 12)
@@ -923,60 +995,47 @@ RefreshRaresFrame = function()
     if MR.NoteRefreshSource then MR:NoteRefreshSource("Rares:Refresh", true) end
 
     local db = MR.db and MR.db.profile or {}
-    if db.raresHideKilled and raresFrame.zoneData then
-        for _, zd in pairs(raresFrame.zoneData) do
-            local body = zd.body
-            if body and body.visibleRares then
+    local zoneData = raresFrame.zoneData or {}
+
+    if db.raresHideKilled then
+        local relayout = false
+        for _, zone in ipairs(raresFrame.visibleZones or {}) do
+            local zd = zoneData[zone.key]
+            local body = zd and zd.body
+            if body and body:IsShown() then
                 for _, rare in ipairs(body.visibleRares) do
-                    local questId = rare[2]
-                    local flagged = IsRareQuestCompleted(rare)
-                    if flagged then SyncRareKillRecord(questId) end
-                    local killStat = GetRareTrackedKillStatus(rare)
-                                     or (flagged and "today")
-                                     or nil
-                    if killStat == "today" then
-                        RebuildRaresFrame()
-                        return
+                    if GetRareKillState(rare) == "today" then
+                        PopulateZoneRows(zd)
+                        relayout = true
+                        break
                     end
                 end
             end
         end
+        if relayout then LayoutRaresFrame(raresFrame) end
     end
 
-    for _, zone in ipairs(ZONES) do
-        local zd = raresFrame.zoneData and raresFrame.zoneData[zone.key]
-        if zd then
-            local numDone, numTotal, status = GetZoneStatus(zone)
+    for _, zone in ipairs(raresFrame.visibleZones or {}) do
+        local zd = zoneData[zone.key]
+        local body = zd and zd.body
+        if body and body:IsShown() then
             local cr, cg, cb = GetZoneColor(zone)
-
+            local numDone, numTotal = GetZoneStatus(zone)
+            zd.count:SetText(string.format("%d/%d", numDone, numTotal))
             local barW = zd.barBg:GetWidth()
             if barW and barW > 0 then
-                local pct   = numTotal > 0 and (numDone / numTotal) or 0
-                local fillW = math.max(1, barW * pct)
-                zd.barFill:SetWidth(fillW)
+                local pct = numTotal > 0 and (numDone / numTotal) or 0
+                zd.barFill:SetWidth(math.max(1, barW * pct))
                 if numDone >= numTotal then
                     zd.barFill:SetColorTexture(0.90, 0.78, 0.18, 1)
                 else
                     zd.barFill:SetColorTexture(cr, cg, cb, 0.80)
                 end
             end
-
-            local body = zd.body
-            if body and body:IsShown() then
-                for i, rare in ipairs(body.visibleRares or {}) do
-                    local dot      = body.dotList[i]
-                    local lbl      = body.nameLbls[i]
-                    local rowBtn   = body.rowBtns and body.rowBtns[i]
-                    local zoneIdx  = body.zoneIdxList and body.zoneIdxList[i] or i
-                    if dot and lbl then
-                        local questId = rare[2]
-                        local flagged = IsRareQuestCompleted(rare)
-                        if flagged then SyncRareKillRecord(questId) end
-                        local killStat = GetRareTrackedKillStatus(rare)
-                                         or (flagged and "today") or nil
-                        local ever = IsAchievementCriteriaCompleted(zone.achievId, zoneIdx, rare)
-                        SetRareRowVisual(rowBtn, dot, lbl, killStat, ever, cr, cg, cb, db.raresAlpha or 1.0, rowBtn and rowBtn._mrHover)
-                    end
+            for i = 1, #body.visibleRares do
+                local hit = body.rowBtns[i]
+                if hit then
+                    UpdateRareRowVisual(hit, hit._mrHover)
                 end
             end
         end
@@ -984,6 +1043,7 @@ RefreshRaresFrame = function()
 
     if raresFrame.UpdateScrollBar then raresFrame.UpdateScrollBar() end
 end
+
 
 local function BuildRaresConfigFrame()
     local f = CreateFrame("Frame", nil, UIParent, "BackdropTemplate")
@@ -1325,7 +1385,9 @@ LayoutRaresFrame = function(frame)
         local data = frame.zoneData and frame.zoneData[zone.key]
         if data then
             local isCollapsed = (not singleZone) and collapsed[zone.key]
-            if data.header then
+            if singleZone then
+                data.header:Hide()
+            else
                 data.arrow:SetFont(ns.FONT_ROWS, math.max(8, db.raresFontSize or 9), GetFontFlags())
                 data.name:SetFont(ns.FONT_HEADERS, math.max(9, (db.raresFontSize or 9) + 1), GetFontFlags())
                 data.count:SetFont(ns.FONT_ROWS, math.max(8, db.raresFontSize or 9), GetFontFlags())
@@ -1333,9 +1395,12 @@ LayoutRaresFrame = function(frame)
                 data.header:SetPoint("TOPLEFT", frame._content, "TOPLEFT", OUTER_PAD, -yOff)
                 data.header:SetPoint("TOPRIGHT", frame._content, "TOPRIGHT", -OUTER_PAD, -yOff)
                 data.arrow:SetText(isCollapsed and "|cff889095+|r" or "|cff889095-|r")
+                if isCollapsed then data.count:SetText("") end
+                data.header:Show()
                 yOff = yOff + ZONE_HDR_H
             end
 
+            data.barBg:Show()
             data.barBg:ClearAllPoints()
             data.barBg:SetPoint("TOPLEFT", frame._content, "TOPLEFT", OUTER_PAD, -yOff)
             data.barBg:SetPoint("TOPRIGHT", frame._content, "TOPRIGHT", -OUTER_PAD, -yOff)
@@ -1346,7 +1411,8 @@ LayoutRaresFrame = function(frame)
             data.body:SetPoint("TOPRIGHT", frame._content, "TOPRIGHT", -OUTER_PAD, -yOff)
             local visibleCount = #(data.body.visibleRares or {})
             data.bodyHeight = visibleCount > 0 and (math.ceil(visibleCount / cols) * rowHeight + 10) or 0
-            for index, hit in ipairs(data.body.rowBtns or {}) do
+            for index = 1, visibleCount do
+                local hit = data.body.rowBtns[index]
                 local col = (index - 1) % cols
                 local row = math.floor((index - 1) / cols)
                 hit:ClearAllPoints()
@@ -1418,8 +1484,10 @@ function MR:ToggleRares()
             if self.SetManagedWindowOpen then self:SetManagedWindowOpen("raresOpen", true) end
             return
         end
-        if not raresFrame or raresFrame.layoutKey ~= GetRaresLayoutKey() then
+        if not raresFrame or raresFrame.layoutKey ~= GetRaresShellKey() then
             RebuildRaresFrame()
+        else
+            ApplyRaresZones(raresFrame)
         end
         MR.raresFrame = raresFrame
         raresFrame:Show()
@@ -1448,8 +1516,10 @@ function MR:EnsureRaresShown()
     if MR.db and MR.db.profile.raresCollapsed then
         for k, v in pairs(MR.db.profile.raresCollapsed) do collapsed[k] = v end
     end
-    if not raresFrame or raresFrame.layoutKey ~= GetRaresLayoutKey() then
+    if not raresFrame or raresFrame.layoutKey ~= GetRaresShellKey() then
         RebuildRaresFrame()
+    else
+        ApplyRaresZones(raresFrame)
     end
     MR.raresFrame = raresFrame
     raresFrame:Show()
@@ -1496,8 +1566,8 @@ function MR:RefreshRares()
         return
     end
 
-    if self.isForever and raresFrame and raresFrame:IsShown() and raresFrame.layoutKey ~= GetRaresLayoutKey() then
-        RebuildRaresFrame()
+    if self.isForever and raresFrame and raresFrame:IsShown() and raresFrame.zonesKey ~= GetVisibleZonesKey() then
+        ApplyRaresZones(raresFrame)
         self.raresFrame = raresFrame
     end
     RefreshRaresFrame()

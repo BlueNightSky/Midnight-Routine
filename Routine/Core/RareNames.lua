@@ -3,6 +3,7 @@ if ns.Inactive then return end
 local MR = ns.MR
 local queue, pending, attempts = {}, {}, {}
 local running = false
+local refreshQueued = false
 local locale = GetLocale()
 local cacheKey = MR.isForever and "forever" or "retail"
 
@@ -32,7 +33,7 @@ end
 local function ProcessQueue()
     local cache = GetCache()
     local changed = false
-    for _ = 1, math.min(10, #queue) do
+    for _ = 1, math.min(1, #queue) do
         local npcID = table.remove(queue, 1)
         if not npcID then break end
         attempts[npcID] = (attempts[npcID] or 0) + 1
@@ -47,12 +48,16 @@ local function ProcessQueue()
             pending[npcID] = nil
         end
     end
-    if changed then
-        if ns.Forever and ns.Forever.InvalidateRareNames then ns.Forever.InvalidateRareNames() end
-        if MR.RebuildRaresFrame then MR:RebuildRaresFrame() end
-    end
     running = #queue > 0
     if running then C_Timer.After(0.5, ProcessQueue) end
+    if changed and not refreshQueued then
+        refreshQueued = true
+        C_Timer.After(1, function()
+            refreshQueued = false
+            if MR.isForever and ns.Forever and ns.Forever.InvalidateRareNames then ns.Forever.InvalidateRareNames() end
+            if MR.OnLocalizedRareNamesChanged then MR:OnLocalizedRareNamesChanged() end
+        end)
+    end
 end
 
 function MR:GetLocalizedRareName(npcID, fallback)

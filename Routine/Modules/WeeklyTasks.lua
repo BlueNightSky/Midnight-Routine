@@ -178,7 +178,11 @@ tracking.installers["WeeklyTasks"] = function(owner, context)
         end
     end
 
+    local LOST_LEGENDS_WEEKLY_MASTER = 92713
     local LOST_LEGENDS_QUEST_IDS = {}
+    for _, path in ipairs(LOST_LEGENDS_PATHS) do
+        LOST_LEGENDS_QUEST_IDS[#LOST_LEGENDS_QUEST_IDS + 1] = path.master
+    end
     for _, variant in ipairs(LOST_LEGENDS_ALL_RELICS) do
         LOST_LEGENDS_QUEST_IDS[#LOST_LEGENDS_QUEST_IDS + 1] = variant.quest
     end
@@ -535,6 +539,62 @@ tracking.installers["WeeklyTasks"] = function(owner, context)
         return changed
     end
 
+    local KITHIX_ENCOUNTER_ID = 3513
+    local KITHIX_DIFFICULTIES = { 14, 15, 16, 17 }
+    local raidInfoState
+    local raidInfoFrame = CreateFrame("Frame")
+    raidInfoFrame:SetScript("OnEvent", function(self)
+        self:UnregisterEvent("UPDATE_INSTANCE_INFO")
+        raidInfoState = "ready"
+        if MR.RequestScan then MR:RequestScan(0.5) end
+    end)
+
+    local function RequestKithixLockouts()
+        if raidInfoState or type(RequestRaidInfo) ~= "function" then return end
+        raidInfoState = "pending"
+        raidInfoFrame:RegisterEvent("UPDATE_INSTANCE_INFO")
+        RequestRaidInfo()
+    end
+
+    local function IsKithixLockoutComplete()
+        if not (C_RaidLocks and C_RaidLocks.IsEncounterComplete) then return false end
+        local maps = {}
+        local known = MR.db and MR.db.global and MR.db.global.encounterInstanceMaps
+        local knownMap = known and tonumber(known[KITHIX_ENCOUNTER_ID])
+        if knownMap then maps[knownMap] = true end
+        if type(GetNumSavedInstances) == "function" and type(GetSavedInstanceInfo) == "function" then
+            for i = 1, GetNumSavedInstances() or 0 do
+                local _, _, _, _, locked, _, _, isRaid, _, _, _, _, _, instanceMapId = GetSavedInstanceInfo(i)
+                instanceMapId = tonumber(instanceMapId)
+                if locked and isRaid and instanceMapId then maps[instanceMapId] = true end
+            end
+        end
+        for mapId in pairs(maps) do
+            for _, difficultyId in ipairs(KITHIX_DIFFICULTIES) do
+                local ok, done = pcall(C_RaidLocks.IsEncounterComplete, mapId, KITHIX_ENCOUNTER_ID, difficultyId)
+                if ok and done then return true end
+            end
+        end
+        return false
+    end
+
+    local function SyncKithixProgress()
+        if not (MR.IsPatchAvailable and MR:IsPatchAvailable("12.1.5")) then return false end
+        if not (MR.db and MR.db.char and MR.db.char.progress) then return false end
+        RequestKithixLockouts()
+        local killed = MR.WasEncounterKilledThisWeek and MR:WasEncounterKilledThisWeek(KITHIX_ENCOUNTER_ID)
+        if not killed and raidInfoState == "ready" then
+            killed = IsKithixLockoutComplete()
+        end
+        if killed then
+            return MR:WriteScanProgress("s1_weekly", "kithix_kill", 1)
+        end
+        if raidInfoState ~= "ready" then return false end
+        local store = MR.db.char.progress.s1_weekly
+        if not (store and (tonumber(store.kithix_kill) or 0) > 0) then return false end
+        return MR:WriteScanProgress("s1_weekly", "kithix_kill", 0)
+    end
+
     tracking.RegisterCallback({}, "CustomTasksResetDue", function(_, resetType, _, characters)
         if resetType ~= "weekly" then return end
         for _, character in ipairs(type(characters) == "table" and characters or {}) do
@@ -574,6 +634,7 @@ tracking.installers["WeeklyTasks"] = function(owner, context)
             end
             local fragments = C_Item.GetItemCount(285065, false, false, true) or 0
             migrated = MR:WriteScanProgress("labyrinth", "mythical_soul_fragments", math.min(fragments, 3)) or migrated
+            migrated = SyncKithixProgress() or migrated
             migrated = MoveKithixProgress(MR.db.char, not resetAt or resetAt <= (tonumber(MR.db.char.lastResetAt) or 0) + 300) or migrated
             local db = MR.db.char.progress
             if not db[mod.key] then db[mod.key] = {} end
@@ -740,6 +801,10 @@ tracking.installers["WeeklyTasks"] = function(owner, context)
                         db[mod.key]["legends_completed_name"] = variant.name
                         break
                     end
+                end
+
+                if C_QuestLog.IsQuestFlaggedCompleted(LOST_LEGENDS_WEEKLY_MASTER) then
+                    db[mod.key]["lost_legends"] = 1
                 end
 
                 if (tonumber(db[mod.key]["lost_legends"]) or 0) >= 1
