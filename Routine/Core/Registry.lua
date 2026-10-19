@@ -943,6 +943,7 @@ end
 function MR:SetModuleOpen(key, open)
     local mod = self.moduleByKey and self.moduleByKey[key]
     local storage = self:GetActiveModuleStorage(self:GetModuleExpansionKey(mod or key))
+    if not storage then return end
     if not storage[key] then storage[key] = {} end
     storage[key].open = open
 end
@@ -950,6 +951,7 @@ end
 function MR:SetModuleDetached(key, detached)
     local mod = self.moduleByKey and self.moduleByKey[key]
     local storage = self:GetActiveModuleStorage(self:GetModuleExpansionKey(mod or key))
+    if not storage then return end
     if not storage[key] then storage[key] = {} end
     storage[key].detached = detached and true or false
 end
@@ -964,6 +966,7 @@ end
 function MR:SetDetachedModulePosition(key, point, relPoint, x, y)
     local mod = self.moduleByKey and self.moduleByKey[key]
     local storage = self:GetActiveModuleStorage(self:GetModuleExpansionKey(mod or key))
+    if not storage then return end
     if not storage[key] then storage[key] = {} end
     storage[key].detachedPos = {
         point = point,
@@ -983,6 +986,7 @@ end
 function MR:SetDetachedModuleSize(key, width, height)
     local mod = self.moduleByKey and self.moduleByKey[key]
     local storage = self:GetActiveModuleStorage(self:GetModuleExpansionKey(mod or key))
+    if not storage then return end
     if not storage[key] then storage[key] = {} end
     storage[key].detachedSize = {
         width = width,
@@ -998,6 +1002,7 @@ function MR:SetModuleEnabled(key, enabled, skipRefresh)
     local professionSource = self.GetMainFrameProgressSource and self:GetMainFrameProgressSource() or nil
     local storage = (mod and mod.profSkillLine) and self:GetActiveProfessionModuleStorage(professionSource)
         or self:GetActiveModuleStorage(self:GetModuleExpansionKey(mod or key))
+    if not storage then return end
     if not storage[key] then storage[key] = {} end
     storage[key].enabled = enabled
     if mod and mod.profSkillLine then

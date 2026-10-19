@@ -402,7 +402,7 @@ end
 function MR:OnLocalizedRareNamesChanged()
     if self.isForever then
         RefreshForeverRareZones()
-        if raresFrame and raresFrame:IsShown() then RebuildRaresFrame() end
+        MR:RebuildRaresFrame()
         return
     end
     if not (raresFrame and raresFrame:IsShown()) then return end

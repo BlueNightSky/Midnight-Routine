@@ -282,10 +282,12 @@ tracking.installers["Activities"] = function(owner, context)
         end
         msg = msg .. " " .. CurseSurgePinLink(site.zone, site.x, site.y)
 
+        local sendChat = (C_ChatInfo and C_ChatInfo.SendChatMessage) or SendChatMessage
+
         if toGroup then
             local chatType = GetCurseSurgeGroupChatType()
             if chatType then
-                SendChatMessage(msg, chatType)
+                sendChat(msg, chatType)
             else
                 print(L["Chat_CurseSurgeNoGroup"] or "|cff2ae7c6MidnightRoutine:|r You are not in a party, raid, or instance group.")
             end
@@ -294,9 +296,9 @@ tracking.installers["Activities"] = function(owner, context)
 
         local idx = GetCurseSurgeZoneChannelIndex()
         if idx then
-            SendChatMessage(msg, "CHANNEL", nil, idx)
+            sendChat(msg, "CHANNEL", nil, tostring(idx))
         else
-            SendChatMessage(msg, "SAY")
+            sendChat(msg, "SAY")
         end
     end
 

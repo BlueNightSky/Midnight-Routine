@@ -359,7 +359,7 @@ tracking.installers["WeeklyTasks"] = function(owner, context)
 
         local expected = assignment.dynamicTitle:lower()
         for _, taskInfo in ipairs(C_TaskQuest.GetQuestsOnMap(assignment.zone) or {}) do
-            local questId = taskInfo.questId or taskInfo.questID
+            local questId = taskInfo.questID
             local title = questId and MR:GetQuestName(questId)
             if title and title:lower():find(expected, 1, true) then
                 assignment.quest = questId
@@ -554,6 +554,12 @@ tracking.installers["WeeklyTasks"] = function(owner, context)
         raidInfoState = "pending"
         raidInfoFrame:RegisterEvent("UPDATE_INSTANCE_INFO")
         RequestRaidInfo()
+        C_Timer.After(15, function()
+            if raidInfoState ~= "pending" then return end
+            raidInfoFrame:UnregisterEvent("UPDATE_INSTANCE_INFO")
+            raidInfoState = "ready"
+            if MR.RequestScan then MR:RequestScan(0.5) end
+        end)
     end
 
     local function IsKithixLockoutComplete()
@@ -565,8 +571,7 @@ tracking.installers["WeeklyTasks"] = function(owner, context)
         if type(GetNumSavedInstances) == "function" and type(GetSavedInstanceInfo) == "function" then
             for i = 1, GetNumSavedInstances() or 0 do
                 local _, _, _, _, locked, _, _, isRaid, _, _, _, _, _, instanceMapId = GetSavedInstanceInfo(i)
-                instanceMapId = tonumber(instanceMapId)
-                if locked and isRaid and instanceMapId then maps[instanceMapId] = true end
+                if locked and isRaid and instanceMapId and instanceMapId > 0 then maps[instanceMapId] = true end
             end
         end
         for mapId in pairs(maps) do
@@ -1169,6 +1174,7 @@ tracking.installers["WeeklyTasks"] = function(owner, context)
                 max = 1,
                 questIds = LABYRINTH_QUEST_IDS,
                 turnInTracked = true,
+                allowQuestFlagBackfill = true,
                 allowManualOverride = true,
                 tooltipFunc = function(tip)
                     for _, questId in ipairs(LABYRINTH_QUEST_IDS) do

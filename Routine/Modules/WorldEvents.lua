@@ -83,18 +83,18 @@ tracking.installers["WorldEvents"] = function(owner, context)
     local function FindWorldBossQuestID(mapID, matchText, bossKey)
         local cache = GetWorldBossQuestCache()
 
-        if not (C_TaskQuest and C_TaskQuest.GetQuestsForPlayerByMapID) then
+        if not (C_TaskQuest and C_TaskQuest.GetQuestsOnMap) then
             return bossKey and cache[bossKey] or nil
         end
 
-        local quests = C_TaskQuest.GetQuestsForPlayerByMapID(mapID)
+        local quests = C_TaskQuest.GetQuestsOnMap(mapID)
         if not quests then
             return bossKey and cache[bossKey] or nil
         end
 
         local needle = NormalizeText(matchText)
         for _, info in ipairs(quests) do
-            local questID = info.questId or info.questID
+            local questID = info.questID
             if questID then
                 local title = MR:GetQuestName(questID)
                 if title and NormalizeText(title):find(needle, 1, true) then
