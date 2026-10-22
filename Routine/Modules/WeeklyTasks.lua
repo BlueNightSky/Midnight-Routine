@@ -187,6 +187,44 @@ tracking.installers["WeeklyTasks"] = function(owner, context)
         LOST_LEGENDS_QUEST_IDS[#LOST_LEGENDS_QUEST_IDS + 1] = variant.quest
     end
 
+    local LOST_LEGENDS_TALE_QUEST_IDS = { 90536, 91492 }
+    for _, questId in ipairs(LOST_LEGENDS_TALE_QUEST_IDS) do
+        LOST_LEGENDS_QUEST_IDS[#LOST_LEGENDS_QUEST_IDS + 1] = questId
+    end
+
+    local LOST_LEGENDS_TITLE_KEYS = {}
+    for _, variant in ipairs(LOST_LEGENDS_FIRST_TIME_RELICS) do
+        local key = string.lower(variant.name or ""):gsub("^the%s+", "")
+        if key ~= "" then
+            LOST_LEGENDS_TITLE_KEYS[#LOST_LEGENDS_TITLE_KEYS + 1] = { key = key, name = variant.name }
+        end
+    end
+
+    local function MatchLostLegendTitle(title)
+        if type(title) ~= "string" or title == "" then return nil end
+        local text = string.lower(title)
+        for _, entry in ipairs(LOST_LEGENDS_TITLE_KEYS) do
+            if text:find(entry.key, 1, true) then
+                return entry.name
+            end
+        end
+        return nil
+    end
+
+    local legendTurnInFrame = CreateFrame("Frame")
+    legendTurnInFrame:RegisterEvent("QUEST_TURNED_IN")
+    legendTurnInFrame:SetScript("OnEvent", function(_, _, questId)
+        if not (MR.db and MR.db.char and MR.db.char.progress) then return end
+        local title = C_QuestLog.GetTitleForQuestID and C_QuestLog.GetTitleForQuestID(questId)
+        local relicName = MatchLostLegendTitle(title)
+        if not relicName then return end
+        MR:WriteScanProgress("s1_weekly", "lost_legends", 1)
+        local progress = MR.db.char.progress
+        progress.s1_weekly = progress.s1_weekly or {}
+        progress.s1_weekly.legends_completed_name = relicName
+        if MR.RequestScan then MR:RequestScan(0.5) end
+    end)
+
     local function GetMainWeeklyProgress()
         local source = MR.GetMainFrameProgressSource and MR:GetMainFrameProgressSource() or (MR.db and MR.db.char)
         local progress = source and source.progress
